@@ -532,26 +532,35 @@ export default function SignInPage() {
             </label>
           ) : null}
 
-          <SocialAuthButtons
-            nextPath={socialNext}
-            initialError={socialError}
-            mode={mode}
-            formRef={socialFormRef}
-            referralCode={referralCode}
-          />
+          {mode === "create-account" && error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
+          {mode === "create-account" && showEmailCredentials ? (
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+              {isSubmitting ? "Please wait..." : "Create account"}
+            </button>
+          ) : null}
+          {mode === "sign-in" && error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
+          {mode === "sign-in" && showEmailCredentials ? (
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+              {isSubmitting ? "Please wait..." : "Sign in"}
+            </button>
+          ) : null}
 
-          {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
+          {!showEmailCredentials ? (
+            <SocialAuthButtons
+              nextPath={socialNext}
+              initialError={socialError}
+              mode={mode}
+              formRef={socialFormRef}
+              referralCode={referralCode}
+            />
+          ) : null}
+
           {mode === "sign-in" && showEmailCredentials ? (
             <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-sm text-cyan-200/75 transition hover:text-cyan-100">
               Forgot password?
             </button>
           ) : null}
 
-          {showEmailCredentials ? (
-            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
-              {isSubmitting ? "Please wait..." : mode === "sign-in" ? "Sign in" : "Create account"}
-            </button>
-          ) : null}
         </form>}
         </div>
 
