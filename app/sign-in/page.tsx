@@ -15,6 +15,7 @@ export default function SignInPage() {
   const [mode, setMode] = useState<AuthMode>("sign-in")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [sessionWarning, setSessionWarning] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailInput, setEmailInput] = useState("")
   const [pendingEmail, setPendingEmail] = useState("")
@@ -87,7 +88,8 @@ export default function SignInPage() {
       })
       .catch((caught: unknown) => {
         if (caught instanceof Error && caught.name === "AbortError") return
-        setError(caught instanceof Error ? caught.message : "Could not verify your session right now.")
+        console.error("Could not check for an existing sign-in session.", caught)
+        setSessionWarning("We could not check for an existing session. You can still sign in below.")
         setCheckingSession(false)
       })
     return () => controller.abort()
@@ -134,6 +136,7 @@ export default function SignInPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError("")
+    setSessionWarning("")
     setIsSubmitting(true)
 
     const formData = new FormData(event.currentTarget)
@@ -317,6 +320,12 @@ export default function SignInPage() {
           </div>
         </div>
 
+        {sessionWarning ? (
+          <p role="status" className="mb-4 rounded-xl border border-amber-200/20 bg-amber-300/10 px-3.5 py-3 text-sm leading-5 text-amber-100">
+            {sessionWarning}
+          </p>
+        ) : null}
+
         {!pendingEmail && !forgotPassword && !resetToken && !resetComplete ? (
           <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-black/20 p-1" role="tablist" aria-label="Authentication mode">
             {(["sign-in", "create-account"] as const).map((option) => (
@@ -464,7 +473,7 @@ export default function SignInPage() {
             Password
             <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
               <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-              <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={8} placeholder="At least 8 characters" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+              <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "create-account" ? 8 : undefined} maxLength={128} placeholder={mode === "create-account" ? "At least 8 characters" : "Enter your password"} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
               <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="grid size-8 shrink-0 place-items-center rounded-lg text-white/45 transition hover:bg-white/5 hover:text-white">
                 {showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
               </button>
@@ -476,7 +485,7 @@ export default function SignInPage() {
               Confirm password
               <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
                 <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                <input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} placeholder="Re-enter password" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+                <input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} placeholder="Re-enter password" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
               </span>
             </label>
           )}
