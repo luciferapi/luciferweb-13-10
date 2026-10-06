@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
-import { beginEmailVerification, discardPendingRegistration } from "@/lib/auth-store"
+import {
+  beginEmailVerification,
+  discardPendingRegistration,
+  SignupIpAlreadyUsedError,
+} from "@/lib/auth-store"
 import { registrationSchema } from "@/lib/auth-validation"
 import { sendRegistrationOtp } from "@/lib/email"
 import { isReferralCodeAvailable } from "@/lib/referral-store"
+import { getSignupIpHash, SignupIpUnavailableError } from "@/lib/signup-ip"
 
 export const runtime = "nodejs"
 
@@ -29,7 +34,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { otp } = await beginEmailVerification(parsed.data)
+    const { otp } = await beginEmailVerification({
+      ...parsed.data,
+      signupIpHash: getSignupIpHash(request),
+    })
     try {
       await sendRegistrationOtp(parsed.data.email, otp)
     } catch (error) {
@@ -38,6 +46,13 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ verificationRequired: true })
   } catch (error) {
+    if (error instanceof SignupIpAlreadyUsedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error instanceof SignupIpUnavailableError) {
+      console.error("Signup IP could not be determined.", error)
+      return NextResponse.json({ error: "Could not verify your network address for signup." }, { status: 503 })
+    }
     if (typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_ENTRY") {
       return NextResponse.json({ error: "An account with this email already exists. Sign in instead." }, { status: 409 })
     }

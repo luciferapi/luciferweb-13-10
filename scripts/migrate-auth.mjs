@@ -48,9 +48,31 @@ try {
       x_username VARCHAR(15) NULL,
       name_edit_used TINYINT(1) NOT NULL DEFAULT 0,
       date_of_birth_edit_used TINYINT(1) NOT NULL DEFAULT 0,
+      signup_ip_hash CHAR(64) NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
+
+  const [signupIpColumns] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'auth_users'
+       AND COLUMN_NAME = 'signup_ip_hash'`,
+  )
+  if (signupIpColumns.length === 0) {
+    await pool.execute("ALTER TABLE auth_users ADD COLUMN signup_ip_hash CHAR(64) NULL")
+  }
+  const [signupIpIndexes] = await pool.execute(
+    `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'auth_users'
+       AND INDEX_NAME = 'auth_users_signup_ip_hash_uq'`,
+  )
+  if (signupIpIndexes.length === 0) {
+    await pool.execute(
+      "ALTER TABLE auth_users ADD UNIQUE INDEX auth_users_signup_ip_hash_uq (signup_ip_hash)",
+    )
+  }
 
   const [socialUsernameColumns] = await pool.execute(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
@@ -186,6 +208,7 @@ try {
       name VARCHAR(100) NOT NULL,
       password_hash VARCHAR(200) NOT NULL,
       date_of_birth DATE NOT NULL,
+      signup_ip_hash CHAR(64) NULL,
       otp_hash VARCHAR(200) NOT NULL,
       expires_at DATETIME NOT NULL,
       resend_after DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -195,6 +218,18 @@ try {
       INDEX auth_pending_registrations_expires_at_idx (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
+
+  const [pendingSignupIpColumns] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'auth_pending_registrations'
+       AND COLUMN_NAME = 'signup_ip_hash'`,
+  )
+  if (pendingSignupIpColumns.length === 0) {
+    await pool.execute(
+      "ALTER TABLE auth_pending_registrations ADD COLUMN signup_ip_hash CHAR(64) NULL",
+    )
+  }
 
   const [pendingColumns] = await pool.execute(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS

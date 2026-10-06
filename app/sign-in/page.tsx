@@ -41,6 +41,7 @@ export default function SignInPage() {
         : pendingEmail
           ? "verify-email"
           : mode
+  const showEmailCredentials = emailInput.trim().length > 0
 
   useEffect(() => {
     const controller = new AbortController()
@@ -61,6 +62,10 @@ export default function SignInPage() {
     if (authError === "signup_required") {
       setMode("create-account")
       setSocialError("No account uses this provider yet. Add your date of birth and accept the Privacy Policy to create one.")
+    }
+    if (authError === "signup_ip_used") {
+      setMode("create-account")
+      setSocialError("An account has already been created from this network.")
     }
     if (code) setMode("create-account")
     setReferralCode(code)
@@ -442,7 +447,19 @@ export default function SignInPage() {
             </button>
           </form>
         ) : <form ref={socialFormRef} onSubmit={handleSubmit} className="space-y-4">
+          <label className="block space-y-2 text-sm font-medium text-white/75">
+            Email address
+            <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
+              <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
+              <input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+            </span>
+          </label>
+          {!showEmailCredentials ? (
+            <p className="text-sm text-white/50" role="status">Enter your email address to continue with email.</p>
+          ) : null}
+
           {mode === "create-account" && (
+            showEmailCredentials ? (
             <>
               <label className="block space-y-2 text-sm font-medium text-white/75">
                 Full name
@@ -460,27 +477,23 @@ export default function SignInPage() {
                 <span className="block text-xs text-white/45">You must be at least 15 years old.</span>
               </label>
             </>
+            ) : null
           )}
-          <label className="block space-y-2 text-sm font-medium text-white/75">
-            Email address
-            <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-              <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-              <input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
-            </span>
-          </label>
 
-          <label className="block space-y-2 text-sm font-medium text-white/75">
-            Password
-            <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-              <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-              <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "create-account" ? 8 : undefined} maxLength={128} placeholder={mode === "create-account" ? "At least 8 characters" : "Enter your password"} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
-              <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="grid size-8 shrink-0 place-items-center rounded-lg text-white/45 transition hover:bg-white/5 hover:text-white">
-                {showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
-              </button>
-            </span>
-          </label>
+          {showEmailCredentials ? (
+            <label className="block space-y-2 text-sm font-medium text-white/75">
+              Password
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
+                <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
+                <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "create-account" ? 8 : undefined} maxLength={128} placeholder={mode === "create-account" ? "At least 8 characters" : "Enter your password"} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="grid size-8 shrink-0 place-items-center rounded-lg text-white/45 transition hover:bg-white/5 hover:text-white">
+                  {showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
+                </button>
+              </span>
+            </label>
+          ) : null}
 
-          {mode === "create-account" && (
+          {mode === "create-account" && showEmailCredentials ? (
             <label className="block space-y-2 text-sm font-medium text-white/75">
               Confirm password
               <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
@@ -488,9 +501,9 @@ export default function SignInPage() {
                 <input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} placeholder="Re-enter password" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
               </span>
             </label>
-          )}
+          ) : null}
 
-          {mode === "create-account" && (
+          {mode === "create-account" && showEmailCredentials ? (
             <label className="flex items-start gap-3 text-sm leading-6 text-white/70">
               <input
                 name="privacyAccepted"
@@ -506,9 +519,9 @@ export default function SignInPage() {
                 .
               </span>
             </label>
-          )}
+          ) : null}
 
-          {mode === "sign-in" && emailInput.trim() ? (
+          {mode === "sign-in" && showEmailCredentials ? (
             <label className="flex items-center gap-2.5 text-sm text-white/70">
               <input
                 name="rememberMe"
@@ -528,15 +541,17 @@ export default function SignInPage() {
           />
 
           {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
-          {mode === "sign-in" ? (
+          {mode === "sign-in" && showEmailCredentials ? (
             <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-sm text-cyan-200/75 transition hover:text-cyan-100">
               Forgot password?
             </button>
           ) : null}
 
-          <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
-            {isSubmitting ? "Please wait..." : mode === "sign-in" ? "Sign in" : "Create account"}
-          </button>
+          {showEmailCredentials ? (
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+              {isSubmitting ? "Please wait..." : mode === "sign-in" ? "Sign in" : "Create account"}
+            </button>
+          ) : null}
         </form>}
         </div>
 

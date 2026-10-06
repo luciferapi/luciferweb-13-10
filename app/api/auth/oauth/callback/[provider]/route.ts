@@ -2,9 +2,15 @@ import { timingSafeEqual } from "node:crypto"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { setAuthSessionCookie } from "@/lib/auth-cookie"
-import { createSession, getOrCreateOAuthUser, OAuthSignupRequiredError } from "@/lib/auth-store"
+import {
+  createSession,
+  getOrCreateOAuthUser,
+  OAuthSignupRequiredError,
+  SignupIpAlreadyUsedError,
+} from "@/lib/auth-store"
 import { getAuthBaseUrl, getSafeAuthDestination, isOAuthProvider } from "@/lib/auth-oauth"
 import { socialSignupSchema } from "@/lib/auth-validation"
+import { getSignupIpHash, SignupIpUnavailableError } from "@/lib/signup-ip"
 
 export const runtime = "nodejs"
 
@@ -18,7 +24,7 @@ function equalSecret(actual: string, expected: string) {
   return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer)
 }
 
-function authErrorRedirect(requestUrl: string, error: "cancelled" | "failed" | "signup_required") {
+function authErrorRedirect(requestUrl: string, error: "cancelled" | "failed" | "signup_required" | "signup_ip_used") {
   const baseUrl = getAuthBaseUrl(requestUrl)
   const destination = new URL("/sign-in", baseUrl)
   destination.searchParams.set("authError", error)
@@ -74,6 +80,7 @@ export async function GET(
   if (!code || !clientId || !clientSecret) return finish(authErrorRedirect(request.url, "failed"))
 
   try {
+    const signupIpHash = signup ? getSignupIpHash(request) : undefined
     const baseUrl = getAuthBaseUrl(request.url)
     const callbackUrl = new URL(`/api/auth/oauth/callback/${provider}`, baseUrl)
     const tokenResponse = await fetch(
@@ -136,6 +143,7 @@ export async function GET(
         allowCreate: Boolean(signup),
         dateOfBirth: signup?.dateOfBirth,
         referralCode,
+        signupIpHash,
       })
     } else {
       if (
@@ -152,6 +160,7 @@ export async function GET(
         allowCreate: Boolean(signup),
         dateOfBirth: signup?.dateOfBirth,
         referralCode,
+        signupIpHash,
       })
     }
 
@@ -162,6 +171,13 @@ export async function GET(
   } catch (error) {
     if (error instanceof OAuthSignupRequiredError) {
       return finish(authErrorRedirect(request.url, "signup_required"))
+    }
+    if (error instanceof SignupIpAlreadyUsedError) {
+      return finish(authErrorRedirect(request.url, "signup_ip_used"))
+    }
+    if (error instanceof SignupIpUnavailableError) {
+      console.error("Signup IP could not be determined.", error)
+      return finish(authErrorRedirect(request.url, "failed"))
     }
     console.error(`${provider} sign-in failed.`, error)
     return finish(authErrorRedirect(request.url, "failed"))

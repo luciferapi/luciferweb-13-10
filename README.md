@@ -69,6 +69,13 @@ optional Telegram and X usernames. Re-run `npm run db:migrate-auth` to apply
 authentication schema updates and assign public UIDs to existing accounts
 before deploying code that displays them. Sign-in sessions use random
 HTTP-only cookies; only their SHA-256 hashes are stored in `auth_sessions`.
+New signups are limited to one account per public IP across email, Google, X,
+and Telegram. Only a SHA-256 hash of the signup IP is stored. The deployment
+proxy must set a trusted `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`
+header and overwrite or sanitize client-supplied values; signup fails closed
+when no valid client IP is provided. Existing accounts have no historical IP
+record, so the restriction applies to accounts created after the migration.
+Run the migration before deploying this restriction.
 Display name and date of birth can each be changed once from Settings. A
 confirmation is shown before either change, and customer support must handle
 later corrections. Chat remains publicly accessible.

@@ -3,6 +3,7 @@ import { promisify } from "node:util"
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise"
 import { getDatabasePool } from "@/lib/database"
 import { generatePublicUserId } from "@/lib/public-user-id"
+import { SignupIpUnavailableError } from "@/lib/signup-ip"
 
 const scrypt = promisify(scryptCallback)
 const SESSION_DURATION_SECONDS = 30 * 24 * 60 * 60
@@ -51,6 +52,26 @@ type PendingRegistrationRow = RowDataPacket & {
   registration_valid?: number | string | boolean
   retry_after_seconds?: number | string
   referral_code: string | null
+  signup_ip_hash: string | null
+}
+
+export class SignupIpAlreadyUsedError extends Error {
+  constructor() {
+    super("An account has already been created from this network.")
+    this.name = "SignupIpAlreadyUsedError"
+  }
+}
+
+function isSignupIpUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ER_DUP_ENTRY" &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.includes("auth_users_signup_ip_hash_uq")
+  )
 }
 
 export type AuthUser = {
@@ -106,14 +127,15 @@ export async function createUser(input: {
   email: string
   password: string
   dateOfBirth: string
+  signupIpHash: string
 }): Promise<AuthUser> {
   const id = randomUUID()
   const publicUid = generatePublicUserId()
   const passwordHash = await hashPassword(input.password)
   const [result] = await getDatabasePool().execute<ResultSetHeader>(
-    `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, publicUid, input.name, input.email, passwordHash, input.dateOfBirth],
+    `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth, signup_ip_hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, publicUid, input.name, input.email, passwordHash, input.dateOfBirth, input.signupIpHash],
   )
   if (result.affectedRows !== 1) throw new Error("The new account was not saved.")
   return {
@@ -134,8 +156,15 @@ export async function beginEmailVerification(input: {
   email: string
   password: string
   dateOfBirth: string
+  signupIpHash: string
   referralCode?: string
 }): Promise<{ otp: string }> {
+  const [existingUsers] = await getDatabasePool().execute<(RowDataPacket & { id: string })[]>(
+    "SELECT id FROM auth_users WHERE signup_ip_hash = ? LIMIT 1",
+    [input.signupIpHash],
+  )
+  if (existingUsers.length > 0) throw new SignupIpAlreadyUsedError()
+
   const otp = randomInt(0, 1_000_000).toString().padStart(6, "0")
   const [passwordHash, otpHash] = await Promise.all([
     hashPassword(input.password),
@@ -144,14 +173,15 @@ export async function beginEmailVerification(input: {
 
   await getDatabasePool().execute(
     `INSERT INTO auth_pending_registrations
-       (email, name, password_hash, date_of_birth, referral_code, otp_hash, expires_at, resend_after, registration_expires_at, attempts)
-     VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? SECOND),
+       (email, name, password_hash, date_of_birth, signup_ip_hash, referral_code, otp_hash, expires_at, resend_after, registration_expires_at, attempts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? SECOND),
        DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? SECOND),
        DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? SECOND), 0)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name),
        password_hash = VALUES(password_hash),
        date_of_birth = VALUES(date_of_birth),
+       signup_ip_hash = VALUES(signup_ip_hash),
        referral_code = VALUES(referral_code),
        otp_hash = VALUES(otp_hash),
        expires_at = VALUES(expires_at),
@@ -163,6 +193,7 @@ export async function beginEmailVerification(input: {
       input.name,
       passwordHash,
       input.dateOfBirth,
+      input.signupIpHash,
       input.referralCode ?? null,
       otpHash,
       EMAIL_OTP_DURATION_SECONDS,
@@ -237,13 +268,13 @@ export async function verifyEmailRegistration(
   otp: string,
 ): Promise<
   | { status: "verified"; user: AuthUser; token: string; expiresAt: Date }
-  | { status: "invalid" | "missing" | "expired" | "attempts-exceeded" | "already-registered" }
+  | { status: "invalid" | "missing" | "expired" | "attempts-exceeded" | "already-registered" | "ip-already-registered" }
 > {
   const connection = await getDatabasePool().getConnection()
   try {
     await connection.beginTransaction()
     const [rows] = await connection.execute<PendingRegistrationRow[]>(
-      `SELECT name, email, password_hash, date_of_birth, referral_code, otp_hash, expires_at, registration_expires_at, attempts,
+      `SELECT name, email, password_hash, date_of_birth, signup_ip_hash, referral_code, otp_hash, expires_at, registration_expires_at, attempts,
               expires_at > CURRENT_TIMESTAMP AS otp_valid,
               registration_expires_at > CURRENT_TIMESTAMP AS registration_valid
        FROM auth_pending_registrations WHERE email = ? FOR UPDATE`,
@@ -255,6 +286,11 @@ export async function verifyEmailRegistration(
       return { status: "missing" }
     }
     if (Number(pending.registration_valid) !== 1) {
+      await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [email])
+      await connection.commit()
+      return { status: "expired" }
+    }
+    if (!pending.signup_ip_hash) {
       await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [email])
       await connection.commit()
       return { status: "expired" }
@@ -293,9 +329,9 @@ export async function verifyEmailRegistration(
     const id = randomUUID()
     const publicUid = generatePublicUserId()
     await connection.execute(
-      `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, publicUid, pending.name, email, pending.password_hash, pending.date_of_birth],
+      `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth, signup_ip_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, publicUid, pending.name, email, pending.password_hash, pending.date_of_birth, pending.signup_ip_hash],
     )
     if (pending.referral_code) {
       const [referrers] = await connection.execute<(RowDataPacket & { user_id: string })[]>(
@@ -340,6 +376,7 @@ export async function verifyEmailRegistration(
     }
   } catch (error) {
     await connection.rollback()
+    if (isSignupIpUniqueViolation(error)) return { status: "ip-already-registered" }
     throw error
   } finally {
     connection.release()
@@ -376,6 +413,7 @@ export async function getOrCreateOAuthUser(input: {
   allowCreate?: boolean
   dateOfBirth?: string
   referralCode?: string
+  signupIpHash?: string
 }): Promise<AuthUser> {
   const providerUserId = input.providerUserId.trim()
   const name = input.name.trim().slice(0, 100)
@@ -456,6 +494,7 @@ export async function getOrCreateOAuthUser(input: {
 
     if (!user) {
       if (!input.allowCreate || !input.dateOfBirth) throw new OAuthSignupRequiredError()
+      if (!input.signupIpHash) throw new SignupIpUnavailableError()
       user = {
         id: randomUUID(),
         public_uid: generatePublicUserId(),
@@ -469,9 +508,9 @@ export async function getOrCreateOAuthUser(input: {
       }
       createdUser = true
       await connection.execute(
-        `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
-         VALUES (?, ?, ?, ?, NULL, ?)`,
-        [user.id, user.public_uid, user.name, user.email, input.dateOfBirth],
+        `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth, signup_ip_hash)
+         VALUES (?, ?, ?, ?, NULL, ?, ?)`,
+        [user.id, user.public_uid, user.name, user.email, input.dateOfBirth, input.signupIpHash],
       )
     }
     if (createdUser && input.referralCode) {
@@ -506,6 +545,7 @@ export async function getOrCreateOAuthUser(input: {
     }
   } catch (error) {
     await connection.rollback()
+    if (isSignupIpUniqueViolation(error)) throw new SignupIpAlreadyUsedError()
     if (
       typeof error === "object" &&
       error !== null &&

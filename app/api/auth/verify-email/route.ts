@@ -20,8 +20,9 @@ export async function POST(request: Request) {
         expired: "The verification code has expired. Request a new code below.",
         "attempts-exceeded": "Too many incorrect codes. Start account creation again.",
         "already-registered": "An account with this email already exists. Sign in instead.",
+        "ip-already-registered": "An account has already been created from this network.",
       } as const
-      const status = result.status === "already-registered" ? 409 : 400
+      const status = result.status === "already-registered" || result.status === "ip-already-registered" ? 409 : 400
       return NextResponse.json({ error: errors[result.status] }, { status })
     }
 

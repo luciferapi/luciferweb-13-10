@@ -2,9 +2,15 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { setAuthSessionCookie } from "@/lib/auth-cookie"
-import { createSession, getOrCreateOAuthUser, OAuthSignupRequiredError } from "@/lib/auth-store"
+import {
+  createSession,
+  getOrCreateOAuthUser,
+  OAuthSignupRequiredError,
+  SignupIpAlreadyUsedError,
+} from "@/lib/auth-store"
 import { OAUTH_COOKIE_MAX_AGE } from "@/lib/auth-oauth"
 import { socialSignupSchema } from "@/lib/auth-validation"
+import { getSignupIpHash, SignupIpUnavailableError } from "@/lib/signup-ip"
 
 export const runtime = "nodejs"
 
@@ -80,6 +86,7 @@ export async function POST(request: Request) {
       privacyAccepted: cookieStore.get("telegram_signup_consent")?.value === "true",
     })
     const signup = signupResult.success ? signupResult.data : null
+    const signupIpHash = signup ? getSignupIpHash(request) : undefined
     const user = await getOrCreateOAuthUser({
       provider: "telegram",
       providerUserId: String(payload.id),
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
       allowCreate: Boolean(signup),
       dateOfBirth: signup?.dateOfBirth,
       referralCode: cookieStore.get("telegram_signup_referral")?.value,
+      signupIpHash,
     })
     const session = await createSession(user.id)
     const response = NextResponse.json({ user })
@@ -101,6 +109,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         error: "No account uses this Telegram identity yet. Choose Create account and try again.",
       }, { status: 409 })
+    }
+    if (error instanceof SignupIpAlreadyUsedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error instanceof SignupIpUnavailableError) {
+      console.error("Signup IP could not be determined.", error)
+      return NextResponse.json({ error: "Could not verify your network address for signup." }, { status: 503 })
     }
     console.error("Telegram sign-in failed.", error)
     return NextResponse.json({ error: "Could not sign in with Telegram right now." }, { status: 500 })
