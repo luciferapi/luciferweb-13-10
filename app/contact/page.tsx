@@ -1,42 +1,64 @@
 import { Footer } from "@/components/footer"
 import { ProjectRequestForm } from "@/components/project-request-form"
+import { ContactEntrance } from "@/components/contact/contact-entrance"
 
 const services = [
-  "Mini Projects",
-  "Websites & Web Applications",
-  "API Development & Integration",
-  "UI Development",
-  "UI/UX Design",
-  "Automated Bots",
-  "Custom Automation",
-  "Dashboard & Admin UI",
-  "Frontend Development",
-  "Custom Web Solutions",
+  "Websites and web applications",
+  "UI/UX and dashboard design",
+  "API development and integration",
+  "Automation and custom bots",
+  "Mini projects and custom builds",
 ]
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#08080b] text-white">
-      <section className="relative mx-auto max-w-6xl px-6 pb-28 pt-36 sm:pt-44">
-        <div className="pointer-events-none absolute -right-32 top-28 size-96 rounded-full bg-fuchsia-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute left-0 top-96 size-72 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="relative grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-300">{"// contact luciferai"}</p>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/55">Tell me what you&apos;re imagining and we&apos;ll turn the first idea into a working system.</p>
-            <p className="mt-6 max-w-xl text-sm leading-6 text-white/45">The ₹1 non-refundable request fee helps discourage spam and prioritize genuine project requests. Sign in with a verified email to submit your brief.</p>
+    <main className="min-h-screen overflow-hidden bg-[#09090b] text-white">
+      <section className="mx-auto max-w-7xl px-4 pb-24 pt-24 sm:px-6 lg:px-8">
+        <ContactEntrance>
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-10">
+            <div data-contact-intro className="flex flex-col">
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan-200">
+                Contact Lucifer AI
+              </p>
+              <h1 className="mt-6 max-w-5xl text-[clamp(3rem,5vw,4.7rem)] font-semibold leading-[1.05] tracking-[-0.065em]">
+                <span className="sr-only">What are you building?</span>
+                <span aria-hidden="true" className="block overflow-hidden pb-1">
+                  <span data-contact-word className="mr-[0.22em] inline-block">What</span>
+                  <span data-contact-word className="inline-block">are</span>
+                </span>
+                <span aria-hidden="true" className="block overflow-hidden pb-1">
+                  <span data-contact-word className="mr-[0.22em] inline-block">you</span>
+                  <span data-contact-word className="inline-block">building?</span>
+                </span>
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/65">
+                Tell me what you&apos;re imagining. We&apos;ll shape the first idea into something you can use.
+              </p>
+
+              <a
+                href="mailto:lucifer@luciferapi.com"
+                className="mt-4 inline-flex min-h-11 w-fit items-center text-sm font-semibold text-cyan-200 underline decoration-cyan-200/40 underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200"
+              >
+                Email lucifer@luciferapi.com
+              </a>
+            </div>
+
+            <div data-contact-form className="order-2 min-w-0 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-2">
+              <ProjectRequestForm />
+            </div>
+
+            <aside className="order-3 lg:col-start-1 lg:row-start-2">
+              <h2 className="text-sm font-semibold text-white/90">What I can help with</h2>
+              <ul data-contact-services className="mt-4 divide-y divide-white/10 border-y border-white/10">
+                {services.map((service) => (
+                  <li data-contact-service key={service} className="py-3 text-sm leading-6 text-white/70">
+                    {service}
+                  </li>
+                ))}
+              </ul>
+            </aside>
           </div>
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur-xl sm:p-8">
-            <p className="font-mono text-xs uppercase tracking-[0.25em] text-white/40">I&apos;m available for</p>
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              {services.map((service, index) => <li key={service} className="flex items-center gap-3 text-sm text-white/70"><span className="font-mono text-xs text-cyan-300/70">0{index + 1}</span>{service}</li>)}
-            </ul>
-          </div>
-        </div>
-        <div className="relative mt-12">
-          <ProjectRequestForm />
-        </div>
-        <div className="mt-20 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between"><span className="font-mono text-xs uppercase tracking-[0.25em] text-white/35">Email</span><a href="mailto:lucifer@luciferapi.com" className="text-xl font-semibold text-cyan-300 transition hover:text-white sm:text-2xl">lucifer@luciferapi.com</a></div>
+        </ContactEntrance>
       </section>
       <Footer />
     </main>

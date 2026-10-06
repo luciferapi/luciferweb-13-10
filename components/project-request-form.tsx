@@ -4,7 +4,7 @@ import Script from "next/script"
 import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
 import { LoaderCircle, ShieldCheck, X } from "lucide-react"
-import type { RazorpaySuccess } from "@/components/project-checkout"
+import type { RazorpaySuccess } from "@/lib/razorpay-types"
 
 type RequestOrder = {
   order_id: string
@@ -248,15 +248,15 @@ export function ProjectRequestForm() {
   }
 
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-cyan-950/20 backdrop-blur-xl sm:p-8">
+    <div className="rounded-3xl border border-white/10 bg-[#101114] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-7">
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="afterInteractive"
         onLoad={() => setScriptReady(true)}
         onError={() => setMessage("Could not load Razorpay Checkout. Check your connection and try again.")}
       />
-      <p className="font-mono text-xs uppercase tracking-[0.25em] text-cyan-300">Request a project</p>
-      <h2 className="mt-3 text-2xl font-bold text-white">Tell me what you want to build</h2>
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-200">Request a project</p>
+      <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">Tell me what you want to build</h2>
       {requestNumber !== null ? (
         <div className="mt-6 rounded-xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-100" role="status">
           <p className="font-semibold">Request submitted · #{requestNumber}</p>
@@ -264,36 +264,36 @@ export function ProjectRequestForm() {
           {message.includes("notification email could not be sent") ? <p className="mt-2 text-amber-100">{message}</p> : null}
         </div>
       ) : (
-        <form onSubmit={(event) => void beginRequestPayment(event)} className="mt-6 space-y-4">
-          <label className="block space-y-2 text-sm font-medium text-white/80">
+        <form onSubmit={(event) => void beginRequestPayment(event)} className="mt-7 space-y-5">
+          <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85">
             Project name
-            <input required minLength={2} maxLength={120} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="What should we call your project?" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+            <input required minLength={2} maxLength={120} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="What should we call your project?" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
           </label>
-          <label className="block space-y-2 text-sm font-medium text-white/80">
+          <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85">
             Project details
-            <textarea required minLength={10} maxLength={5000} rows={5} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the features, users, design, or problem to solve." className="w-full resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+            <textarea required minLength={10} maxLength={5000} rows={5} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the features, users, design, or problem to solve." className="w-full resize-y rounded-xl border border-white/15 bg-white/[0.035] px-4 py-3 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block space-y-2 text-sm font-medium text-white/80">
+            <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85">
               Gmail / contact email
-              <input type="email" maxLength={254} value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} placeholder="you@gmail.com" aria-describedby="project-request-contact-help" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+              <input type="email" maxLength={254} value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} placeholder="you@gmail.com" aria-describedby="project-request-contact-help" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
             </label>
-            <label className="block space-y-2 text-sm font-medium text-white/80">
+            <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85">
               WhatsApp number
-              <input type="tel" maxLength={25} value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="+91 98765 43210" aria-describedby="project-request-contact-help" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+              <input type="tel" maxLength={25} value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="+91 98765 43210" aria-describedby="project-request-contact-help" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
             </label>
-            <label className="block space-y-2 text-sm font-medium text-white/80">
+            <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85">
               Telegram ID
-              <input maxLength={64} value={telegramId} onChange={(event) => setTelegramId(event.target.value)} placeholder="@username or numeric ID" aria-describedby="project-request-contact-help" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+              <input maxLength={64} value={telegramId} onChange={(event) => setTelegramId(event.target.value)} placeholder="@username or numeric ID" aria-describedby="project-request-contact-help" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
             </label>
-            <p id="project-request-contact-help" className="text-xs leading-5 text-white/50 sm:col-span-2">Provide at least one contact method: Gmail, WhatsApp, or Telegram.</p>
-            <label className="block space-y-2 text-sm font-medium text-white/80">
+            <p id="project-request-contact-help" className="text-xs leading-5 text-white/65 sm:col-span-2">Provide at least one contact method: Gmail, WhatsApp, or Telegram.</p>
+            <label className="block space-y-2 text-sm font-medium text-white/85">
               Preferred language <span className="text-cyan-200">(required)</span>
-              <input required maxLength={80} value={preferredLanguage} onChange={(event) => setPreferredLanguage(event.target.value)} placeholder="e.g. English, Tamil" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+              <input required maxLength={80} value={preferredLanguage} onChange={(event) => setPreferredLanguage(event.target.value)} placeholder="e.g. English, Tamil" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
             </label>
-            <label className="block space-y-2 text-sm font-medium text-white/80 sm:col-span-2">
+            <label data-contact-field className="block space-y-2 text-sm font-medium text-white/85 sm:col-span-2">
               When do you need it? <span className="text-cyan-200">(required)</span>
-              <input required maxLength={160} value={desiredDuration} onChange={(event) => setDesiredDuration(event.target.value)} placeholder="e.g. within 2 weeks, flexible" className="h-11 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-white outline-none placeholder:text-white/35 focus:border-cyan-300/60" />
+              <input required maxLength={160} value={desiredDuration} onChange={(event) => setDesiredDuration(event.target.value)} placeholder="e.g. within 2 weeks, flexible" className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.035] px-4 text-white outline-none transition-colors placeholder:text-white/55 focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-200/20" />
             </label>
           </div>
           {!sessionLoading && !signedIn ? (
@@ -303,11 +303,11 @@ export function ProjectRequestForm() {
           ) : null}
           {message ? <p className="text-sm text-rose-200" role="alert">{message}</p> : null}
           {needsSignIn ? <Link href="/sign-in?next=%2Fcontact" className="inline-flex font-semibold text-cyan-200 underline underline-offset-4">Sign in to continue</Link> : null}
-          <label className="flex items-start gap-3 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-sm leading-6 text-amber-100">
+          <label data-contact-field className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-white/75">
             <input type="checkbox" required checked={feeAccepted} onChange={(event) => setFeeAccepted(event.target.checked)} className="mt-1 size-4 shrink-0 accent-cyan-300" />
-            <span>The ₹1 fee helps discourage spam and prioritize genuine project requests. It is a non-refundable request fee, even if your request is declined or cannot be completed.</span>
+            <span>The ₹1 fee helps discourage spam and prioritize genuine project requests. It is non-refundable, even if your request is declined or cannot be completed.</span>
           </label>
-          <button type="submit" disabled={busy || sessionLoading || !signedIn || !feeAccepted} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+          <button type="submit" disabled={busy || sessionLoading || !signedIn || !feeAccepted} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-200 px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-100">
             {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <ShieldCheck aria-hidden="true" className="size-4" />}
             Pay ₹1 &amp; submit request
           </button>

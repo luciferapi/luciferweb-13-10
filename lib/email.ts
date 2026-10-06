@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import type { PayoutDetails } from "@/lib/withdrawal-method-store"
 
 function getTransporter() {
   const { SMTP_HOST, SMTP_USER, SMTP_PASSWORD } = process.env
@@ -100,5 +101,55 @@ export async function sendProjectRequestNotification(input: {
     subject: `New paid project request #${input.requestNumber}`,
     text: `New Project Request\nProject: ${input.projectName}\nUser: ${input.userEmail}\nPayment: ₹1 — Verified (non-refundable request fee)\nRequest ID: #${input.requestNumber}\n${optionalText ? `\n${optionalText}\n` : ""}\nDescription:\n${input.description}`,
     html: `<h1>New Project Request</h1><p><strong>Project:</strong> ${projectName}</p><p><strong>User:</strong> <a href="mailto:${userEmail}">${userEmail}</a></p><p><strong>Payment:</strong> ₹1 — Verified (non-refundable request fee)</p><p><strong>Request ID:</strong> #${input.requestNumber}</p>${optionalHtml}<h2>Description</h2><p style="white-space:pre-wrap">${description}</p>`,
+  })
+}
+
+export async function sendWithdrawalRequestNotification(input: {
+  withdrawalId: string
+  userName: string
+  userEmail: string | null
+  publicUid: string
+  amountPaise: number
+  payoutDetails: PayoutDetails
+}): Promise<void> {
+  const transporter = getTransporter()
+  const { SMTP_USER } = process.env
+  const recipient =
+    process.env.WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL ||
+    process.env.PROJECT_REQUEST_NOTIFICATION_EMAIL ||
+    SMTP_USER
+  if (!recipient) {
+    throw new Error("Set WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL, PROJECT_REQUEST_NOTIFICATION_EMAIL, or SMTP_USER for withdrawal notifications.")
+  }
+
+  const userName = escapeHtml(input.userName)
+  const userEmail = input.userEmail ? escapeHtml(input.userEmail) : "Not provided"
+  const publicUid = escapeHtml(input.publicUid)
+  const withdrawalId = escapeHtml(input.withdrawalId)
+  const amount = `₹${(input.amountPaise / 100).toLocaleString("en-IN")}`
+  const payoutDestination = input.payoutDetails.method === "upi"
+    ? (() => {
+        const [accountName, provider] = input.payoutDetails.upiId.split("@")
+        return `${accountName.slice(0, 1)}${"*".repeat(Math.min(Math.max(accountName.length - 1, 3), 8))}@${provider}`
+      })()
+    : `Account ending in ${input.payoutDetails.accountNumber.slice(-4)}`
+  const destination = `Payout destination: ${payoutDestination}`
+
+  await transporter.sendMail({
+    from: { name: "Lucifer AI", address: SMTP_USER! },
+    to: recipient,
+    subject: `Wallet withdrawal ${withdrawalId}`,
+    text: [
+      "New wallet withdrawal request",
+      `Withdrawal ID: ${input.withdrawalId}`,
+      `Amount: ${amount}`,
+      `User: ${input.userName}`,
+      `Email: ${input.userEmail || "Not provided"}`,
+      `Public UID: ${input.publicUid}`,
+      `Payout method: ${input.payoutDetails.method.toUpperCase()}`,
+      destination,
+      "Status: Pending review",
+    ].join("\n"),
+    html: `<h1>New wallet withdrawal request</h1><p><strong>Withdrawal ID:</strong> ${withdrawalId}</p><p><strong>Amount:</strong> ${escapeHtml(amount)}</p><p><strong>User:</strong> ${userName}</p><p><strong>Email:</strong> ${userEmail}</p><p><strong>Public UID:</strong> ${publicUid}</p><p><strong>Payout method:</strong> ${input.payoutDetails.method.toUpperCase()}</p><p><strong>Payout destination:</strong> ${escapeHtml(payoutDestination)}</p><p><strong>Status:</strong> Pending review</p>`,
   })
 }

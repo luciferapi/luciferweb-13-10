@@ -330,18 +330,22 @@ try {
   }, [])
 
 return (
-    <div className="ai-chat-section relative h-dvh overflow-hidden">
-      <Button
-        type="button"
-        onClick={clearChat}
-        disabled={!isLoaded}
-        variant="ghost"
-        size="icon"
-        className="absolute left-4 top-4 z-20 h-10 w-10 rounded-full"
-        aria-label="Reset chat"
-      >
-        <MessageSquareDashed className="h-5 w-5" />
-      </Button>
+    <main className="ai-chat-section relative h-dvh overflow-hidden">
+      {messages.length > 0 || error ? (
+        <div className="pointer-events-none absolute right-4 top-24 z-20 sm:right-8">
+          <Button
+            type="button"
+            onClick={clearChat}
+            disabled={!isLoaded}
+            variant="ghost"
+            className="pointer-events-auto h-10 gap-2 rounded-xl border border-slate-700/70 bg-slate-950/70 px-3 text-slate-300 shadow-sm backdrop-blur-xl transition hover:border-cyan-300/30 hover:bg-slate-900 hover:text-cyan-100"
+            aria-label="Start a new chat"
+          >
+            <MessageSquareDashed className="h-4 w-4" />
+            <span className="text-xs font-medium">New chat</span>
+          </Button>
+        </div>
+      ) : null}
 
 <MessageList
         messages={messages}
@@ -349,6 +353,7 @@ return (
         error={error}
         onRetry={retry}
         isLoaded={isLoaded}
+        onSendPrompt={sendMessage}
       />
 
 <Composer
@@ -359,6 +364,6 @@ return (
         selectedModel={selectedModel}
         onModelChange={handleModelChange}
       />
-    </div>
+    </main>
   )
 }

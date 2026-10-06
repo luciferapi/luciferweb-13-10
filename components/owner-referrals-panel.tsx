@@ -16,6 +16,7 @@ export function OwnerReferralsPanel() {
   const [busyId, setBusyId] = useState("")
   const [savingProgram, setSavingProgram] = useState(false)
   const [error, setError] = useState("")
+  const [reasonDrafts, setReasonDrafts] = useState<Record<string, string>>({})
 
   const loadReferrals = useCallback(async (signal?: AbortSignal) => {
     setError("")
@@ -29,6 +30,9 @@ export function OwnerReferralsPanel() {
     }
     setReferrals(result.referrals as ReferralEntry[])
     setProgram(result.program)
+    setReasonDrafts(Object.fromEntries(
+      (result.referrals as ReferralEntry[]).map((referral) => [referral.id, referral.statusReason ?? ""]),
+    ))
   }, [])
 
   useEffect(() => {
@@ -44,13 +48,28 @@ export function OwnerReferralsPanel() {
   }, [loadReferrals])
 
   async function changeStatus(id: string, status: ReferralStatus) {
+    const enteredReason = reasonDrafts[id]?.trim()
+    if (status === "rejected" && (!enteredReason || enteredReason === "Awaiting manual review")) {
+      setError("Add a specific review reason before rejecting this referral.")
+      return
+    }
+
     setBusyId(id)
     setError("")
     try {
       const response = await fetch("/api/owner/referrals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update-status", id, status }),
+        body: JSON.stringify({
+          action: "update-status",
+          id,
+          status,
+          reason: enteredReason && enteredReason !== "Awaiting manual review"
+            ? enteredReason
+            : status === "pending"
+              ? "Awaiting manual review"
+              : null,
+        }),
       })
       const result: unknown = await response.json().catch(() => null)
       if (!response.ok) {
@@ -147,12 +166,14 @@ export function OwnerReferralsPanel() {
                       <option value="fixed">Fixed</option><option value="percentage">Percent</option>
                     </select>
                     <input aria-label={`${label} amount`} type="number" min="0" max={program[side].type === "percentage" ? "100" : "1000000"} step="0.01" value={program[side].amount} onChange={(event) => updateReward(side, "amount", event.target.value)} className="h-10 min-w-0 rounded-md border border-border bg-card px-2 text-sm" />
-                    <input aria-label={`${label} currency`} type="text" maxLength={3} disabled={program[side].type === "percentage"} value={program[side].currency} onChange={(event) => updateReward(side, "currency", event.target.value)} className="h-10 min-w-0 rounded-md border border-border bg-card px-2 text-xs uppercase disabled:opacity-40" />
+                    <span className="flex h-10 items-center justify-center rounded-md border border-border bg-muted px-2 text-xs text-muted-foreground">
+                      {program[side].type === "fixed" ? "INR ₹" : "%"}
+                    </span>
                   </div>
                 </fieldset>
               ))}
               <label className="space-y-1 text-xs font-medium">
-                Minimum qualifying purchase
+                Minimum qualifying purchase (INR ₹)
                 <input name="minPurchaseAmount" type="number" min="0" step="0.01" defaultValue={program.conditions.minPurchaseAmount ?? ""} className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm" />
               </label>
               <label className="space-y-1 text-xs font-medium">
@@ -181,6 +202,15 @@ export function OwnerReferralsPanel() {
                 </span>
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold capitalize">{referral.status}</span>
+                  <label className="sr-only" htmlFor={`referral-reason-${referral.id}`}>Review reason for {referral.name}</label>
+                  <input
+                    id={`referral-reason-${referral.id}`}
+                    value={reasonDrafts[referral.id] ?? ""}
+                    onChange={(event) => setReasonDrafts((current) => ({ ...current, [referral.id]: event.target.value }))}
+                    maxLength={500}
+                    placeholder="Review reason"
+                    className="h-9 w-full rounded-lg border border-border bg-background px-2.5 text-xs sm:w-48"
+                  />
                   {(["pending", "active", "rejected"] as const).map((status) => (
                     <button key={status} type="button" disabled={busyId === referral.id || referral.status === status} onClick={() => void changeStatus(referral.id, status)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold capitalize transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-45">
                       {busyId === referral.id ? "Saving..." : status}

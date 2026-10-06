@@ -63,15 +63,47 @@ sign-in:
 npm run db:migrate-auth
 ```
 
-Registration stores a scrypt password hash, normalized email, name, and date of
-birth in `auth_users`. Sign-in sessions use random HTTP-only cookies; only their
-SHA-256 hashes are stored in `auth_sessions`. Chat remains publicly accessible.
+Registration stores a scrypt password hash, normalized email, name, date of
+birth, and a unique public UID in `auth_users`. The profile also supports
+optional Telegram and X usernames. Re-run `npm run db:migrate-auth` to apply
+authentication schema updates and assign public UIDs to existing accounts
+before deploying code that displays them. Sign-in sessions use random
+HTTP-only cookies; only their SHA-256 hashes are stored in `auth_sessions`.
+Display name and date of birth can each be changed once from Settings. A
+confirmation is shown before either change, and customer support must handle
+later corrections. Chat remains publicly accessible.
 The forgot-password endpoint checks that an account exists before creating and
 sending a reset link.
 New accounts receive a six-digit email verification code that expires after ten
 minutes. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASSWORD` in
 the local and production environment settings; SMTP credentials are separate
 from the MySQL password.
+
+### Google sign-in
+
+Google OAuth is implemented as a server-side authorization-code flow. To enable it:
+
+1. In Google Cloud Console, select or create a project and configure the OAuth
+   consent screen with the app name, support email, and the scopes `openid`,
+   `email`, and `profile`. Add test users while the consent screen is in Testing,
+   or publish the consent screen before making sign-in generally available.
+2. Create an OAuth client ID with application type **Web application**.
+3. Add these authorized redirect URIs to that client:
+   - `http://localhost:3000/api/auth/oauth/callback/google` for local development.
+   - `https://your-production-host/api/auth/oauth/callback/google` for production,
+     replacing the host with the exact public origin used by the app.
+4. Set `AUTH_BASE_URL` to the matching origin, without a trailing slash, and set
+   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local` for development
+   and in the production hosting provider's secret environment settings. Never
+   commit real credentials or put the client secret in a `NEXT_PUBLIC_` variable.
+5. Restart/redeploy the app. The Google option is enabled when both Google
+   credentials are present. New Google accounts still require the user to enter
+   a date of birth and accept the Privacy Policy before OAuth begins.
+
+The callback URI must match exactly between Google Cloud Console and
+`AUTH_BASE_URL`. The app uses the provider's verified email, stores the Google
+identity against the account, and creates its own session cookie. Authentication
+tables are created by `npm run db:migrate-auth`.
 
 ### Paid project requests
 
@@ -93,6 +125,38 @@ production hosting as well as local development. Requesters may also provide
 optional contact email, WhatsApp number, Telegram ID, preferred language, and
 desired duration. The confirmation states that the team will respond within
 12 hours.
+
+### Wallet deposits and withdrawals
+
+After creating the authentication tables, create the saved payout method table
+and wallet deposit and withdrawal request tables before enabling those Wallet
+features:
+
+```bash
+npm run db:migrate-withdrawal-methods
+npm run db:migrate-wallet
+```
+
+Deposits use Razorpay Checkout and are credited only after the payment
+signature, Razorpay order, and captured payment are verified server-side.
+Verified payment method, provider status, references, contact details, fees,
+taxes, and available payment-method details are saved with the deposit and
+shown in its transaction history. Full card numbers are never stored. Configure
+`RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in local and production server
+environment settings. Deposits are limited to whole-rupee amounts from ₹50 to
+₹1,000. Each deposit and withdrawal has a unique 16-character alphanumeric ID:
+deposit IDs start with `DEP`, and withdrawal IDs start with `WIT`.
+
+Withdrawal requests require a payout method saved in Settings. Requests are
+limited to ₹50-₹1,500 each, up to four requests per user per day (India
+Standard Time), and cannot exceed the available wallet balance. New requests
+are emailed to `WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL`, falling back to
+`PROJECT_REQUEST_NOTIFICATION_EMAIL` and then `SMTP_USER`. The notification
+contains the request amount and a masked payout destination; full payout
+details remain encrypted at rest. Configure `PAYOUT_DATA_ENCRYPTION_KEY` for
+encrypted payout storage and SMTP settings for email delivery. If email
+delivery fails, the request remains saved and the requester is shown its
+reference ID so they can contact support.
 
 ## Learn More
 

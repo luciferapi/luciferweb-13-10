@@ -1,6 +1,6 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import { findUserBySession, updateUserName } from "@/lib/auth-store"
+import { findUserBySession, ProfileOneTimeEditError, updateUserProfile } from "@/lib/auth-store"
 import { profileUpdateSchema } from "@/lib/auth-validation"
 
 export const runtime = "nodejs"
@@ -12,17 +12,25 @@ export async function PATCH(request: Request) {
   const body: unknown = await request.json().catch(() => null)
   const parsed = profileUpdateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Enter a name between 1 and 100 characters." }, { status: 400 })
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Enter valid profile details." },
+      { status: 400 },
+    )
   }
 
   try {
     const user = await findUserBySession(token)
     if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 })
 
-    await updateUserName(user.id, parsed.data.name)
-    return NextResponse.json({ user: { ...user, name: parsed.data.name } })
+    await updateUserProfile(user.id, parsed.data)
+    const updatedUser = await findUserBySession(token)
+    if (!updatedUser) return NextResponse.json({ error: "Not signed in." }, { status: 401 })
+    return NextResponse.json({ user: updatedUser })
   } catch (error) {
-    console.error("Could not update the account name.", error)
-    return NextResponse.json({ error: "Could not update your name right now." }, { status: 500 })
+    if (error instanceof ProfileOneTimeEditError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    console.error("Could not update the account profile.", error)
+    return NextResponse.json({ error: "Could not update your profile right now." }, { status: 500 })
   }
 }

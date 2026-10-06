@@ -35,24 +35,20 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
 
   return (
     <div
+      data-chat-message-content
       className={cn(
-        "flex max-w-[90%] md:max-w-[80%] gap-2",
+        "flex max-w-[92%] gap-3 sm:max-w-[84%]",
         isUser
-          ? "ml-auto flex-row-reverse user-message-enter"
-          : "mr-auto animate-in fade-in slide-in-from-bottom-2 duration-300 items-end",
+          ? "ml-auto flex-row-reverse"
+          : "mr-auto items-end",
       )}
     >
       {/* Avatar */}
       <div
         className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden",
-          isUser ? "bg-slate-800" : "bg-slate-800",
+          "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700/70 bg-slate-900",
           !isUser && isStreaming && "sticky bottom-4 self-end transition-all duration-300",
         )}
-        style={{
-          boxShadow:
-            "rgba(14, 63, 126, 0.04) 0px 0px 0px 1px, rgba(42, 51, 69, 0.04) 0px 1px 1px -0.5px, rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px, rgba(42, 51, 70, 0.04) 0px 6px 6px -3px, rgba(14, 63, 126, 0.04) 0px 12px 12px -6px, rgba(14, 63, 126, 0.04) 0px 24px 24px -12px",
-        }}
         aria-hidden="true"
       >
         {isUser ? (
@@ -65,30 +61,23 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       {/* Message content */}
       <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
         {/* Role label (optional, shown on larger screens) */}
-        <span className="text-xs text-stone-400 mb-1 hidden sm:block mt-2">{isUser ? "You" : "Assistant"}</span>
+        <span className="mb-1 mt-1 hidden text-xs text-stone-400 sm:block">{isUser ? "You" : "Assistant"}</span>
 
         {/* Bubble */}
         <div
           className={cn(
-            "rounded-2xl border-none overflow-hidden",
+            "overflow-hidden rounded-2xl",
             isUser
-              ? "bg-violet-500/15 text-violet-100 border border-violet-300/20 rounded-br-md"
-              : "bg-transparent text-slate-200 rounded-bl-md",
+              ? "rounded-br-md border border-cyan-200/15 bg-cyan-300/10 text-slate-100"
+              : "rounded-bl-md border border-slate-800/80 bg-slate-950/45 text-slate-200",
           )}
-          style={{
-            boxShadow: isUser
-              ? "0 8px 28px rgba(0, 0, 0, 0.2)"
-              : "none",
-            willChange: isStreaming ? "height" : "auto",
-            transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
         >
           {!isUser && message.content.trim() && (
             <div className="flex justify-end p-2 pb-0">
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] font-medium text-slate-300 transition hover:bg-slate-800"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] font-medium text-slate-300 transition hover:bg-slate-800"
                 aria-label="Copy assistant message"
               >
                 {copied ? <CopyCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -98,9 +87,6 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
           )}
           <div
             className={cn(isUser ? "px-4 py-3" : "py-1")}
-            style={{
-              transition: "max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease",
-            }}
           >
             {isUser ? (
               <div className="flex flex-col gap-2">

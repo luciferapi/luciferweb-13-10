@@ -12,8 +12,10 @@ type ReferralRow = RowDataPacket & {
   name: string
   email: string
   status: ReferralStatus
+  status_reason: string | null
   depth: number
   created_at: Date | string
+  signup_at: Date | string
 }
 type ReferralProgramRow = RowDataPacket & {
   referrer_reward_type: "fixed" | "percentage"
@@ -104,10 +106,10 @@ export async function updateReferralProgram(program: ReferralProgram): Promise<v
     [
       program.referrerReward.type,
       program.referrerReward.amount,
-      program.referrerReward.type === "fixed" ? program.referrerReward.currency : "USD",
+      "INR",
       program.refereeReward.type,
       program.refereeReward.amount,
-      program.refereeReward.type === "fixed" ? program.refereeReward.currency : "USD",
+      "INR",
       program.conditions.minPurchaseAmount,
       validUntil,
       program.conditions.maxReferrals,
@@ -149,16 +151,16 @@ export async function getUserReferralTree(userId: string): Promise<{ code: strin
   const code = await createReferralCode(userId)
   const [rows] = await getDatabasePool().execute<ReferralRow[]>(
     `WITH RECURSIVE referral_tree AS (
-       SELECT id, referrer_id, referee_id, status, created_at, 0 AS depth
+       SELECT id, referrer_id, referee_id, status, status_reason, created_at, 0 AS depth
        FROM referrals WHERE referrer_id = ?
        UNION ALL
-       SELECT child.id, child.referrer_id, child.referee_id, child.status, child.created_at, parent.depth + 1
+       SELECT child.id, child.referrer_id, child.referee_id, child.status, child.status_reason, child.created_at, parent.depth + 1
        FROM referrals AS child
        INNER JOIN referral_tree AS parent ON child.referrer_id = parent.referee_id
        WHERE parent.depth < 9
      )
-     SELECT tree.id, tree.referrer_id, tree.referee_id, tree.status, tree.created_at, tree.depth,
-            users.name, users.email
+     SELECT tree.id, tree.referrer_id, tree.referee_id, tree.status, tree.status_reason, tree.created_at, tree.depth,
+            users.name, users.email, users.created_at AS signup_at
      FROM referral_tree AS tree
      INNER JOIN auth_users AS users ON users.id = tree.referee_id
      ORDER BY tree.depth, tree.created_at DESC`,
@@ -171,16 +173,18 @@ export async function getUserReferralTree(userId: string): Promise<{ code: strin
       id: row.id,
       name: row.name,
       status: row.status,
+      statusReason: row.status_reason,
       depth: Number(row.depth),
       createdAt: new Date(row.created_at).toISOString(),
+      signupAt: new Date(row.signup_at).toISOString(),
     })),
   }
 }
 
 export async function listAllReferrals(): Promise<ReferralEntry[]> {
   const [rows] = await getDatabasePool().execute<ReferralRow[]>(
-    `SELECT referrals.id, referrals.referrer_id, referrals.referee_id, referrals.status, referrals.created_at,
-            0 AS depth, invited.name, invited.email
+    `SELECT referrals.id, referrals.referrer_id, referrals.referee_id, referrals.status, referrals.status_reason, referrals.created_at,
+            0 AS depth, invited.name, invited.email, invited.created_at AS signup_at
      FROM referrals
      INNER JOIN auth_users AS invited ON invited.id = referrals.referee_id
      ORDER BY referrals.created_at DESC`,
@@ -190,15 +194,17 @@ export async function listAllReferrals(): Promise<ReferralEntry[]> {
     id: row.id,
     name: `${row.name} (${row.email})`,
     status: row.status,
+    statusReason: row.status_reason,
     depth: 0,
     createdAt: new Date(row.created_at).toISOString(),
+    signupAt: new Date(row.signup_at).toISOString(),
   }))
 }
 
-export async function updateReferralStatus(id: string, status: ReferralStatus): Promise<boolean> {
+export async function updateReferralStatus(id: string, status: ReferralStatus, reason: string | null): Promise<boolean> {
   const [result] = await getDatabasePool().execute<ResultSetHeader>(
-    `UPDATE referrals SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    [status, id],
+    `UPDATE referrals SET status = ?, status_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [status, reason, id],
   )
   return result.affectedRows === 1
 }

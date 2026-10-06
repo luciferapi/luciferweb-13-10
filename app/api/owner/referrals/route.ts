@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic"
 const updateSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(["pending", "active", "rejected"]),
+  reason: z.string().trim().max(500).nullable().optional(),
 })
 const rewardSchema = z.object({
   type: z.enum(["fixed", "percentage"]),
   amount: z.number().min(0).max(1_000_000),
-  currency: z.string().regex(/^[A-Z]{3}$/),
+  currency: z.literal("INR"),
 }).refine((reward) => reward.type !== "percentage" || reward.amount <= 100, {
   message: "Percentage rewards cannot exceed 100.",
 })
@@ -56,7 +57,8 @@ export async function PATCH(request: Request) {
       await updateReferralProgram(parsed.data.program)
       return NextResponse.json({ success: true })
     }
-    const updated = await updateReferralStatus(parsed.data.id, parsed.data.status)
+    const reason = parsed.data.reason || (parsed.data.status === "pending" ? "Awaiting manual review" : null)
+    const updated = await updateReferralStatus(parsed.data.id, parsed.data.status, reason)
     if (!updated) return NextResponse.json({ error: "Referral not found." }, { status: 404 })
     return NextResponse.json({ success: true })
   } catch (error) {

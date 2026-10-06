@@ -91,8 +91,8 @@ html {
 }
 
 @theme inline {
-  --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Geist Mono", monospace;
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -151,10 +151,45 @@ html {
 
   html {
     @apply bg-background text-foreground;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
+    font-family: var(--font-sans), "Segoe UI", sans-serif;
+    letter-spacing: -0.02em;
+    text-rendering: optimizeLegibility;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: -0.06em;
+    line-height: 0.96;
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  span,
+  label,
+  button,
+  input,
+  textarea,
+  select {
+    text-wrap: pretty;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-shell {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
   }
 }
 
@@ -274,16 +309,14 @@ html {
   animation: grain 8s steps(10) infinite;
 }
 
-/* Keep the AI chat dark regardless of the site's selected theme. */
+/* Keep the chat workspace dark regardless of the site's selected theme. */
 .ai-chat-section {
   color-scheme: dark;
   color: #e2e8f0;
   background:
-    radial-gradient(ellipse at 50% 32%, rgba(124, 58, 237, 0.16), transparent 55%),
-    linear-gradient(145deg, #080b14, #101225 58%, #08131b);
+    radial-gradient(ellipse at 50% 12%, rgba(34, 211, 238, 0.075), transparent 48%),
+    linear-gradient(145deg, #080b12, #0b1119 58%, #080d14);
 }
-.ai-chat-section .lucifer-title { color: #f1f5f9; }
-.ai-chat-section .lucifer-subtitle,
 .ai-chat-section .text-stone-400 { color: #94a3b8; }
 .ai-chat-section .text-stone-800 { color: #e2e8f0; }
 .ai-chat-section .bg-white { background-color: #1e293b; }
@@ -292,10 +325,12 @@ html {
 .ai-chat-section textarea { min-width: 0; color: #f1f5f9; caret-color: #67e8f9; }
 .ai-chat-section textarea::placeholder { color: #94a3b8; opacity: 1; }
 .ai-chat-section button[aria-label="Reset chat"],
-.ai-chat-section button[aria-label="Select AI model"] { background: #1e293b; color: #c4b5fd; }
+.ai-chat-section button[aria-label="Start a new chat"],
+.ai-chat-section button[aria-label="Select AI model"] { color: #a5f3fc; }
 .ai-chat-section button[aria-label="Reset chat"]:hover,
-.ai-chat-section button[aria-label="Select AI model"]:hover { background: #334155; }
-.ai-chat-section button[aria-label="Start voice input"] { background: #1e293b; color: #93c5fd; }
+.ai-chat-section button[aria-label="Start a new chat"]:hover,
+.ai-chat-section button[aria-label="Select AI model"]:hover { color: #ecfeff; }
+.ai-chat-section button[aria-label="Start voice input"] { color: #a5f3fc; }
 .ai-chat-section button[aria-label="Start voice input"]:hover { background: #334155; }
 .ai-chat-section button[aria-label="Attach image"] { background: #1e293b; color: #67e8f9; }
 .ai-chat-section button[aria-label="Attach image"]:hover { background: #334155; }
@@ -304,10 +339,6 @@ html {
 .ai-chat-section button:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
 .ai-chat-section button:disabled { cursor: not-allowed; }
 .ai-chat-section .gradient-text-animated,
-.ai-chat-section .analysis-word-gradient { background-image: linear-gradient(110deg, #67e8f9, #a78bfa, #f0abfc, #67e8f9); }
-.ai-chat-section .orb-intro,
-.ai-chat-section .composer-intro,
-.ai-chat-section .text-blur-intro,
-.ai-chat-section .text-blur-intro-delay { animation-duration: 500ms; animation-delay: 0ms; }
+.ai-chat-section .analysis-word-gradient { background-image: linear-gradient(110deg, #67e8f9, #a5f3fc, #67e8f9); }
 @media (max-width: 640px) { .ai-chat-section textarea { font-size: 16px; } }
-@media (prefers-reduced-motion: reduce) { .ai-chat-section *, .ai-chat-section *::before, .ai-chat-section *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .ai-chat-section .orb-intro, .ai-chat-section .composer-intro, .ai-chat-section .text-blur-intro, .ai-chat-section .text-blur-intro-delay, .ai-chat-section .streaming-word { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .ai-chat-section *, .ai-chat-section *::before, .ai-chat-section *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .ai-chat-section .streaming-word { opacity: 1; transform: none; filter: none; } }

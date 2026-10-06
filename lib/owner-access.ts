@@ -4,8 +4,8 @@ import { findUserBySession } from "@/lib/auth-store"
 
 const OWNER_EMAIL = "kspgpraveen157@gmail.com"
 
-export function isOwnerEmail(email: string) {
-  return email.trim().toLowerCase() === OWNER_EMAIL
+export function isOwnerEmail(email: string | null) {
+  return email?.trim().toLowerCase() === OWNER_EMAIL
 }
 
 export async function requireOwnerAccess(): Promise<NextResponse | null> {

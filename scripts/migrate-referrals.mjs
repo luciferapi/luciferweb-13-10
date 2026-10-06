@@ -53,6 +53,7 @@ try {
       referrer_id CHAR(36) NOT NULL,
       referee_id CHAR(36) NOT NULL UNIQUE,
       status ENUM('pending', 'active', 'rejected') NOT NULL DEFAULT 'pending',
+      status_reason VARCHAR(500) NULL DEFAULT 'Awaiting manual review',
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX referrals_referrer_created_idx (referrer_id, created_at),
@@ -64,15 +65,31 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
 
+  const [referralReasonColumns] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'referrals'
+       AND COLUMN_NAME = 'status_reason'`,
+  )
+  if (referralReasonColumns.length === 0) {
+    await pool.execute(
+      "ALTER TABLE referrals ADD COLUMN status_reason VARCHAR(500) NULL DEFAULT 'Awaiting manual review' AFTER status",
+    )
+  }
+  await pool.execute(
+    `UPDATE referrals SET status_reason = 'Awaiting manual review'
+     WHERE status = 'pending' AND status_reason IS NULL`,
+  )
+
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS referral_program_settings (
       program_id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
       referrer_reward_type ENUM('fixed', 'percentage') NOT NULL DEFAULT 'fixed',
       referrer_reward_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-      referrer_reward_currency CHAR(3) NOT NULL DEFAULT 'USD',
+      referrer_reward_currency CHAR(3) NOT NULL DEFAULT 'INR',
       referee_reward_type ENUM('fixed', 'percentage') NOT NULL DEFAULT 'fixed',
       referee_reward_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-      referee_reward_currency CHAR(3) NOT NULL DEFAULT 'USD',
+      referee_reward_currency CHAR(3) NOT NULL DEFAULT 'INR',
       min_purchase_amount DECIMAL(10,2) NULL,
       valid_until DATETIME NULL,
       max_referrals INT UNSIGNED NULL,
@@ -83,6 +100,21 @@ try {
     INSERT INTO referral_program_settings (program_id)
     VALUES (1)
     ON DUPLICATE KEY UPDATE program_id = VALUES(program_id)
+  `)
+  await pool.execute(`
+    UPDATE referral_program_settings
+    SET referrer_reward_currency = 'INR'
+    WHERE referrer_reward_currency <> 'INR'
+  `)
+  await pool.execute(`
+    UPDATE referral_program_settings
+    SET referee_reward_currency = 'INR'
+    WHERE referee_reward_currency <> 'INR'
+  `)
+  await pool.execute(`
+    ALTER TABLE referral_program_settings
+      MODIFY referrer_reward_currency CHAR(3) NOT NULL DEFAULT 'INR',
+      MODIFY referee_reward_currency CHAR(3) NOT NULL DEFAULT 'INR'
   `)
 
   console.log("Referral tables are ready.")

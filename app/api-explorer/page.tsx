@@ -8,5 +8,5 @@ export default async function ApiExplorerPage() {
   await requireSignedInUser("/api-explorer")
   const apiProjects = (await readProjects()).filter((project) => project.isPublished && project.category === "API")
 
-  return <main className="min-h-screen bg-[#08080b] pt-24"><ApiSection apiProjects={apiProjects} /></main>
+  return <main className="min-h-screen bg-background pt-20 text-foreground"><ApiSection apiProjects={apiProjects} /></main>
 }

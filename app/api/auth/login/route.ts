@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { authenticateUser, createSession, SESSION_DURATION_SECONDS } from "@/lib/auth-store"
+import { authenticateUser, createSession } from "@/lib/auth-store"
+import { setAuthSessionCookie } from "@/lib/auth-cookie"
 import { loginSchema } from "@/lib/auth-validation"
 
 export const runtime = "nodejs"
@@ -17,14 +18,7 @@ export async function POST(request: Request) {
 
     const session = await createSession(user.id)
     const response = NextResponse.json({ user })
-    response.cookies.set("lucifer_session", session.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: session.expiresAt,
-      maxAge: SESSION_DURATION_SECONDS,
-    })
+    setAuthSessionCookie(response, session, parsed.data.rememberMe)
     return response
   } catch (error) {
     console.error("Sign-in failed.", error)

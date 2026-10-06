@@ -14,7 +14,11 @@ export async function GET() {
       getUserReferralTree(user.id),
       getReferralProgram(),
     ])
-    return NextResponse.json({ ...referralData, program }, { headers: { "Cache-Control": "private, no-store" } })
+    return NextResponse.json({
+      ...referralData,
+      name: user.name,
+      program,
+    }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) {
     console.error("Could not load referral data.", error)
     return NextResponse.json({ error: "Could not load your referrals right now." }, { status: 500 })

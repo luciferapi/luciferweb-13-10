@@ -53,16 +53,16 @@ export function Footer() {
   ]
 
   return (
-    <footer ref={footerRef} id="contact" className="relative overflow-hidden bg-background py-16 pb-6 text-foreground">
-      <div className="max-w-7xl mx-auto px-6">
+    <footer ref={footerRef} id="contact" className="relative overflow-hidden bg-background py-20 pb-6 text-foreground">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: [0.25, 0.4, 0.25, 1] }}
-          className="text-center mb-12"
+          className="mb-12 text-center"
         >
-          <h2 className="overflow-hidden text-4xl font-black leading-[0.9] tracking-tighter text-foreground md:text-6xl">
+          <h2 className="overflow-hidden text-[clamp(2.5rem,5vw,5rem)] font-black leading-[0.9] tracking-[-0.08em] text-foreground">
             <motion.span
               className="block"
               initial={{ y: 100 }}
@@ -89,9 +89,9 @@ export function Footer() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-xl mx-auto mb-12"
+          className="mx-auto mb-12 max-w-xl"
         >
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <motion.div className="flex-1 relative" whileFocus={{ scale: 1.02 }}>
               <motion.input
                 type="email"
@@ -147,7 +147,7 @@ export function Footer() {
           transition={{ delay: 0.3 }}
         >
           <p className="mx-auto max-w-xl font-mono text-xs leading-relaxed text-muted-foreground">
-              LUCIFER AI is a personal technology lab by K Praveenkumar — exploring code, AI, APIs, and creative systems. Build something useful, then share what you learned.
+              LUCIFER AI is a personal technology lab by K Praveenkumar. It explores code, AI, APIs, and creative systems. Build something useful, then share what you learned.
           </p>
         </motion.div>
 

@@ -7,16 +7,16 @@ import { Footer } from "@/components/footer"
 
 function LuciferHero() {
   return (
-    <section id="hero" className="relative flex min-h-[92vh] items-center overflow-hidden bg-background px-6 pt-28 text-foreground">
+    <section id="hero" className="relative flex min-h-[92vh] items-center overflow-hidden bg-background px-4 pb-8 pt-28 text-foreground sm:px-6 lg:px-8">
       <video className="absolute inset-0 h-full w-full object-cover opacity-0 brightness-110 contrast-110 dark:opacity-100" autoPlay muted loop playsInline aria-hidden="true">
         <source src="/video/background%20video.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(8,8,11,0.42)_0%,rgba(8,8,11,0.36)_42%,rgba(8,8,11,0.16)_100%),linear-gradient(180deg,rgba(8,8,11,0.1),rgba(8,8,11,0.48))] dark:block" aria-hidden="true" />
       <div className="absolute inset-0 hidden bg-[radial-gradient(circle_at_72%_35%,rgba(168,85,247,0.18),transparent_32%),radial-gradient(circle_at_15%_75%,rgba(34,211,238,0.12),transparent_28%)] dark:block" aria-hidden="true" />
-      <div className="relative mx-auto grid min-w-0 w-full max-w-6xl items-center gap-12 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="relative mx-auto grid min-w-0 w-full max-w-6xl items-center gap-10 xl:grid-cols-[1.08fr_0.92fr]">
         <div className="min-w-0">
-          <h1 className="mt-6 text-[clamp(2.25rem,6vw,4.5rem)] font-black uppercase tracking-[-0.06em] text-foreground xl:text-7xl dark:text-white dark:drop-shadow-[0_0_24px_rgba(255,255,255,0.22)]">BUILDING DIGITAL EXPERIENCES</h1>
-          <p className="mt-7 max-w-xl text-lg leading-8 text-muted-foreground dark:text-white/80 dark:drop-shadow-[0_0_18px_rgba(0,0,0,0.45)]">Hi, I&apos;m K Praveenkumar. I build with code, AI, APIs, and modern web technologies.</p>
+          <h1 className="mt-6 text-[clamp(2.5rem,5.5vw,4.8rem)] font-black uppercase leading-[0.9] tracking-[-0.08em] text-foreground xl:text-[5.2rem] dark:text-white dark:drop-shadow-[0_0_24px_rgba(255,255,255,0.22)]">BUILDING DIGITAL EXPERIENCES</h1>
+          <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8 dark:text-white/80 dark:drop-shadow-[0_0_18px_rgba(0,0,0,0.45)]">Hi, I&apos;m K Praveenkumar. I build with code, AI, APIs, and modern web technologies.</p>
           <div className="mt-9 flex flex-wrap gap-3"><a href="#api" className="rounded-full bg-foreground px-6 py-3 text-sm font-bold uppercase tracking-[0.12em] text-background transition hover:opacity-80">Explore the APIs</a><a href="#about" className="rounded-full border border-border px-6 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-foreground/80 transition hover:border-cyan-500/60 hover:text-foreground dark:border-white/15 dark:text-white/80 dark:hover:text-white">About LUCIFER AI</a><a href="/contact" className="rounded-full border border-cyan-500/50 bg-cyan-500/10 px-6 py-3 text-sm font-bold uppercase tracking-[0.12em] text-cyan-800 transition hover:bg-cyan-500/20 dark:text-cyan-200">Request New Project</a></div>
         </div>
         <motion.a href="/chat" aria-label="Open LUCIFER AI chat" className="relative mx-auto block min-w-0 w-full max-w-sm cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-8 focus-visible:ring-offset-background" initial={{ opacity: 0, y: 28, rotate: -3 }} animate={{ opacity: 1, y: [0, -10, 0], rotate: [-3, 2, -3] }} transition={{ opacity: { duration: 0.7 }, y: { duration: 4, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}>

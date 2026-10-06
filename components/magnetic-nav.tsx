@@ -1,10 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { BookOpen, ChartNoAxesColumn, ChevronDown, FolderKanban, LayoutDashboard, LayoutGrid, LogIn, LogOut, Menu, Moon, Monitor, PanelLeftClose, PanelLeftOpen, Pencil, Receipt, Send, ShieldCheck, Sparkles, Sun, Settings2, UserRound, Wallet, X } from 'lucide-react';
+import gsap from 'gsap';
+import { BookOpen, ChartNoAxesColumn, ChevronDown, FolderKanban, LayoutDashboard, LayoutGrid, LogIn, LogOut, Menu, Moon, Monitor, PanelLeftClose, PanelLeftOpen, Pencil, Send, ShieldCheck, Sparkles, Sun, Settings2, UserRound, Wallet, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const NAV_ITEMS = [
   { label: 'Home', href: '/', icon: LayoutGrid },
@@ -14,9 +23,10 @@ const NAV_ITEMS = [
   { label: 'Pocket Money', href: '/pocket-money', icon: Wallet },
   { label: 'Contact', href: '/contact', icon: Send },
   { label: 'Privacy', href: '/privacy', icon: ShieldCheck },
+  { label: 'Settings', href: '/settings', icon: Settings2 },
 ];
 
-const TRANSACTION_NAV_ITEM = { label: 'Transaction History', href: '/transactions', icon: Receipt };
+const WALLET_NAV_ITEM = { label: 'Wallet', href: '/wallet', icon: Wallet };
 const OWNER_NAV_ITEM = { label: 'Admin Dashboard', href: '/owner', icon: LayoutDashboard };
 const POCKET_MONEY_SUB_ITEMS = [
   { label: '📺 Watch Ads & Tasks', href: '/pocket-money/watch-ads-tasks' },
@@ -30,36 +40,8 @@ const THEME_OPTIONS = [
   { label: 'Dark', value: 'dark', icon: Moon },
 ];
 
-const LANGUAGE_OPTIONS = [
-  { label: 'English', value: 'en' },
-  { label: 'Hindi', value: 'hi' },
-  { label: 'Tamil', value: 'ta' },
-  { label: 'Telugu', value: 'te' },
-  { label: 'Kannada', value: 'kn' },
-  { label: 'Malayalam', value: 'ml' },
-  { label: 'Bengali', value: 'bn' },
-  { label: 'Marathi', value: 'mr' },
-  { label: 'Gujarati', value: 'gu' },
-  { label: 'Punjabi', value: 'pa' },
-  { label: 'Urdu', value: 'ur' },
-  { label: 'Arabic', value: 'ar' },
-  { label: 'Spanish', value: 'es' },
-  { label: 'French', value: 'fr' },
-  { label: 'German', value: 'de' },
-  { label: 'Italian', value: 'it' },
-  { label: 'Portuguese', value: 'pt' },
-  { label: 'Russian', value: 'ru' },
-  { label: 'Chinese', value: 'zh' },
-  { label: 'Japanese', value: 'ja' },
-  { label: 'Korean', value: 'ko' },
-  { label: 'Thai', value: 'th' },
-  { label: 'Vietnamese', value: 'vi' },
-  { label: 'Indonesian', value: 'id' },
-  { label: 'Turkish', value: 'tr' },
-  { label: 'Dutch', value: 'nl' },
-];
-
 type SessionUser = {
+  publicUid: string
   name: string
   email: string
 }
@@ -69,6 +51,7 @@ export default function MagneticNav() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pocketMoneyOpen, setPocketMoneyOpen] = useState(pathname.startsWith('/pocket-money'));
   const [editingName, setEditingName] = useState(false);
@@ -77,12 +60,28 @@ export default function MagneticNav() {
   const [nameError, setNameError] = useState('');
   const [signedIn, setSignedIn] = useState(false);
   const [profile, setProfile] = useState<SessionUser | null>(null);
+  const [walletBalancePaise, setWalletBalancePaise] = useState<number | null>(null);
+  const [walletBalanceError, setWalletBalanceError] = useState(false);
+  const [walletBalanceLoading, setWalletBalanceLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const mobileHeaderRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileDrawerRef = useRef<HTMLDivElement>(null);
+  const mobileBackdropRef = useRef<HTMLButtonElement>(null);
   const navItems = signedIn
-    ? [...NAV_ITEMS, TRANSACTION_NAV_ITEM, ...(profile?.email.trim().toLowerCase() === 'kspgpraveen157@gmail.com' ? [OWNER_NAV_ITEM] : [])]
+    ? [...NAV_ITEMS, WALLET_NAV_ITEM, ...(profile?.email.trim().toLowerCase() === 'kspgpraveen157@gmail.com' ? [OWNER_NAV_ITEM] : [])]
     : NAV_ITEMS;
+  const profileBalanceLabel = walletBalanceLoading && walletBalancePaise === null
+    ? '...'
+    : walletBalanceError && walletBalancePaise === null
+      ? 'Unavailable'
+      : new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2,
+      }).format((walletBalancePaise ?? 0) / 100);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--navigation-width", sidebarExpanded ? "17rem" : "5.75rem");
@@ -91,6 +90,74 @@ export default function MagneticNav() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const header = mobileHeaderRef.current;
+    if (!header) return;
+
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      const context = gsap.context(() => {
+        gsap.fromTo(
+          header,
+          { y: -14, autoAlpha: 0 },
+          { y: 0, autoAlpha: 1, duration: 0.48, ease: 'power3.out', clearProps: 'transform,opacity,visibility' },
+        );
+      }, header);
+      return () => context.revert();
+    });
+
+    return () => media.revert();
+  }, []);
+
+  useEffect(() => {
+    const drawer = mobileDrawerRef.current;
+    const backdrop = mobileBackdropRef.current;
+    if (!drawer || !backdrop) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(drawer, {
+        xPercent: menuOpen ? 0 : -100,
+        autoAlpha: menuOpen ? 1 : 0,
+        pointerEvents: menuOpen ? 'auto' : 'none',
+      });
+      gsap.set(backdrop, {
+        autoAlpha: menuOpen ? 1 : 0,
+        pointerEvents: menuOpen ? 'auto' : 'none',
+      });
+      return;
+    }
+
+    gsap.killTweensOf([drawer, backdrop]);
+    const timeline = gsap.timeline();
+    timeline.to(backdrop, {
+      autoAlpha: menuOpen ? 1 : 0,
+      pointerEvents: menuOpen ? 'auto' : 'none',
+      duration: menuOpen ? 0.24 : 0.18,
+      ease: 'power2.out',
+    }, 0);
+    timeline.to(drawer, {
+      xPercent: menuOpen ? 0 : -100,
+      autoAlpha: menuOpen ? 1 : 0,
+      pointerEvents: menuOpen ? 'auto' : 'none',
+      duration: menuOpen ? 0.38 : 0.28,
+      ease: menuOpen ? 'power3.out' : 'power2.in',
+    }, 0);
+
+    if (menuOpen) {
+      const items = drawer.querySelectorAll<HTMLElement>('[data-mobile-nav-item]');
+      timeline.fromTo(
+        items,
+        { autoAlpha: 0, x: -8 },
+        { autoAlpha: 1, x: 0, duration: 0.22, stagger: 0.035, ease: 'power2.out' },
+        0.12,
+      );
+    }
+
+    return () => {
+      timeline.kill();
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -109,12 +176,18 @@ export default function MagneticNav() {
           'user' in result &&
           typeof result.user === 'object' &&
           result.user !== null &&
+          'publicUid' in result.user &&
+          typeof result.user.publicUid === 'string' &&
           'name' in result.user &&
           typeof result.user.name === 'string' &&
           'email' in result.user &&
-          typeof result.user.email === 'string'
+          (typeof result.user.email === 'string' || result.user.email === null)
         ) {
-          setProfile({ name: result.user.name, email: result.user.email });
+          setProfile({
+            publicUid: result.user.publicUid,
+            name: result.user.name,
+            email: result.user.email ?? '',
+          });
         } else {
           throw new Error('The session response did not contain a valid profile.');
         }
@@ -130,6 +203,76 @@ export default function MagneticNav() {
     return () => controller.abort();
   }, [pathname]);
 
+  useEffect(() => {
+    if (!signedIn) {
+      setWalletBalancePaise(null);
+      setWalletBalanceError(false);
+      setWalletBalanceLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    async function loadWalletBalance() {
+      setWalletBalanceLoading(true);
+      setWalletBalanceError(false);
+      try {
+        const response = await fetch('/api/wallet/balance', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const result: unknown = await response.json();
+        if (!response.ok) throw new Error('Could not load your wallet balance.');
+        if (
+          typeof result !== 'object' ||
+          result === null ||
+          !('balancePaise' in result) ||
+          typeof result.balancePaise !== 'number' ||
+          !Number.isSafeInteger(result.balancePaise) ||
+          result.balancePaise < 0
+        ) {
+          throw new Error('The wallet balance response was invalid.');
+        }
+        setWalletBalancePaise(result.balancePaise);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        console.error('Could not load the profile wallet balance.', error);
+        setWalletBalanceError(true);
+      } finally {
+        if (!controller.signal.aborted) setWalletBalanceLoading(false);
+      }
+    }
+
+    const refreshBalance = () => void loadWalletBalance();
+    void loadWalletBalance();
+    window.addEventListener('wallet-deposit-updated', refreshBalance);
+    window.addEventListener('wallet-withdrawal-updated', refreshBalance);
+    return () => {
+      controller.abort();
+      window.removeEventListener('wallet-deposit-updated', refreshBalance);
+      window.removeEventListener('wallet-withdrawal-updated', refreshBalance);
+    };
+  }, [signedIn]);
+
+  useEffect(() => {
+    function updateProfile(event: Event) {
+      if (!(event instanceof CustomEvent)) return
+      const detail: unknown = event.detail
+      if (
+        typeof detail !== "object" ||
+        detail === null ||
+        !("name" in detail) ||
+        typeof detail.name !== "string"
+      ) {
+        return
+      }
+      const name = detail.name
+      setProfile((current) => current ? { ...current, name } : current)
+    }
+
+    window.addEventListener("lucifer:profile-updated", updateProfile)
+    return () => window.removeEventListener("lucifer:profile-updated", updateProfile)
+  }, [])
+
   async function handleSignOut() {
     if (!window.confirm('Are you sure you want to log out?')) return;
 
@@ -139,7 +282,9 @@ export default function MagneticNav() {
       if (!response.ok) throw new Error('Could not sign out right now.');
       setSignedIn(false);
       setProfile(null);
+      setWalletBalancePaise(null);
       setMenuOpen(false);
+      setProfileOpen(false);
       setSettingsOpen(false);
     } catch (error) {
       console.error('Sign out failed.', error);
@@ -195,6 +340,7 @@ export default function MagneticNav() {
 
   useEffect(() => {
     setMenuOpen(false);
+    setProfileOpen(false);
     setSettingsOpen(false);
     if (pathname.startsWith('/pocket-money')) setPocketMoneyOpen(true);
   }, [pathname]);
@@ -350,16 +496,6 @@ export default function MagneticNav() {
                 </Link>
               );
             })}
-            <button
-              type="button"
-              aria-label="Open settings"
-              aria-expanded={settingsOpen}
-              onClick={() => setSettingsOpen((open) => !open)}
-              className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-            >
-              <Settings2 aria-hidden="true" size={16} className="text-cyan-700 dark:text-cyan-200" />
-              <span>Settings</span>
-            </button>
           </nav>
 
           <div className="mt-auto space-y-2 border-t border-border pt-3">
@@ -371,12 +507,15 @@ export default function MagneticNav() {
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-semibold text-foreground">{profile.name}</span>
                   <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{profile.email}</span>
+                  <span className="mt-0.5 block truncate font-mono text-[10px] text-muted-foreground">UID {profile.publicUid}</span>
                 </span>
               </div>
             ) : null}
-            <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-sky-300 px-3 text-sm font-bold text-slate-950 shadow-[0_6px_24px_rgba(34,211,238,0.14)] transition hover:brightness-105">
-              <Sparkles aria-hidden="true" size={16} /> Start chatting
-            </Link>
+            {pathname !== "/chat" ? (
+              <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-sky-300 px-3 text-sm font-bold text-slate-950 shadow-[0_6px_24px_rgba(34,211,238,0.14)] transition hover:brightness-105">
+                <Sparkles aria-hidden="true" size={16} /> Start chatting
+              </Link>
+            ) : null}
             {authChecked && signedIn ? (
               <button
                 type="button"
@@ -400,6 +539,12 @@ export default function MagneticNav() {
           {signedIn && profile ? (
             <>
               <p className="px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Account</p>
+              <p className="px-2.5 pb-2 text-xs text-muted-foreground">
+                Public UID
+                <span className="mt-0.5 block select-all font-mono font-semibold tracking-wide text-foreground">
+                  {profile.publicUid}
+                </span>
+              </p>
               <button
                 type="button"
                 onClick={() => { setNameDraft(profile.name); setNameError(''); setEditingName(true); setSettingsOpen(false); }}
@@ -425,14 +570,128 @@ export default function MagneticNav() {
       ) : null}
     </aside>
 
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
-      <div className="pointer-events-auto mx-auto flex min-h-14 max-w-7xl items-center justify-between gap-3 rounded-2xl border border-white/10 bg-background/75 px-3 shadow-[0_14px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl transition-colors sm:min-h-16 sm:px-5">
-        <Link href="/" aria-label="Lucifer AI home" className="group flex shrink-0 items-center gap-2.5">
-          <span className="relative size-9 overflow-hidden rounded-xl border border-cyan-200/30 bg-white/5 shadow-[0_0_22px_rgba(103,232,249,0.12)] sm:size-10">
+    <header ref={mobileHeaderRef} className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
+      <div className="pointer-events-auto mx-auto flex min-h-14 max-w-6xl items-center gap-3 px-3 sm:min-h-16 sm:px-5">
+        <Link href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
+          <span className="relative size-9 overflow-hidden rounded-xl border border-cyan-200/25 bg-white/5 sm:size-10">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover transition duration-300 group-hover:scale-110" />
           </span>
-          <span className="text-sm font-black tracking-[0.04em] text-foreground sm:text-base">LUCIFER <span className="text-cyan-300">AI</span></span>
+          <span className="truncate text-sm font-black tracking-[0.04em] text-foreground sm:text-base">LUCIFER <span className="text-cyan-300">AI</span></span>
         </Link>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {authChecked && !signedIn && !menuOpen ? (
+            <Link
+              href="/sign-in"
+              aria-current={pathname === '/sign-in' ? 'page' : undefined}
+              className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/sign-in' ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-700 dark:text-cyan-200' : 'border-border text-foreground/75 hover:border-cyan-300/40 hover:text-cyan-700 dark:hover:text-cyan-200'}`}
+            >
+              <LogIn aria-hidden="true" size={16} /> Sign in
+            </Link>
+          ) : null}
+          {pathname !== '/chat' && !menuOpen ? (
+            <Link href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-cyan-300 px-3.5 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-200 active:translate-y-0 sm:inline-flex">
+              <Sparkles aria-hidden="true" size={15} /> Start chatting
+            </Link>
+          ) : null}
+          {authChecked && signedIn && profile ? (
+            <DropdownMenu
+              open={profileOpen}
+              onOpenChange={(open) => {
+                setProfileOpen(open);
+                if (open) setMenuOpen(false);
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Open profile menu for ${profile.name}`}
+                  title={profile.name}
+                  className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-1.5 text-sm font-semibold text-foreground transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                >
+                  <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-slate-950">
+                    {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
+                  </span>
+                  <span className="hidden max-w-28 truncate font-mono text-xs tabular-nums sm:inline">
+                    {profileBalanceLabel}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={10} className="w-72 rounded-xl border-border bg-card p-2">
+                <DropdownMenuLabel className="flex min-w-0 items-center gap-3 px-2 py-2">
+                  <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-cyan-300/15 text-sm font-bold text-cyan-800 dark:text-cyan-200">
+                    {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">{profile.name}</span>
+                    <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">{profile.email}</span>
+                  </span>
+                  <UserRound aria-hidden="true" size={16} className="shrink-0 text-muted-foreground" />
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <p className="px-2 py-2 text-xs text-muted-foreground">
+                  Public UID
+                  <span className="mt-1 block select-all font-mono text-sm font-semibold tracking-wide text-foreground">
+                    {profile.publicUid}
+                  </span>
+                </p>
+                <DropdownMenuSeparator />
+                <div className="mx-1 my-1 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">Wallet balance</p>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <p aria-live="polite" className="font-mono text-base font-bold tabular-nums text-foreground">
+                      {walletBalanceLoading && walletBalancePaise === null
+                        ? 'Loading...'
+                        : walletBalanceError && walletBalancePaise === null
+                          ? 'Unavailable'
+                          : new Intl.NumberFormat('en-IN', {
+                            style: 'currency',
+                            currency: 'INR',
+                            minimumFractionDigits: 2,
+                          }).format((walletBalancePaise ?? 0) / 100)}
+                    </p>
+                    <DropdownMenuItem asChild className="min-h-8 cursor-pointer rounded-md px-2 text-xs">
+                      <Link href="/wallet">View wallet</Link>
+                    </DropdownMenuItem>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setNameDraft(profile.name);
+                    setNameError('');
+                    setEditingName(true);
+                  }}
+                  className="min-h-10 cursor-pointer rounded-lg"
+                >
+                  <Pencil aria-hidden="true" />Change name
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="min-h-10 cursor-pointer rounded-lg">
+                  <Link href="/settings">Account settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => void handleSignOut()}
+                  disabled={signingOut}
+                  className="min-h-10 cursor-pointer rounded-lg text-destructive focus:text-destructive"
+                >
+                  <LogOut aria-hidden="true" />{signingOut ? 'Logging out...' : 'Log out'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          <button
+            ref={menuButtonRef}
+            type="button"
+            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+            className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-muted/40 text-foreground/80 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-cyan-700 active:scale-[0.97] dark:hover:text-cyan-200 xl:hidden"
+          >
+            {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
+          </button>
+        </div>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl border border-border/70 bg-muted/40 p-1 xl:flex">
           {navItems.map((item) => {
@@ -448,58 +707,29 @@ export default function MagneticNav() {
               </Link>
             );
           })}
-          <button
-            type="button"
-            aria-label="Open settings"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((open) => !open)}
-            className={`relative rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${settingsOpen ? 'bg-cyan-300/10 text-cyan-700 shadow-sm dark:text-cyan-200' : 'text-foreground/65 hover:bg-background/70 hover:text-foreground'}`}
-          >
-            Settings
-          </button>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
-          {authChecked && !signedIn && (
-            <Link
-              href="/sign-in"
-              aria-current={pathname === '/sign-in' ? 'page' : undefined}
-              className={`hidden items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition sm:inline-flex ${pathname === '/sign-in' ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-600 dark:text-cyan-200' : 'border-border text-foreground/75 hover:border-cyan-300/40 hover:text-cyan-600 dark:hover:text-cyan-200'}`}
-            >
-              <LogIn aria-hidden="true" size={16} /> Sign in
-            </Link>
-          )}
-          <Link href="/chat" className="hidden items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-sky-300 px-4 py-2.5 text-sm font-bold text-slate-950 shadow-[0_6px_24px_rgba(34,211,238,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(34,211,238,0.28)] sm:inline-flex">
-            <Sparkles aria-hidden="true" size={15} /> Start chatting <span aria-hidden="true">↗</span>
-          </Link>
-          <button
-            type="button"
-            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setMenuOpen((open) => !open)}
-            className="grid size-10 place-items-center rounded-xl border border-border text-foreground/80 transition hover:border-cyan-300/40 hover:bg-muted hover:text-cyan-600 dark:hover:text-cyan-200 xl:hidden"
-          >
-            {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
-          </button>
-        </div>
       </div>
 
-      {menuOpen ? (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setMenuOpen(false)}
-          className="pointer-events-auto fixed inset-0 z-[60] bg-black/45 backdrop-blur-[2px] xl:hidden"
-        />
-      ) : null}
+      <button
+        ref={mobileBackdropRef}
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={() => setMenuOpen(false)}
+        className="pointer-events-none fixed inset-0 z-[60] bg-black/45 opacity-0 backdrop-blur-[2px] xl:hidden"
+        style={{ opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}
+      />
       <div
+        ref={mobileDrawerRef}
         id="mobile-navigation"
         role={menuOpen ? 'dialog' : undefined}
         aria-label={menuOpen ? 'Mobile navigation' : undefined}
         aria-modal={menuOpen || undefined}
         aria-hidden={!menuOpen}
-        className={`pointer-events-auto invisible fixed inset-y-0 left-0 z-[70] flex w-[min(20rem,calc(100vw-3rem))] flex-col overflow-y-auto overscroll-contain border-r border-border/80 bg-card/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl transition-transform duration-300 ease-out xl:hidden sm:p-5 ${menuOpen ? 'visible translate-x-0' : '-translate-x-full'}`}
+        inert={!menuOpen}
+        className="pointer-events-none fixed inset-y-0 left-0 z-[70] flex w-[min(20rem,calc(100vw-3rem))] flex-col overflow-y-auto overscroll-contain border-r border-cyan-300/15 bg-background/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl xl:hidden sm:p-5"
+        style={{ opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}
       >
           <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 size-48 rounded-full bg-cyan-300/10 blur-3xl" />
           <div className="relative mb-5 flex items-center justify-between gap-3 border-b border-border pb-4">
@@ -516,24 +746,12 @@ export default function MagneticNav() {
               <X aria-hidden="true" size={18} />
             </button>
           </div>
-          {signedIn && profile ? (
-            <div className="relative mb-4 flex min-w-0 items-center gap-3 rounded-xl border border-border/70 bg-background/50 p-3">
-              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-cyan-300/15 text-sm font-bold text-cyan-800 dark:text-cyan-200">
-                {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-foreground">{profile.name}</span>
-                <span className="mt-0.5 block truncate text-xs text-muted-foreground">{profile.email}</span>
-              </span>
-              <UserRound aria-hidden="true" size={16} className="ml-auto shrink-0 text-muted-foreground" />
-            </div>
-          ) : null}
           <nav aria-label="Mobile page links" className="relative flex flex-col gap-1">
           {navItems.map(({ icon: Icon, ...item }) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
             if (item.href === "/pocket-money") {
               return (
-                <div key={item.href}>
+                <div key={item.href} data-mobile-nav-item>
                   <button
                     type="button"
                     aria-expanded={pocketMoneyOpen}
@@ -567,6 +785,7 @@ export default function MagneticNav() {
             return (
               <Link
                 key={item.href}
+                data-mobile-nav-item
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
@@ -580,19 +799,6 @@ export default function MagneticNav() {
               </Link>
             );
           })}
-          <button
-            type="button"
-            aria-label="Open settings"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((open) => !open)}
-            className={`group flex min-h-11 items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${settingsOpen ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}
-          >
-            <span className="flex min-w-0 items-center gap-2.5">
-              <Settings2 aria-hidden="true" size={17} className={settingsOpen ? 'shrink-0 text-cyan-700 dark:text-cyan-200' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-cyan-700 dark:group-hover:text-cyan-200'} />
-              <span>Settings</span>
-            </span>
-            <span aria-hidden="true" className={`text-xs ${settingsOpen ? 'text-cyan-700 dark:text-cyan-200' : 'text-muted-foreground'}`}>⚙</span>
-          </button>
           </nav>
           {settingsOpen ? (
             <section aria-label="Settings options" className="relative mt-2 rounded-xl border border-border/70 bg-background/60 p-2">
@@ -642,18 +848,9 @@ export default function MagneticNav() {
               Sign in <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
             </Link>
           )}
-          {authChecked && signedIn ? (
-            <button
-              type="button"
-              onClick={() => void handleSignOut()}
-              disabled={signingOut}
-              className="relative mt-2 flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
-            >
-              <LogOut aria-hidden="true" size={17} />
-              {signingOut ? 'Logging out...' : 'Log out'}
-            </button>
+          {pathname !== '/chat' ? (
+            <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
           ) : null}
-          <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-sky-300 px-4 py-3 text-sm font-bold text-slate-950 shadow-[0_6px_24px_rgba(34,211,238,0.16)]"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
       </div>
     </header>
     {editingName ? (

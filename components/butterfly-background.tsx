@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 
-const hiddenRoutes = ["/api-explorer", "/projects", "/chat", "/owner"]
+const hiddenRoutes = ["/api-explorer", "/projects", "/chat", "/contact", "/owner", "/wallet", "/transactions"]
 
 export function ButterflyBackground() {
   const pathname = usePathname()

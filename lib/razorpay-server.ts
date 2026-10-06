@@ -15,3 +15,10 @@ export async function fetchRazorpayOrder(orderId: string, authorization: string)
     cache: "no-store",
   })
 }
+
+export async function fetchRazorpayPayment(paymentId: string, authorization: string) {
+  return fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+    headers: { Authorization: authorization, Accept: "application/json" },
+    cache: "no-store",
+  })
+}

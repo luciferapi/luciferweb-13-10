@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt, randomUUID, scrypt as scryptCallbac
 import { promisify } from "node:util"
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise"
 import { getDatabasePool } from "@/lib/database"
+import { generatePublicUserId } from "@/lib/public-user-id"
 
 const scrypt = promisify(scryptCallback)
 const SESSION_DURATION_SECONDS = 30 * 24 * 60 * 60
@@ -12,16 +13,27 @@ const EMAIL_OTP_MAX_ATTEMPTS = 5
 
 type UserRow = RowDataPacket & {
   id: string
+  public_uid: string
   name: string
-  email: string
-  date_of_birth: string
+  email: string | null
+  date_of_birth: string | Date | null
+  telegram_username: string | null
+  x_username: string | null
+  name_edit_used: number | boolean
+  date_of_birth_edit_used: number | boolean
+  password_hash?: string | null
 }
 
 type SessionRow = RowDataPacket & {
   id: string
+  public_uid: string
   name: string
-  email: string
-  date_of_birth: string
+  email: string | null
+  date_of_birth: string | Date | null
+  telegram_username: string | null
+  x_username: string | null
+  name_edit_used: number | boolean
+  date_of_birth_edit_used: number | boolean
   expires_at: Date
 }
 
@@ -43,12 +55,33 @@ type PendingRegistrationRow = RowDataPacket & {
 
 export type AuthUser = {
   id: string
+  publicUid: string
   name: string
-  email: string
+  email: string | null
+  dateOfBirth: string | null
+  telegramUsername: string | null
+  xUsername: string | null
+  nameEditUsed: boolean
+  dateOfBirthEditUsed: boolean
+}
+
+function normalizeDateOfBirth(value: string | Date | null): string | null {
+  if (value === null) return null
+  return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10)
 }
 
 function toAuthUser(row: UserRow | SessionRow): AuthUser {
-  return { id: row.id, name: row.name, email: row.email }
+  return {
+    id: row.id,
+    publicUid: row.public_uid,
+    name: row.name,
+    email: row.email,
+    dateOfBirth: normalizeDateOfBirth(row.date_of_birth),
+    telegramUsername: row.telegram_username,
+    xUsername: row.x_username,
+    nameEditUsed: Boolean(row.name_edit_used),
+    dateOfBirthEditUsed: Boolean(row.date_of_birth_edit_used),
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -75,14 +108,25 @@ export async function createUser(input: {
   dateOfBirth: string
 }): Promise<AuthUser> {
   const id = randomUUID()
+  const publicUid = generatePublicUserId()
   const passwordHash = await hashPassword(input.password)
   const [result] = await getDatabasePool().execute<ResultSetHeader>(
-    `INSERT INTO auth_users (id, name, email, password_hash, date_of_birth)
-     VALUES (?, ?, ?, ?, ?)`,
-    [id, input.name, input.email, passwordHash, input.dateOfBirth],
+    `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, publicUid, input.name, input.email, passwordHash, input.dateOfBirth],
   )
   if (result.affectedRows !== 1) throw new Error("The new account was not saved.")
-  return { id, name: input.name, email: input.email }
+  return {
+    id,
+    publicUid,
+    name: input.name,
+    email: input.email,
+    dateOfBirth: input.dateOfBirth,
+    telegramUsername: null,
+    xUsername: null,
+    nameEditUsed: false,
+    dateOfBirthEditUsed: false,
+  }
 }
 
 export async function beginEmailVerification(input: {
@@ -237,7 +281,7 @@ export async function verifyEmailRegistration(
     }
 
     const [existingUsers] = await connection.execute<UserRow[]>(
-      "SELECT id, name, email, date_of_birth FROM auth_users WHERE email = ? LIMIT 1",
+      "SELECT id, public_uid, name, email, date_of_birth FROM auth_users WHERE email = ? LIMIT 1",
       [email],
     )
     if (existingUsers.length > 0) {
@@ -247,10 +291,11 @@ export async function verifyEmailRegistration(
     }
 
     const id = randomUUID()
+    const publicUid = generatePublicUserId()
     await connection.execute(
-      `INSERT INTO auth_users (id, name, email, password_hash, date_of_birth)
-       VALUES (?, ?, ?, ?, ?)`,
-      [id, pending.name, email, pending.password_hash, pending.date_of_birth],
+      `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, publicUid, pending.name, email, pending.password_hash, pending.date_of_birth],
     )
     if (pending.referral_code) {
       const [referrers] = await connection.execute<(RowDataPacket & { user_id: string })[]>(
@@ -260,8 +305,8 @@ export async function verifyEmailRegistration(
       const referrerId = referrers[0]?.user_id
       if (referrerId && referrerId !== id) {
         await connection.execute(
-          `INSERT INTO referrals (id, referrer_id, referee_id, status)
-           VALUES (?, ?, ?, 'pending')`,
+          `INSERT INTO referrals (id, referrer_id, referee_id, status, status_reason)
+           VALUES (?, ?, ?, 'pending', 'Awaiting manual review')`,
           [randomUUID(), referrerId, id],
         )
       }
@@ -279,7 +324,17 @@ export async function verifyEmailRegistration(
 
     return {
       status: "verified",
-      user: { id, name: pending.name, email },
+      user: {
+        id,
+        publicUid,
+        name: pending.name,
+        email,
+        dateOfBirth: pending.date_of_birth,
+        telegramUsername: null,
+        xUsername: null,
+        nameEditUsed: false,
+        dateOfBirthEditUsed: false,
+      },
       token,
       expiresAt,
     }
@@ -293,13 +348,208 @@ export async function verifyEmailRegistration(
 
 export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
   const [rows] = await getDatabasePool().execute<UserRow[]>(
-    `SELECT id, name, email, date_of_birth, password_hash
+    `SELECT id, public_uid, name, email, date_of_birth, telegram_username, x_username,
+            name_edit_used, date_of_birth_edit_used, password_hash
      FROM auth_users WHERE email = ? LIMIT 1`,
     [email],
   )
-  const row = rows[0] as (UserRow & { password_hash: string }) | undefined
-  if (!row || !await verifyPassword(password, row.password_hash)) return null
+  const row = rows[0]
+  if (!row?.password_hash || !await verifyPassword(password, row.password_hash)) return null
   return toAuthUser(row)
+}
+
+export type OAuthProvider = "google" | "twitter" | "telegram"
+
+export class OAuthSignupRequiredError extends Error {
+  constructor() {
+    super("Create an account before using this provider to sign in.")
+    this.name = "OAuthSignupRequiredError"
+  }
+}
+
+export async function getOrCreateOAuthUser(input: {
+  provider: OAuthProvider
+  providerUserId: string
+  name: string
+  email?: string | null
+  emailVerified?: boolean
+  allowCreate?: boolean
+  dateOfBirth?: string
+  referralCode?: string
+}): Promise<AuthUser> {
+  const providerUserId = input.providerUserId.trim()
+  const name = input.name.trim().slice(0, 100)
+  const email = input.email?.trim().toLowerCase() || null
+  if (!providerUserId || !name || (email && !input.emailVerified)) {
+    throw new Error("The provider did not return a valid verified identity.")
+  }
+
+  const connection = await getDatabasePool().getConnection()
+  try {
+    await connection.beginTransaction()
+    const [identities] = await connection.execute<(RowDataPacket & {
+      id: string
+      public_uid: string
+      name: string
+      email: string | null
+      date_of_birth: string | Date | null
+      telegram_username: string | null
+      x_username: string | null
+      name_edit_used: number | boolean
+      date_of_birth_edit_used: number | boolean
+    })[]>(
+      `SELECT users.id, users.public_uid, users.name, users.email, users.date_of_birth,
+              users.telegram_username, users.x_username,
+              users.name_edit_used, users.date_of_birth_edit_used
+       FROM auth_identities AS identities
+       JOIN auth_users AS users ON users.id = identities.user_id
+       WHERE identities.provider = ? AND identities.provider_user_id = ?
+       LIMIT 1 FOR UPDATE`,
+      [input.provider, providerUserId],
+    )
+    if (identities[0]) {
+      await connection.commit()
+      return {
+        id: identities[0].id,
+        publicUid: identities[0].public_uid,
+        name: identities[0].name,
+        email: identities[0].email,
+        dateOfBirth: normalizeDateOfBirth(identities[0].date_of_birth),
+        telegramUsername: identities[0].telegram_username,
+        xUsername: identities[0].x_username,
+        nameEditUsed: Boolean(identities[0].name_edit_used),
+        dateOfBirthEditUsed: Boolean(identities[0].date_of_birth_edit_used),
+      }
+    }
+
+    let user: {
+      id: string
+      public_uid: string
+      name: string
+      email: string | null
+      date_of_birth: string | Date | null
+      telegram_username: string | null
+      x_username: string | null
+      name_edit_used: number | boolean
+      date_of_birth_edit_used: number | boolean
+    } | undefined
+    let createdUser = false
+    if (email && input.emailVerified) {
+      const [users] = await connection.execute<(RowDataPacket & {
+        id: string
+        public_uid: string
+        name: string
+        email: string | null
+        date_of_birth: string | Date | null
+        telegram_username: string | null
+        x_username: string | null
+        name_edit_used: number | boolean
+        date_of_birth_edit_used: number | boolean
+      })[]>(
+        `SELECT id, public_uid, name, email, date_of_birth, telegram_username, x_username,
+                name_edit_used, date_of_birth_edit_used
+         FROM auth_users WHERE email = ? LIMIT 1 FOR UPDATE`,
+        [email],
+      )
+      user = users[0]
+    }
+
+    if (!user) {
+      if (!input.allowCreate || !input.dateOfBirth) throw new OAuthSignupRequiredError()
+      user = {
+        id: randomUUID(),
+        public_uid: generatePublicUserId(),
+        name,
+        email,
+        date_of_birth: input.dateOfBirth,
+        telegram_username: null,
+        x_username: null,
+        name_edit_used: false,
+        date_of_birth_edit_used: false,
+      }
+      createdUser = true
+      await connection.execute(
+        `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth)
+         VALUES (?, ?, ?, ?, NULL, ?)`,
+        [user.id, user.public_uid, user.name, user.email, input.dateOfBirth],
+      )
+    }
+    if (createdUser && input.referralCode) {
+      const [referrers] = await connection.execute<(RowDataPacket & { user_id: string })[]>(
+        "SELECT user_id FROM referral_profiles WHERE referral_code = ? FOR UPDATE",
+        [input.referralCode.trim().toUpperCase()],
+      )
+      const referrerId = referrers[0]?.user_id
+      if (referrerId && referrerId !== user.id) {
+        await connection.execute(
+          `INSERT INTO referrals (id, referrer_id, referee_id, status, status_reason)
+           VALUES (?, ?, ?, 'pending', 'Awaiting manual review')`,
+          [randomUUID(), referrerId, user.id],
+        )
+      }
+    }
+    await connection.execute(
+      "INSERT INTO auth_identities (provider, provider_user_id, user_id) VALUES (?, ?, ?)",
+      [input.provider, providerUserId, user.id],
+    )
+    await connection.commit()
+    return {
+      id: user.id,
+      publicUid: user.public_uid,
+      name: user.name,
+      email: user.email,
+      dateOfBirth: normalizeDateOfBirth(user.date_of_birth),
+      telegramUsername: user.telegram_username,
+      xUsername: user.x_username,
+      nameEditUsed: Boolean(user.name_edit_used),
+      dateOfBirthEditUsed: Boolean(user.date_of_birth_edit_used),
+    }
+  } catch (error) {
+    await connection.rollback()
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ER_DUP_ENTRY"
+    ) {
+      const [identities] = await getDatabasePool().execute<(RowDataPacket & {
+        id: string
+        public_uid: string
+        name: string
+        email: string | null
+        date_of_birth: string | Date | null
+        telegram_username: string | null
+        x_username: string | null
+        name_edit_used: number | boolean
+        date_of_birth_edit_used: number | boolean
+      })[]>(
+        `SELECT users.id, users.public_uid, users.name, users.email, users.date_of_birth,
+                users.telegram_username, users.x_username,
+                users.name_edit_used, users.date_of_birth_edit_used
+         FROM auth_identities AS identities
+         JOIN auth_users AS users ON users.id = identities.user_id
+         WHERE identities.provider = ? AND identities.provider_user_id = ?
+         LIMIT 1`,
+        [input.provider, providerUserId],
+      )
+      if (identities[0]) {
+        return {
+          id: identities[0].id,
+          publicUid: identities[0].public_uid,
+          name: identities[0].name,
+          email: identities[0].email,
+          dateOfBirth: normalizeDateOfBirth(identities[0].date_of_birth),
+          telegramUsername: identities[0].telegram_username,
+          xUsername: identities[0].x_username,
+          nameEditUsed: Boolean(identities[0].name_edit_used),
+          dateOfBirthEditUsed: Boolean(identities[0].date_of_birth_edit_used),
+        }
+      }
+    }
+    throw error
+  } finally {
+    connection.release()
+  }
 }
 
 export async function createSession(userId: string): Promise<{ token: string; expiresAt: Date }> {
@@ -315,7 +565,7 @@ export async function createSession(userId: string): Promise<{ token: string; ex
 
 export async function createPasswordResetToken(email: string): Promise<string | null> {
   const [users] = await getDatabasePool().execute<UserRow[]>(
-    "SELECT id, name, email, date_of_birth FROM auth_users WHERE email = ? LIMIT 1",
+    "SELECT id, public_uid, name, email, date_of_birth FROM auth_users WHERE email = ? LIMIT 1",
     [email],
   )
   const user = users[0]
@@ -371,7 +621,9 @@ export async function resetPassword(token: string, password: string): Promise<bo
 export async function findUserBySession(token: string): Promise<AuthUser | null> {
   const tokenHash = createHash("sha256").update(token).digest("hex")
   const [rows] = await getDatabasePool().execute<SessionRow[]>(
-    `SELECT users.id, users.name, users.email, users.date_of_birth, sessions.expires_at
+    `SELECT users.id, users.public_uid, users.name, users.email, users.date_of_birth,
+            users.telegram_username, users.x_username,
+            users.name_edit_used, users.date_of_birth_edit_used, sessions.expires_at
      FROM auth_sessions AS sessions
      JOIN auth_users AS users ON users.id = sessions.user_id
      WHERE sessions.token_hash = ? AND sessions.expires_at > CURRENT_TIMESTAMP
@@ -381,8 +633,85 @@ export async function findUserBySession(token: string): Promise<AuthUser | null>
   return rows[0] ? toAuthUser(rows[0]) : null
 }
 
-export async function updateUserName(userId: string, name: string): Promise<void> {
-  await getDatabasePool().execute("UPDATE auth_users SET name = ? WHERE id = ?", [name, userId])
+export class ProfileOneTimeEditError extends Error {
+  constructor(field: "name" | "dateOfBirth") {
+    super(field === "name"
+      ? "Your display name has already used its one-time change."
+      : "Your date of birth has already used its one-time change.")
+    this.name = "ProfileOneTimeEditError"
+  }
+}
+
+export async function updateUserProfile(
+  userId: string,
+  profile: {
+    name?: string
+    dateOfBirth?: string
+    telegramUsername?: string | null
+    xUsername?: string | null
+  },
+): Promise<void> {
+  const connection = await getDatabasePool().getConnection()
+  try {
+    await connection.beginTransaction()
+    const [rows] = await connection.execute<(RowDataPacket & {
+      name: string
+      date_of_birth: string | Date | null
+      name_edit_used: number | boolean
+      date_of_birth_edit_used: number | boolean
+    })[]>(
+      `SELECT name, date_of_birth, name_edit_used, date_of_birth_edit_used
+       FROM auth_users WHERE id = ? FOR UPDATE`,
+      [userId],
+    )
+    const current = rows[0]
+    if (!current) throw new Error("The account profile could not be found.")
+
+    const updatedName = profile.name !== undefined && profile.name !== current.name
+      ? profile.name
+      : undefined
+    const updatedDateOfBirth = profile.dateOfBirth !== undefined &&
+      profile.dateOfBirth !== normalizeDateOfBirth(current.date_of_birth)
+      ? profile.dateOfBirth
+      : undefined
+    const nameChanged = updatedName !== undefined
+    const dateOfBirthChanged = updatedDateOfBirth !== undefined
+    if (nameChanged && Boolean(current.name_edit_used)) throw new ProfileOneTimeEditError("name")
+    if (dateOfBirthChanged && Boolean(current.date_of_birth_edit_used)) {
+      throw new ProfileOneTimeEditError("dateOfBirth")
+    }
+
+    const updates: string[] = []
+    const values: (string | null)[] = []
+    if (updatedName !== undefined) {
+      updates.push("name = ?", "name_edit_used = 1")
+      values.push(updatedName)
+    }
+    if (updatedDateOfBirth !== undefined) {
+      updates.push("date_of_birth = ?", "date_of_birth_edit_used = 1")
+      values.push(updatedDateOfBirth)
+    }
+    if (profile.telegramUsername !== undefined) {
+      updates.push("telegram_username = ?")
+      values.push(profile.telegramUsername)
+    }
+    if (profile.xUsername !== undefined) {
+      updates.push("x_username = ?")
+      values.push(profile.xUsername)
+    }
+    if (updates.length > 0) {
+      await connection.execute(
+        `UPDATE auth_users SET ${updates.join(", ")} WHERE id = ?`,
+        [...values, userId],
+      )
+    }
+    await connection.commit()
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
+  }
 }
 
 export async function deleteSession(token: string): Promise<void> {

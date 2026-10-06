@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useCallback, type KeyboardEvent, useEffect } from "react"
+import gsap from "gsap"
 import { Square, Mic, MicOff, Brain, Paperclip, X, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -82,10 +83,33 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
   const [showImageBounce, setShowImageBounce] = useState(false)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const composerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<SpeechRecognitionController | null>(null)
   const baseTextRef = useRef("")
   const finalTranscriptsRef = useRef("")
+
+  useEffect(() => {
+    const composer = composerRef.current
+    if (!composer || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        composer,
+        { autoAlpha: 0, y: 16 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.42,
+          delay: 0.12,
+          ease: "power3.out",
+          clearProps: "transform,opacity,visibility",
+        },
+      )
+    }, composer)
+
+    return () => context.revert()
+  }, [])
 
   function handleInput() {
     const textarea = textareaRef.current
@@ -235,17 +259,13 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
   const currentModel = AI_MODELS.find((m) => m.id === selectedModel) || AI_MODELS[0]
 
   return (
-    <div className={cn("fixed bottom-4 left-0 right-0 px-4 pointer-events-none z-10", "composer-intro")}>
-      <div className="relative max-w-2xl mx-auto pointer-events-auto">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-10 px-3 sm:bottom-6 sm:px-6 xl:left-[var(--navigation-width)]">
+      <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-3xl">
         <div
           className={cn(
-            "flex flex-col gap-3 border border-slate-700/80 bg-slate-950/90 p-4 transition-all duration-200 relative overflow-hidden rounded-3xl backdrop-blur-xl",
-            "focus-within:border-cyan-400/50 focus-within:ring-2 focus-within:ring-cyan-400/10",
+            "relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/95 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-colors duration-200 sm:rounded-3xl sm:p-4",
+            "focus-within:border-cyan-300/45 focus-within:ring-2 focus-within:ring-cyan-300/10",
           )}
-          style={{
-            boxShadow:
-              "0 18px 60px rgba(0, 0, 0, 0.45)",
-          }}
         >
           <div className="flex gap-2 items-center">
             {uploadedImage && (
@@ -271,13 +291,13 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 handleInput()
               }}
               onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "Listening..." : "Type a message... (Shift+Enter for new line)"}
+              placeholder={isRecording ? "Listening..." : "Message Lucifer AI..."}
               disabled={isStreaming || disabled}
               rows={1}
               className={cn(
-                "flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500",
+                "min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 text-slate-100 placeholder:text-slate-400",
                 "focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
-                "max-h-[56px] overflow-y-auto",
+                "max-h-40 overflow-y-auto",
               )}
               aria-label="Message input"
             />
@@ -305,7 +325,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 onClick={handleSend}
                 disabled={(!value.trim() && !uploadedImage) || disabled}
                 className={cn(
-                  "flex items-center gap-2 rounded-full bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex min-h-10 items-center gap-2 rounded-xl bg-cyan-300 px-3.5 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:-translate-y-px hover:bg-cyan-200 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50",
                 )}
                 aria-label="Send message"
               >
@@ -315,7 +335,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -331,7 +351,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 disabled={isStreaming || disabled}
                 size="icon"
                 className={cn(
-                  "h-9 w-9 shrink-0 transition-all rounded-full relative z-10",
+                  "relative z-10 h-9 w-9 shrink-0 rounded-xl transition-all",
                   isRecording
                     ? "bg-red-500 hover:bg-red-600 text-white animate-bounce-subtle"
                     : "bg-slate-800 hover:bg-slate-700 text-slate-200",
@@ -349,19 +369,19 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
               }}
               disabled={isStreaming || disabled}
               size="icon"
-              className="h-9 w-9 shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full"
+              className="h-9 w-9 shrink-0 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700"
               aria-label="Attach image"
             >
               <Paperclip className="w-4 h-4" />
             </Button>
 
             <DropdownMenu>
-              <DropdownMenuTrigger className="bg-slate-800" asChild>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   disabled={isStreaming || disabled}
-                  className="h-9 w-9 shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full"
+                  className="h-9 w-9 shrink-0 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700"
                   aria-label="Select AI model"
                   onClick={playClickSound}
                 >
@@ -397,7 +417,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
               </DropdownMenuPortal>
             </DropdownMenu>
 
-            <span className="text-xs font-medium tracking-wide text-slate-400">{currentModel.name}</span>
+            <span className="min-w-0 truncate text-xs font-medium tracking-wide text-slate-400">{currentModel.name}</span>
           </div>
         </div>
       </div>

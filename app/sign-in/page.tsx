@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, CalendarDays, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react"
+import gsap from "gsap"
 import { getLatestEligibleBirthDate } from "@/lib/age"
+import { SocialAuthButtons } from "@/components/social-auth-buttons"
 
 type AuthMode = "sign-in" | "create-account"
 
@@ -24,12 +26,42 @@ export default function SignInPage() {
   const [resetComplete, setResetComplete] = useState(false)
   const [notice, setNotice] = useState("")
   const [checkingSession, setCheckingSession] = useState(true)
+  const [socialNext, setSocialNext] = useState("/chat")
+  const [socialError, setSocialError] = useState("")
+  const socialFormRef = useRef<HTMLFormElement>(null)
+  const authPanelRef = useRef<HTMLElement>(null)
+  const authStageRef = useRef<HTMLDivElement>(null)
+  const authStage = resetComplete
+    ? "reset-complete"
+    : resetToken
+      ? "reset-password"
+      : forgotPassword
+        ? "forgot-password"
+        : pendingEmail
+          ? "verify-email"
+          : mode
 
   useEffect(() => {
     const controller = new AbortController()
     const params = new URLSearchParams(window.location.search)
     const token = params.get("reset") ?? ""
     const code = params.get("ref")?.trim().toUpperCase() ?? ""
+    const requestedSocialPath = params.get("next")
+    setSocialNext(
+      requestedSocialPath?.startsWith("/") &&
+      !requestedSocialPath.startsWith("//") &&
+      !requestedSocialPath.includes("\\")
+        ? requestedSocialPath
+        : "/chat",
+    )
+    const authError = params.get("authError")
+    if (authError === "cancelled") setSocialError("Sign-in was cancelled. You can try again or use your email.")
+    if (authError === "failed") setSocialError("Social sign-in failed. Please try again or use your email.")
+    if (authError === "signup_required") {
+      setMode("create-account")
+      setSocialError("No account uses this provider yet. Add your date of birth and accept the Privacy Policy to create one.")
+    }
+    if (code) setMode("create-account")
     setReferralCode(code)
     if (code || params.get("mode") === "create-account") setMode("create-account")
     setResetToken(token)
@@ -69,6 +101,36 @@ export default function SignInPage() {
     return () => window.clearInterval(timer)
   }, [pendingEmail, resendSeconds])
 
+  useLayoutEffect(() => {
+    const panel = authPanelRef.current
+    if (!panel || checkingSession || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        panel,
+        { autoAlpha: 0, y: 18 },
+        { autoAlpha: 1, y: 0, duration: 0.55, ease: "power2.out", clearProps: "all" },
+      )
+    }, panel)
+
+    return () => context.revert()
+  }, [checkingSession])
+
+  useLayoutEffect(() => {
+    const stage = authStageRef.current
+    if (!stage || checkingSession || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        stage,
+        { autoAlpha: 0, y: 10 },
+        { autoAlpha: 1, y: 0, duration: 0.32, ease: "power2.out", clearProps: "all" },
+      )
+    }, stage)
+
+    return () => context.revert()
+  }, [authStage, checkingSession])
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError("")
@@ -96,6 +158,7 @@ export default function SignInPage() {
       : {
           email: String(formData.get("email") ?? ""),
           password,
+          rememberMe: formData.get("rememberMe") === "on",
         }
 
     try {
@@ -234,13 +297,13 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080b] px-4 py-28 text-white sm:px-6">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080b] px-4 py-20 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.10),transparent_45%),linear-gradient(135deg,transparent_45%,rgba(217,70,239,0.04))]" />
       {checkingSession ? (
         <p className="relative text-sm text-white/65" role="status">Checking your sign-in...</p>
       ) : (
-      <section className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#101014]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8" aria-labelledby="sign-in-title">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-cyan-200">
+      <section ref={authPanelRef} className="relative w-full max-w-lg rounded-[28px] border border-white/10 bg-[#101014]/95 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-7 lg:p-8" aria-labelledby="sign-in-title">
+        <Link href="/" className="mb-7 inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-200">
           <ArrowLeft aria-hidden="true" size={16} /> Home
         </Link>
 
@@ -249,8 +312,8 @@ export default function SignInPage() {
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">LUCIFER AI</p>
-            <h1 id="sign-in-title" className="mt-1 text-xl font-bold">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">LUCIFER AI</p>
+            <h1 id="sign-in-title" className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-black tracking-[-0.06em] text-white">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
           </div>
         </div>
 
@@ -263,7 +326,7 @@ export default function SignInPage() {
                 role="tab"
                 aria-selected={mode === option}
                 onClick={() => { setMode(option); setError(""); }}
-                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${mode === option ? "bg-white/10 text-white" : "text-white/45 hover:text-white/75"}`}
+                className={`rounded-lg px-3 py-2.5 text-sm font-semibold tracking-[-0.02em] transition ${mode === option ? "bg-white/10 text-white shadow-inner shadow-black/20" : "text-white/45 hover:text-white/75"}`}
               >
                 {option === "sign-in" ? "Sign in" : "Create account"}
               </button>
@@ -271,6 +334,7 @@ export default function SignInPage() {
           </div>
         ) : null}
 
+        <div ref={authStageRef}>
         {resetComplete ? (
           <div className="space-y-4">
             <p role="status" className="text-sm leading-6 text-emerald-300">Your password has been reset. You can now sign in with your new password.</p>
@@ -368,7 +432,7 @@ export default function SignInPage() {
               Back to account form
             </button>
           </form>
-        ) : <form onSubmit={handleSubmit} className="space-y-4">
+        ) : <form ref={socialFormRef} onSubmit={handleSubmit} className="space-y-4">
           {mode === "create-account" && (
             <>
               <label className="block space-y-2 text-sm font-medium text-white/75">
@@ -435,6 +499,25 @@ export default function SignInPage() {
             </label>
           )}
 
+          {mode === "sign-in" && emailInput.trim() ? (
+            <label className="flex items-center gap-2.5 text-sm text-white/70">
+              <input
+                name="rememberMe"
+                type="checkbox"
+                className="size-4 shrink-0 accent-cyan-300"
+              />
+              <span>Remember me</span>
+            </label>
+          ) : null}
+
+          <SocialAuthButtons
+            nextPath={socialNext}
+            initialError={socialError}
+            mode={mode}
+            formRef={socialFormRef}
+            referralCode={referralCode}
+          />
+
           {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
           {mode === "sign-in" ? (
             <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-sm text-cyan-200/75 transition hover:text-cyan-100">
@@ -446,6 +529,7 @@ export default function SignInPage() {
             {isSubmitting ? "Please wait..." : mode === "sign-in" ? "Sign in" : "Create account"}
           </button>
         </form>}
+        </div>
 
       </section>
       )}

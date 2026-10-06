@@ -20,8 +20,10 @@ export type ReferralEntry = {
   id: string
   name: string
   status: ReferralStatus
+  statusReason: string | null
   depth: number
   createdAt: string
+  signupAt: string
 }
 
 export function isReferralEntry(value: unknown): value is ReferralEntry {
@@ -29,8 +31,10 @@ export function isReferralEntry(value: unknown): value is ReferralEntry {
     "id" in value && typeof value.id === "string" &&
     "name" in value && typeof value.name === "string" &&
     "status" in value && (value.status === "pending" || value.status === "active" || value.status === "rejected") &&
+    "statusReason" in value && (typeof value.statusReason === "string" || value.statusReason === null) &&
     "depth" in value && typeof value.depth === "number" &&
-    "createdAt" in value && typeof value.createdAt === "string"
+    "createdAt" in value && typeof value.createdAt === "string" &&
+    "signupAt" in value && typeof value.signupAt === "string"
 }
 
 export function isReferralProgram(value: unknown): value is ReferralProgram {
