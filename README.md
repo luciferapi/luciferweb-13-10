@@ -14,77 +14,104 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
 
-## Hostinger MySQL
+## Source layout
 
-Project data is stored in the Hostinger MySQL database. Configure either
-`DATABASE_URL` or the individual `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
-and `DB_NAME` variables in `.env.local` and in production hosting settings. Keep
-all credentials private. For local development, use Hostinger's remote database
-host and allow only the development machine's public IP in remote-access settings.
-When the app runs on the same Hostinger account, use the host specified for that
-website/database in hPanel.
+- `src/app` contains routes, layouts, and API handlers.
+- `src/features` groups feature-specific components and server-side logic.
+- `src/components` and `src/hooks` contain shared UI and hooks.
+- `src/lib` contains shared utilities and integrations.
+- `public` contains static web assets; `storage/project-catalog` contains local project media and source bundles.
+- `supabase` contains database configuration, migrations, and Edge Functions.
+- `docs` contains project documentation and archived design references.
 
-Before starting the app against a new database, import the current project catalog:
+## Supabase backend
 
-```bash
-npm run db:migrate
-```
+The Next.js app stores authentication records, sessions, projects, purchases,
+wallet activity, payout methods, referrals, and project requests in Supabase
+Postgres through server-side Supabase clients. It has no MySQL runtime fallback.
+Copy `.env.example` to `.env.local`
+and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+and the server-only `SUPABASE_SECRET_KEY` (or
+`SUPABASE_SERVICE_ROLE_KEY`). Never expose the server key through a
+`NEXT_PUBLIC_` variable.
 
-The migration creates the `projects` table, imports the contents of
-`data/projects.json`, verifies the imported rows, and removes that seed file only
-after the import succeeds. Do not run it until the database settings point at the
-intended database.
+App-managed email uses Hostinger SMTP (`smtp.hostinger.com`, port `465`) by
+default. Configure `SMTP_USER` and `SMTP_PASSWORD` with the Hostinger mailbox
+credentials. `SMTP_HOST` and `SMTP_PORT` can override the defaults if needed.
+To send a delivery test, make a same-origin `POST` request to
+`/api/owner/email-test` while signed in to the owner account with an email
+verification code. It sends a fixed test message to `SMTP_USER`; it does not
+accept arbitrary recipients.
 
-You can optionally use Cloudflare R2 for project images, demo videos, and source ZIPs
-instead of local disk. Set `CLOUDFLARE_R2_ACCOUNT_ID`, `CLOUDFLARE_R2_ACCESS_KEY_ID`,
-`CLOUDFLARE_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_R2_BUCKET`, and
-`CLOUDFLARE_R2_ENDPOINT` in `.env.local` and production hosting settings. Set
-`CLOUDFLARE_R2_PUBLIC_URL` to the bucket's public custom domain or enabled `r2.dev`
-URL for images and videos. Create a second bucket with public access disabled and set
-its name as `CLOUDFLARE_R2_PRIVATE_BUCKET`; source ZIPs are stored there and only
-returned through the verified purchase download flow. Give the R2 access key
-permission to read and write both buckets. When R2 is not configured, uploads
-continue to use local disk.
-
-Create the authentication tables once before using account registration or
-sign-in:
+Apply the database schema to the intended Supabase project with the Supabase CLI:
 
 ```bash
-npm run db:migrate-auth
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
 ```
 
-Registration stores a scrypt password hash, normalized email, name, date of
-birth, and a unique public UID in `auth_users`. The profile also supports
-optional Telegram and X usernames. Re-run `npm run db:migrate-auth` to apply
-authentication schema updates and assign public UIDs to existing accounts
-before deploying code that displays them. Sign-in sessions use random
-HTTP-only cookies; only their SHA-256 hashes are stored in `auth_sessions`.
+The migration enables row-level security and grants application table access
+only to the server-side service role. Keep that key private and configure it in
+the production hosting environment as well as local development. These schema
+migrations create the Supabase tables but do not transfer existing MySQL
+accounts, payment history, or project records; plan and verify any legacy-data
+import separately before switching a live deployment.
+
+Owner uploads for project images, demo videos, homepage banner images, maintenance images,
+and source ZIPs are stored in Cloudflare R2. Homepage banner text, link paths, enabled state,
+and display order remain in Supabase. Banner image URLs are stored as private
+R2 metadata keyed by banner ID, and uploaded image bytes are stored in the public R2 bucket.
+Set `CLOUDFLARE_R2_ACCOUNT_ID`, `CLOUDFLARE_R2_ACCESS_KEY_ID`,
+`CLOUDFLARE_R2_SECRET_ACCESS_KEY`, and `CLOUDFLARE_R2_BUCKET` in `.env.local` and
+production hosting settings. The endpoint is derived from the account ID; set
+`CLOUDFLARE_R2_ENDPOINT` only when using a custom S3-compatible endpoint. Use a
+public bucket hostname such as `https://<bucket>.<account-id>.r2.cloudflarestorage.com`,
+a custom public domain, or an enabled `r2.dev` URL for images, videos, and banners.
+If the value is set to the account-level R2 endpoint, the app normalizes it to the
+bucket-specific public hostname automatically. Create a second bucket with public access
+disabled and set its name as `CLOUDFLARE_R2_PRIVATE_BUCKET`; source ZIPs are stored there
+and only returned through the verified purchase download flow. Maintenance settings are also
+stored in this private bucket; maintenance images remain in the public media bucket. Give
+the R2 access key permission to read and write both buckets. New owner uploads fail with a setup error rather
+than silently falling back to local disk if R2 is unavailable. Legacy files already on local
+disk can still be read until they are migrated. The variable names are listed in `.env.example`.
+
+Supabase Auth manages account credentials. The application profile stores the
+normalized email, name, and a unique public UID in Supabase; date of birth is
+optional and can be added later in Settings. The profile also supports optional
+Telegram and X usernames.
+Sign-in sessions use random HTTP-only cookies; only their SHA-256 hashes are
+stored in Supabase.
 New signups are limited to one account per public IP across email, Google, X,
 and Telegram. Only a SHA-256 hash of the signup IP is stored. The deployment
 proxy must set a trusted `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`
 header and overwrite or sanitize client-supplied values; signup fails closed
 when no valid client IP is provided. Existing accounts have no historical IP
-record, so the restriction applies to accounts created after the migration.
-Run the migration before deploying this restriction.
+record, so the restriction applies to accounts created after deployment.
 Display name and date of birth can each be changed once from Settings. A
 confirmation is shown before either change, and customer support must handle
 later corrections. Chat remains publicly accessible.
-The forgot-password endpoint checks that an account exists before creating and
-sending a reset link.
-New accounts receive a six-digit email verification code that expires after ten
-minutes. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASSWORD` in
-the local and production environment settings; SMTP credentials are separate
-from the MySQL password.
+The forgot-password endpoint checks that an account exists before creating
+and sending a reset code. Owner sign-in codes are generated and verified by
+the app, sent through Hostinger SMTP, and require the server-only Supabase key.
+Owner access is restricted to the allowlisted email and an email-OTP-authenticated
+session. No Supabase Auth SMTP configuration is required.
+
+Set `PAYOUT_DATA_ENCRYPTION_KEY` to a strong, persistent server-only secret so
+saved payout details can be encrypted at rest. Registration, owner sign-in,
+support tickets, project requests, withdrawal notifications, and
+password-reset messages use Hostinger SMTP. Set `SUPPORT_TICKET_NOTIFICATION_EMAIL`,
+`ADMIN_NOTIFICATION_EMAIL`, `PROJECT_REQUEST_NOTIFICATION_EMAIL`, and
+`WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL` as needed. Project and withdrawal
+alerts use their specific recipient when set, otherwise they fall back to
+`ADMIN_NOTIFICATION_EMAIL`. Never commit SMTP, encryption, or provider secrets.
 
 ### Google sign-in
 
@@ -109,16 +136,10 @@ Google OAuth is implemented as a server-side authorization-code flow. To enable 
 
 The callback URI must match exactly between Google Cloud Console and
 `AUTH_BASE_URL`. The app uses the provider's verified email, stores the Google
-identity against the account, and creates its own session cookie. Authentication
-tables are created by `npm run db:migrate-auth`.
+identity against the account, and creates its own session cookie. Identity and
+session records are stored in Supabase.
 
 ### Paid project requests
-
-Apply the project-request schema after migrating authentication:
-
-```bash
-npm run db:migrate-project-requests
-```
 
 The Contact page requires a signed-in account (new accounts must verify their
 email), a project name and description, and explicit acceptance of the
@@ -132,17 +153,12 @@ production hosting as well as local development. Requesters may also provide
 optional contact email, WhatsApp number, Telegram ID, preferred language, and
 desired duration. The confirmation states that the team will respond within
 12 hours.
+Use Razorpay test credentials in local development and live credentials only in
+production. Configure `NEXT_PUBLIC_RAZORPAY_KEY_ID` for the browser checkout and
+`RAZORPAY_KEY_ID` plus `RAZORPAY_KEY_SECRET` for server-side order creation and
+verification. Never expose or commit the secret key.
 
 ### Wallet deposits and withdrawals
-
-After creating the authentication tables, create the saved payout method table
-and wallet deposit and withdrawal request tables before enabling those Wallet
-features:
-
-```bash
-npm run db:migrate-withdrawal-methods
-npm run db:migrate-wallet
-```
 
 Deposits use Razorpay Checkout and are credited only after the payment
 signature, Razorpay order, and captured payment are verified server-side.
