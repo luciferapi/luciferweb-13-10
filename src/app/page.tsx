@@ -115,9 +115,9 @@ function LuciferHero() {
         </div>
         <motion.nav
           aria-label="Quick links"
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.2, ease: "easeOut" }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.55, delay: 0.2, ease: "easeOut" }}
           className="mt-8 flex w-full flex-wrap items-center justify-center gap-4 lg:col-span-2"
         >
           <MotionLink href="/contact#project-request" whileHover={prefersReducedMotion ? undefined : { y: -2 }} whileTap={{ scale: 0.96 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-[#AFFF00] px-5 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#121212] transition hover:bg-[#D9FF70] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#AFFF00] focus-visible:ring-offset-2 focus-visible:ring-offset-background">
