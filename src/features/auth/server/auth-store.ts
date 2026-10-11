@@ -10,7 +10,7 @@ import { isOwnerEmail } from "@/features/auth/server/owner-email"
 
 const scrypt = promisify(scryptCallback)
 const SESSION_DURATION_SECONDS = 30 * 24 * 60 * 60
-const EMAIL_OTP_DURATION_SECONDS = 60
+const EMAIL_OTP_DURATION_SECONDS = 10 * 60
 const EMAIL_OTP_RESEND_SECONDS = 60
 const EMAIL_REGISTRATION_DURATION_SECONDS = 30 * 60
 const EMAIL_OTP_MAX_ATTEMPTS = 5

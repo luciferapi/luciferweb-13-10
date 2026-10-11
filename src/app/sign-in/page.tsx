@@ -446,7 +446,7 @@ export default function SignInPage() {
           </form>
         ) : pendingEmail ? (
           <form onSubmit={handleVerifyEmail} className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">We requested a six-digit code for <span className="font-semibold text-white">{pendingEmail}</span>. Check your inbox and spam folder. The code expires in 1 minute.</p>
+            <p className="text-sm leading-6 text-white/65">We requested a six-digit code for <span className="font-semibold text-white">{pendingEmail}</span>. Check your inbox and spam folder. The code expires in 10 minutes.</p>
             <label className="block space-y-2 text-sm font-medium text-white/75">
               Verification code
               <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">

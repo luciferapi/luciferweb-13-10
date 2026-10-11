@@ -58,7 +58,12 @@ export async function POST(request: Request) {
         nameEditUsed: false,
         dateOfBirthEditUsed: false,
       }
-      return NextResponse.json({ user })
+      const response = NextResponse.json({ user })
+      if (profile) {
+        const session = await createSession(profile.id, "password")
+        setAuthSessionCookie(response, session, parsed.data.rememberMe, "user")
+      }
+      return response
     }
 
     const user = await authenticateUser(parsed.data.email, parsed.data.password)
