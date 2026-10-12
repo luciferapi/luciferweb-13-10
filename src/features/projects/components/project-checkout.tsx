@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Download, LoaderCircle, ShieldCheck } from "lucide-react"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
-import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
+import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
 export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }: {
@@ -18,7 +18,6 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
   const [downloadToken, setDownloadToken] = useState("")
   const [message, setMessage] = useState("")
   const [needsSignIn, setNeedsSignIn] = useState(false)
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
   async function updatePendingStatus(orderId: string, status: "cancelled" | "failed") {
     const response = await fetch("/api/transactions", {
@@ -71,15 +70,11 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
 
   async function beginCheckout() {
     const analyticsAttempt = {}
-    if (!keyId) {
-      setMessage("Checkout is unavailable. Check the Razorpay public key and reload the page.")
-      return
-    }
-
     setBusy(true)
     setMessage("")
     setNeedsSignIn(false)
     try {
+      const keyId = await getRazorpayKeyId()
       const Razorpay = await loadRazorpayCheckout()
       const orderResponse = await fetch("/api/create-order", {
         method: "POST",

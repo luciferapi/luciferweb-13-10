@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
 import { LoaderCircle, ShieldCheck, X } from "lucide-react"
 import type { RazorpaySuccess } from "@/features/payments/server/razorpay-types"
-import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
+import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
 type RequestOrder = {
@@ -50,7 +50,6 @@ export function ProjectRequestForm() {
   const [preferredLanguage, setPreferredLanguage] = useState("")
   const [desiredDuration, setDesiredDuration] = useState("")
   const [feeAccepted, setFeeAccepted] = useState(false)
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
   useEffect(() => {
     try {
@@ -155,14 +154,11 @@ export function ProjectRequestForm() {
       setMessage("Accept the non-refundable ₹1 request fee before continuing.")
       return
     }
-    if (!keyId) {
-      setMessage("Checkout is unavailable. Check the Razorpay public key and reload the page.")
-      return
-    }
 
     const analyticsAttempt = {}
     setBusy(true)
     try {
+      const keyId = await getRazorpayKeyId()
       const Razorpay = await loadRazorpayCheckout()
       const orderResponse = await fetch("/api/project-requests/create-order", {
         method: "POST",
