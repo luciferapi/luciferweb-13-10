@@ -35,6 +35,10 @@ export type OwnerAnalytics = {
     enabledApis: number
     totalProjectRequests: number
     paidProjectRequests: number
+    totalProjectPurchases: number
+    paidProjectPurchases: number
+    totalApiPurchases: number
+    paidApiPurchases: number
     totalReferrals: number
     openSupportTickets: number
     escalatedSupportTickets: number
@@ -146,6 +150,10 @@ export async function getOwnerAnalytics(): Promise<OwnerAnalytics> {
     enabledApis,
     totalProjectRequests,
     paidProjectRequests,
+    totalProjectPurchases,
+    paidProjectPurchases,
+    totalApiPurchases,
+    paidApiPurchases,
     totalReferrals,
     pendingReferrals,
     openTickets,
@@ -171,6 +179,10 @@ export async function getOwnerAnalytics(): Promise<OwnerAnalytics> {
     exactCount(client.from("api_endpoints").select("*", { count: "exact", head: true }).eq("is_enabled", true)),
     totalCount("project_requests"),
     exactCount(client.from("project_requests").select("*", { count: "exact", head: true }).eq("payment_status", "paid")),
+    totalCount("project_purchases"),
+    statusCount("project_purchases", "paid"),
+    totalCount("api_endpoint_purchases"),
+    statusCount("api_endpoint_purchases", "paid"),
     totalCount("referrals"),
     statusCount("referrals", "pending"),
     exactCount(client.from("support_tickets").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress", "waiting_on_user"])),
@@ -180,22 +192,14 @@ export async function getOwnerAnalytics(): Promise<OwnerAnalytics> {
     statusCount("api_endpoint_purchases", "pending"),
     statusCount("wallet_deposits", "pending"),
     statusCount("wallet_withdrawal_requests", "pending"),
-    readAllRows<SignupRow>((from, to) =>
-      client.from("auth_users").select("created_at").gte("created_at", periodStart).range(from, to)),
-    readAllRows<MoneyRow>((from, to) =>
-      client.from("project_purchases").select("amount_paise, purchased_at").eq("status", "paid").gte("purchased_at", periodStart).range(from, to)),
-    readAllRows<MoneyRow>((from, to) =>
-      client.from("api_endpoint_purchases").select("amount_paise, purchased_at").eq("status", "paid").gte("purchased_at", periodStart).range(from, to)),
-    readAllRows<MoneyRow>((from, to) =>
-      client.from("wallet_deposits").select("amount_paise, paid_at").eq("status", "paid").gte("paid_at", periodStart).range(from, to)),
-    readAllRows<MoneyRow>((from, to) =>
-      client.from("wallet_withdrawal_requests").select("amount_paise, processed_at").eq("status", "paid").gte("processed_at", periodStart).range(from, to)),
-    readAllRows<ActivityRow>((from, to) =>
-      client.from("referrals").select("created_at").gte("created_at", periodStart).range(from, to)),
-    readAllRows<ActivityRow>((from, to) =>
-      client.from("support_tickets").select("created_at").gte("created_at", periodStart).range(from, to)),
-    readAllRows<ActivityRow>((from, to) =>
-      client.from("project_requests").select("created_at").gte("created_at", periodStart).range(from, to)),
+    readAllRows<SignupRow>((from, to) => client.from("auth_users").select("created_at").gte("created_at", periodStart).range(from, to)),
+    readAllRows<MoneyRow>((from, to) => client.from("project_purchases").select("amount_paise, purchased_at").eq("status", "paid").gte("purchased_at", periodStart).range(from, to)),
+    readAllRows<MoneyRow>((from, to) => client.from("api_endpoint_purchases").select("amount_paise, purchased_at").eq("status", "paid").gte("purchased_at", periodStart).range(from, to)),
+    readAllRows<MoneyRow>((from, to) => client.from("wallet_deposits").select("amount_paise, paid_at").eq("status", "paid").gte("paid_at", periodStart).range(from, to)),
+    readAllRows<MoneyRow>((from, to) => client.from("wallet_withdrawal_requests").select("amount_paise, processed_at").eq("status", "paid").gte("processed_at", periodStart).range(from, to)),
+    readAllRows<ActivityRow>((from, to) => client.from("referrals").select("created_at").gte("created_at", periodStart).range(from, to)),
+    readAllRows<ActivityRow>((from, to) => client.from("support_tickets").select("created_at").gte("created_at", periodStart).range(from, to)),
+    readAllRows<ActivityRow>((from, to) => client.from("project_requests").select("created_at").gte("created_at", periodStart).range(from, to)),
     client.from("owner_audit_logs").select("action, created_at").order("created_at", { ascending: false }).limit(8),
   ])
 
@@ -253,6 +257,10 @@ export async function getOwnerAnalytics(): Promise<OwnerAnalytics> {
       enabledApis,
       totalProjectRequests,
       paidProjectRequests,
+      totalProjectPurchases,
+      paidProjectPurchases,
+      totalApiPurchases,
+      paidApiPurchases,
       totalReferrals,
       openSupportTickets: openTickets,
       escalatedSupportTickets: escalatedTickets,
