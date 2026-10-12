@@ -38,18 +38,24 @@ function ScrollReveal({
 
 function LuciferHero() {
   const prefersReducedMotion = useReducedMotion()
+  const [mounted, setMounted] = useState(false)
   const [loadBackgroundVideo, setLoadBackgroundVideo] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
+  const shouldAnimate = mounted && !prefersReducedMotion
 
   useEffect(() => {
-    if (prefersReducedMotion) return
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!shouldAnimate) return
     const connection = (navigator as Navigator & {
       connection?: { saveData?: boolean; effectiveType?: string }
     }).connection
     if (connection?.saveData) return
     const timer = window.setTimeout(() => setLoadBackgroundVideo(true), 1200)
     return () => window.clearTimeout(timer)
-  }, [prefersReducedMotion])
+  }, [shouldAnimate])
 
   return (
     <section
@@ -77,7 +83,7 @@ function LuciferHero() {
       />
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="min-w-0"
@@ -98,7 +104,7 @@ function LuciferHero() {
             </MotionLink>
             <MotionLink
               href="/projects"
-              whileHover={prefersReducedMotion ? undefined : { y: -2 }}
+              whileHover={shouldAnimate ? { y: -2 } : undefined}
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
               className="inline-flex min-h-12 items-center rounded-full border border-border bg-muted/40 px-6 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -109,7 +115,7 @@ function LuciferHero() {
         </motion.div>
 
         <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           className="relative flex min-h-64 items-center justify-center lg:min-h-[26rem]"
@@ -118,11 +124,11 @@ function LuciferHero() {
             href="/chat"
             aria-label="Chat with Lucifer AI"
             className="relative block w-64 shrink-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:w-80 lg:w-full lg:max-w-[28rem]"
-            initial={prefersReducedMotion ? false : { opacity: 0, rotate: -3 }}
+            initial={false}
             animate={{
               opacity: 1,
               rotate: 0,
-              y: prefersReducedMotion ? 0 : [0, -10, 0],
+              y: shouldAnimate ? [0, -10, 0] : 0,
             }}
             transition={{
               opacity: { duration: 0.7 },
