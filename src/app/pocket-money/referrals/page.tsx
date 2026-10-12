@@ -3,6 +3,7 @@ import { ArrowLeft, Users } from "lucide-react"
 import Link from "next/link"
 import { Footer } from "@/components/layout/footer"
 import { ReferralDashboard } from "@/features/referrals/components/referral-dashboard"
+import { requireSignedInUser } from "@/features/auth/server/auth-session"
 
 export const metadata: Metadata = {
   title: "Referral Dashboard | LUCIFER AI",
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function ReferralsPage() {
+export default async function ReferralsPage() {
+  await requireSignedInUser("/pocket-money/referrals")
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto min-h-[70vh] max-w-5xl px-6 pb-24 pt-40">

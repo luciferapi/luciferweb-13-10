@@ -92,7 +92,13 @@ export function OwnerAnalyticsPanel() {
   useEffect(() => {
     const controller = new AbortController()
     void loadAnalytics(controller.signal)
-    return () => controller.abort()
+    const refreshTimer = window.setInterval(() => {
+      void loadAnalytics(undefined, true)
+    }, 30_000)
+    return () => {
+      controller.abort()
+      window.clearInterval(refreshTimer)
+    }
   }, [loadAnalytics])
 
   if (loading) {
@@ -151,6 +157,16 @@ export function OwnerAnalyticsPanel() {
           <span><CircleDollarSign aria-hidden="true" size={16} /> Wallet deposits</span>
           <strong>{formatRupees(analytics.period.walletDepositsPaise)}</strong>
           <small>Paid deposits in 30 days</small>
+        </article>
+        <article className="owner-analytics-kpi">
+          <span><Activity aria-hidden="true" size={16} /> New projects</span>
+          <strong>{formatCount(analytics.summary.totalProjects)}</strong>
+          <small>{formatCount(analytics.summary.publishedProjects)} published · live total</small>
+        </article>
+        <article className="owner-analytics-kpi">
+          <span><CircleDollarSign aria-hidden="true" size={16} /> Buy counts</span>
+          <strong>{formatCount(analytics.summary.paidProjectPurchases + analytics.summary.paidApiPurchases)}</strong>
+          <small>{formatCount(analytics.summary.paidProjectPurchases)} projects · {formatCount(analytics.summary.paidApiPurchases)} APIs · paid</small>
         </article>
         <article className="owner-analytics-kpi">
           <span><Activity aria-hidden="true" size={16} /> Paid withdrawals</span>

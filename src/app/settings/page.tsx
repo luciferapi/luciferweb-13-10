@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { SettingsPanel } from "@/features/auth/components/settings-panel"
 import { SettingsMotion } from "@/features/auth/components/settings-motion"
+import { requireSignedInUser } from "@/features/auth/server/auth-session"
 
 export const metadata: Metadata = {
   title: "Settings | LUCIFER AI",
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireSignedInUser("/settings")
+
   return (
     <main className="min-h-dvh bg-background px-4 pb-24 pt-28 text-foreground sm:px-6 sm:pt-32 lg:px-8">
       <SettingsMotion>
