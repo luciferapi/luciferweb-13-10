@@ -22,7 +22,6 @@ export function SignInPage() {
   const [emailInput, setEmailInput] = useState("")
   const [pendingEmail, setPendingEmail] = useState("")
   const [privilegedOtpRequested, setPrivilegedOtpRequested] = useState(false)
-  const [staffCodeSignIn, setStaffCodeSignIn] = useState(false)
   const [referralCode, setReferralCode] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
   const [verificationType, setVerificationType] = useState<"signup" | "email">("signup")
@@ -50,7 +49,7 @@ export function SignInPage() {
           : mode
   const showEmailCredentials = emailInput.trim().length > 0
   const ownerOtpSignIn = mode === "sign-in" && isOwnerEmail(emailInput)
-  const emailOtpOnlySignIn = ownerOtpSignIn || (mode === "sign-in" && staffCodeSignIn)
+  const emailOtpOnlySignIn = ownerOtpSignIn
 
   useEffect(() => {
     const controller = new AbortController()
@@ -69,7 +68,7 @@ export function SignInPage() {
       setSocialError("An account has already been created from this network.")
     }
     if (authError === "otp_required") {
-      setSocialError("Owner and staff accounts must sign in with an emailed verification code.")
+      setSocialError("Owner accounts must sign in with an emailed verification code.")
     }
     if (code) setMode("create-account")
     setReferralCode(code)
@@ -253,7 +252,7 @@ export function SignInPage() {
     }
   }
 
-  async function handleRequestLoginOtp(type: "owner" | "staff") {
+  async function handleRequestLoginOtp() {
     if (isSubmitting) return
     setError("")
     setNotice("")
@@ -273,7 +272,7 @@ export function SignInPage() {
       setPrivilegedOtpRequested(true)
       setLoginCodeResendSeconds(result.retryAfterSeconds)
       setVerificationCode("")
-      setNotice(result.message ?? `Check your inbox and spam folder for the ${type} sign-in code.`)
+      setNotice(result.message ?? "Check your inbox and spam folder for the owner sign-in code.")
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not send the sign-in code.")
     } finally {
@@ -378,7 +377,7 @@ export function SignInPage() {
           </span>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">LUCIFER AI</p>
-            <h1 id="sign-in-title" className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-black tracking-[-0.06em] text-foreground">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : privilegedOtpRequested ? (ownerOtpSignIn ? "Owner sign-in" : "Staff sign-in") : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
+            <h1 id="sign-in-title" className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-black tracking-[-0.06em] text-foreground">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : privilegedOtpRequested ? "Owner sign-in" : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
           </div>
         </div>
 
@@ -398,7 +397,6 @@ export function SignInPage() {
                 aria-selected={mode === option}
                 onClick={() => {
                   setMode(option)
-                  setStaffCodeSignIn(false)
                   setPrivilegedOtpRequested(false)
                   setVerificationCode("")
                   setError("")
@@ -512,7 +510,7 @@ export function SignInPage() {
         ) : privilegedOtpRequested ? (
           <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
             <p className="text-sm leading-6 text-muted-foreground">
-              Enter the six-digit {ownerOtpSignIn ? "owner" : "staff"} sign-in code for <span className="font-semibold text-foreground">{emailInput}</span>. Check your inbox and spam or junk folder. It expires in 5 minutes; requesting a new code invalidates the previous one.
+              Enter the six-digit owner sign-in code for <span className="font-semibold text-foreground">{emailInput}</span>. Check your inbox and spam or junk folder. It expires in 5 minutes; requesting a new code invalidates the previous one.
             </p>
             <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Sign-in code
@@ -532,7 +530,7 @@ export function SignInPage() {
                     setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
                     setError("")
                   }}
-                  aria-label={`Six-digit ${ownerOtpSignIn ? "owner" : "staff"} sign-in code`}
+                  aria-label="Six-digit owner sign-in code"
                   autoFocus
                   required
                   className="h-full min-w-0 flex-1 bg-transparent text-center font-mono text-lg font-semibold tracking-[0.45em] text-foreground outline-none placeholder:text-muted-foreground/50"
@@ -546,7 +544,7 @@ export function SignInPage() {
             </button>
             <button
               type="button"
-              onClick={() => void handleRequestLoginOtp(ownerOtpSignIn ? "owner" : "staff")}
+              onClick={() => void handleRequestLoginOtp()}
               disabled={isSubmitting || loginCodeResendSeconds > 0}
               className="w-full py-2 text-sm text-cyan-700 dark:text-cyan-200 transition hover:text-cyan-600 dark:hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-muted-foreground/60"
             >
@@ -554,7 +552,7 @@ export function SignInPage() {
                 ? `Resend sign-in code in ${String(Math.floor(loginCodeResendSeconds / 60)).padStart(2, "0")}:${String(loginCodeResendSeconds % 60).padStart(2, "0")}`
                 : "Resend sign-in code"}
             </button>
-            <button type="button" onClick={() => { setPrivilegedOtpRequested(false); setStaffCodeSignIn(false); setVerificationCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-muted-foreground transition hover:text-foreground">
+            <button type="button" onClick={() => { setPrivilegedOtpRequested(false); setVerificationCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-muted-foreground transition hover:text-foreground">
               Back to sign in
             </button>
           </form>
@@ -563,7 +561,7 @@ export function SignInPage() {
           onSubmit={(event) => {
             if (emailOtpOnlySignIn) {
               event.preventDefault()
-              void handleRequestLoginOtp("owner")
+              void handleRequestLoginOtp()
               return
             }
             void handleSubmit(event)
@@ -574,7 +572,7 @@ export function SignInPage() {
             Email address
             <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
               <Mail aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
-              <input name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={emailInput} onChange={(event) => { setEmailInput(event.target.value); setPrivilegedOtpRequested(false); setStaffCodeSignIn(false); setVerificationCode(""); setError(""); setNotice(""); }} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
+              <input name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={emailInput} onChange={(event) => { setEmailInput(event.target.value); setPrivilegedOtpRequested(false); setVerificationCode(""); setError(""); setNotice(""); }} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
             </span>
           </label>
           {!showEmailCredentials ? (
@@ -673,33 +671,19 @@ export function SignInPage() {
           {mode === "sign-in" && error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
           {emailOtpOnlySignIn ? (
             <div className="space-y-3">
-              <p className="text-sm leading-6 text-cyan-700/80 dark:text-cyan-100/75">{ownerOtpSignIn ? "Owner" : "Staff"} sign-in uses an emailed one-time code. Password and social sign-in are disabled for this account.</p>
-              <button type="button" onClick={() => void handleRequestLoginOtp(ownerOtpSignIn ? "owner" : "staff")} disabled={isSubmitting || loginCodeResendSeconds > 0} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
+              <p className="text-sm leading-6 text-cyan-700/80 dark:text-cyan-100/75">Owner sign-in uses an emailed one-time code. Password and social sign-in are disabled for this account.</p>
+              <button type="button" onClick={() => void handleRequestLoginOtp()} disabled={isSubmitting || loginCodeResendSeconds > 0} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
                 {isSubmitting
                   ? "Sending code..."
                   : loginCodeResendSeconds > 0
                     ? `Resend sign-in code in ${String(Math.floor(loginCodeResendSeconds / 60)).padStart(2, "0")}:${String(loginCodeResendSeconds % 60).padStart(2, "0")}`
-                    : `Send ${ownerOtpSignIn ? "owner" : "staff"} sign-in code`}
+                    : "Send owner sign-in code"}
               </button>
             </div>
           ) : null}
           {mode === "sign-in" && showEmailCredentials && !emailOtpOnlySignIn ? (
             <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? "Please wait..." : "Sign in"}
-            </button>
-          ) : null}
-
-          {mode === "sign-in" && showEmailCredentials && !ownerOtpSignIn && !staffCodeSignIn ? (
-            <button
-              type="button"
-              onClick={() => {
-                setStaffCodeSignIn(true)
-                void handleRequestLoginOtp("staff")
-              }}
-              disabled={isSubmitting || loginCodeResendSeconds > 0}
-              className="w-full py-2 text-sm text-cyan-700 dark:text-cyan-200 transition hover:text-cyan-600 dark:hover:text-cyan-100 disabled:cursor-wait disabled:opacity-60"
-            >
-              Sign in as staff with an email code
             </button>
           ) : null}
 

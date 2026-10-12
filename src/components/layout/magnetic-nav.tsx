@@ -436,7 +436,7 @@ export default function MagneticNav() {
                 <LogOut aria-hidden="true" size={18} />
               </button>
             ) : (
-              <Link prefetch href="/login" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+              <Link prefetch href="/login" aria-label="Login" title="Login" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
                 <LogIn aria-hidden="true" size={18} />
               </Link>
             )
@@ -541,7 +541,7 @@ export default function MagneticNav() {
               </button>
             ) : authChecked ? (
               <Link prefetch href="/login" className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
-                <LogIn aria-hidden="true" size={16} />Sign in
+                <LogIn aria-hidden="true" size={16} />Login
               </Link>
             ) : null}
           </div>
@@ -601,7 +601,7 @@ export default function MagneticNav() {
                 aria-current={pathname === '/login' ? 'page' : undefined}
                 className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/login' ? 'border-lime/40 bg-lime/10 text-lime' : 'border-border bg-muted/30 text-foreground/75 hover:border-lime/40 hover:bg-lime/10 hover:text-lime dark:hover:text-lime'}`}
               >
-                <LogIn aria-hidden="true" size={16} /> Sign in
+                <LogIn aria-hidden="true" size={16} /> Login
               </Link>
             ) : null}
             {pathname !== '/chat' && !menuOpen ? (
@@ -881,7 +881,7 @@ export default function MagneticNav() {
             onClick={() => setMenuOpen(false)}
             className={`relative mt-2 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${pathname === '/login' ? 'border-lime/25 bg-lime/10 text-lime' : 'border-border/70 text-foreground/75 hover:border-lime/25 hover:bg-muted hover:text-foreground'}`}
           >
-            Sign in <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
+            Login <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
           </Link>
         )}
 
