@@ -467,18 +467,25 @@ export default function MagneticNav() {
               if (href === "/pocket-money") {
                 return (
                   <div key={href}>
-                    <button
-                      type="button"
-                      aria-expanded={pocketMoneyOpen}
-                      onClick={() => setPocketMoneyOpen((open) => !open)}
-                      className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
+                    <div className={`flex min-h-10 w-full items-center rounded-xl text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}>
+                      <Link
+                        href={href}
+                        aria-current={pathname === href ? "page" : undefined}
+                        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2"
+                      >
                         <Icon aria-hidden="true" size={16} className={active ? "text-lime" : ""} />
                         <span>{label}</span>
-                      </span>
-                      <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
-                    </button>
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={`${pocketMoneyOpen ? "Collapse" : "Expand"} Pocket Money submenu`}
+                        aria-expanded={pocketMoneyOpen}
+                        onClick={() => setPocketMoneyOpen((open) => !open)}
+                        className="grid min-h-10 min-w-10 place-items-center rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+                      >
+                        <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
+                      </button>
+                    </div>
                     {pocketMoneyOpen ? (
                       <div className="ml-8 mt-1 flex flex-col gap-1 border-l border-border pl-2">
                         {POCKET_MONEY_SUB_ITEMS.map((item) => (
@@ -771,18 +778,26 @@ export default function MagneticNav() {
             if (item.href === "/pocket-money") {
               return (
                 <div key={item.href} data-mobile-nav-item>
-                  <button
-                    type="button"
-                    aria-expanded={pocketMoneyOpen}
-                    onClick={() => setPocketMoneyOpen((open) => !open)}
-                    className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}
-                  >
-                    <span className="group flex min-w-0 items-center gap-2.5">
+                  <div className={`flex min-h-11 w-full items-center gap-2 rounded-xl text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}>
+                    <Link
+                      href={item.href}
+                      aria-current={pathname === item.href ? 'page' : undefined}
+                      onClick={() => setMenuOpen(false)}
+                      className="group flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5"
+                    >
                       <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-lime' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-lime dark:group-hover:text-lime'} />
                       <span>{item.label}</span>
-                    </span>
-                    <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
-                  </button>
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`${pocketMoneyOpen ? 'Collapse' : 'Expand'} Pocket Money submenu`}
+                      aria-expanded={pocketMoneyOpen}
+                      onClick={() => setPocketMoneyOpen((open) => !open)}
+                      className="grid min-h-11 min-w-11 place-items-center rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+                    >
+                      <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
                   {pocketMoneyOpen ? (
                     <div className="ml-8 mt-1 flex flex-col gap-1 border-l border-border pl-2">
                       {POCKET_MONEY_SUB_ITEMS.map((subItem) => (
