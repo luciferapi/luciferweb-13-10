@@ -104,7 +104,7 @@ function LuciferHero() {
             </MotionLink>
             <MotionLink
               href="/projects"
-              whileHover={shouldAnimate ? { y: -2 } : undefined}
+              whileHover={prefersReducedMotion ? undefined : { y: -2 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
               className="inline-flex min-h-12 items-center rounded-full border border-border bg-muted/40 px-6 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
