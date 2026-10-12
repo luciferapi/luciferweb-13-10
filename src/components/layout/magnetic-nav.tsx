@@ -145,7 +145,7 @@ export default function MagneticNav() {
       xPercent: menuOpen ? 0 : 100,
       autoAlpha: menuOpen ? 1 : 0,
       pointerEvents: menuOpen ? 'auto' : 'none',
-      duration: menuOpen ? 0.38 : 0.28,
+      duration: menuOpen ? 0.2 : 0.14,
       ease: menuOpen ? 'power3.out' : 'power2.in',
     }, 0);
 
@@ -372,7 +372,7 @@ export default function MagneticNav() {
     <aside aria-label="Primary navigation" className={`pointer-events-none fixed inset-y-0 right-0 z-50 hidden p-3 transition-[width] duration-300 ease-in-out xl:block ${sidebarExpanded ? "w-[17rem]" : "w-[5.75rem]"}`}>
       <div className="pointer-events-auto flex h-full overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-[0_16px_60px_rgba(0,0,0,0.2)] backdrop-blur-2xl">
         <div className={`flex shrink-0 flex-col items-center bg-background py-4 text-foreground transition-[width] duration-300 ${sidebarExpanded ? "w-[4.25rem]" : "w-full"}`}>
-          <Link href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-muted">
+          <Link prefetch href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-muted">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </Link>
           <button
@@ -436,7 +436,7 @@ export default function MagneticNav() {
                 <LogOut aria-hidden="true" size={18} />
               </button>
             ) : (
-              <Link href="/sign-in" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+              <Link prefetch href="/sign-in" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
                 <LogIn aria-hidden="true" size={18} />
               </Link>
             )
@@ -526,7 +526,7 @@ export default function MagneticNav() {
               </div>
             ) : null}
             {pathname !== "/chat" ? (
-              <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.14)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+              <Link prefetch href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.14)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 <Sparkles aria-hidden="true" size={16} /> Start chatting
               </Link>
             ) : null}
@@ -540,7 +540,7 @@ export default function MagneticNav() {
                 <LogOut aria-hidden="true" size={16} />{signingOut ? "Logging out..." : "Log out"}
               </button>
             ) : authChecked ? (
-              <Link href="/sign-in" className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
+              <Link prefetch href="/sign-in" className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
                 <LogIn aria-hidden="true" size={16} />Sign in
               </Link>
             ) : null}
@@ -586,7 +586,7 @@ export default function MagneticNav() {
 
     <header ref={mobileHeaderRef} className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
       <div className="pointer-events-auto mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-2xl sm:min-h-16 sm:px-4">
-        <Link href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
+        <Link prefetch href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
           <span className="relative size-9 overflow-hidden rounded-xl border border-lime/25 bg-muted shadow-[0_8px_20px_rgba(131,255,81,0.12)] sm:size-10">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover transition duration-300 group-hover:scale-110" />
           </span>
@@ -605,7 +605,7 @@ export default function MagneticNav() {
               </Link>
             ) : null}
             {pathname !== '/chat' && !menuOpen ? (
-              <Link href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-lime px-3.5 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.18)] transition hover:-translate-y-0.5 hover:bg-lime active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex">
+              <Link prefetch href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-lime px-3.5 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.18)] transition hover:-translate-y-0.5 hover:bg-lime active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex">
                 <Sparkles aria-hidden="true" size={15} /> Start chatting
               </Link>
             ) : null}
@@ -668,7 +668,7 @@ export default function MagneticNav() {
                             }).format((walletBalancePaise ?? 0) / 100)}
                       </p>
                       <DropdownMenuItem
-                        render={<Link href="/wallet">View wallet</Link>}
+                        render={<Link prefetch href="/wallet">View wallet</Link>}
                         className="min-h-8 cursor-pointer rounded-md px-2 text-xs"
                       />
                     </div>
@@ -685,7 +685,7 @@ export default function MagneticNav() {
                     <Pencil aria-hidden="true" />Change name
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    render={<Link href="/settings">Account settings</Link>}
+                    render={<Link prefetch href="/settings">Account settings</Link>}
                     className="min-h-10 cursor-pointer rounded-lg"
                   />
                   <DropdownMenuSeparator />
@@ -886,7 +886,7 @@ export default function MagneticNav() {
         )}
 
         {pathname !== '/chat' ? (
-          <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
+          <Link prefetch href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
         ) : null}
       </div>
     {editingName ? (
