@@ -206,7 +206,7 @@ export function ReferralDashboard() {
       ) : error && !data ? (
         <div>
           <p className="text-sm text-muted-foreground">{error}</p>
-          {error.startsWith("Sign in") ? <Link href="/sign-in?next=%2Fpocket-money%2Freferrals" className="mt-4 inline-flex rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">Sign in</Link> : null}
+          {error.startsWith("Sign in") ? <Link href="/login?next=%2Fpocket-money%2Freferrals" className="mt-4 inline-flex rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">Sign in</Link> : null}
         </div>
       ) : data ? (
         <>

@@ -349,7 +349,7 @@ export function SignInPage() {
       if (!response.ok) throw new Error(result.error ?? "Could not reset your password.")
       setResetComplete(true)
       setResetToken("")
-      window.history.replaceState(null, "", "/sign-in")
+      window.history.replaceState(null, "", "/login")
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not reset your password.")
     } finally {

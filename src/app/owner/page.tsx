@@ -17,7 +17,7 @@ export const metadata = {
 
 export default async function OwnerPage() {
   const access = await getOwnerWorkspaceAccess()
-  if (!access) redirect("/sign-in?next=/owner")
+  if (!access) redirect("/login?next=/owner")
   const visibleModules = ownerModules.filter((module) => access.isPrimaryOwner || access.modules.includes(module.slug))
 
   return (

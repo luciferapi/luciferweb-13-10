@@ -14,7 +14,7 @@ export const ownerRouteOptions = [
   { group: "Main pages", path: "/projects", label: "Projects" },
   { group: "Main pages", path: "/projects/*", label: "Project details (all projects)" },
   { group: "Main pages", path: "/settings", label: "Settings" },
-  { group: "Main pages", path: "/sign-in", label: "Sign in" },
+  { group: "Main pages", path: "/login", label: "Sign in" },
   { group: "Main pages", path: "/skills", label: "Skills" },
   { group: "Main pages", path: "/support", label: "Support" },
   { group: "Main pages", path: "/transactions", label: "Transactions" },

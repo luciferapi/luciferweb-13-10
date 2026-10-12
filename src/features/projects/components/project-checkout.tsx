@@ -178,7 +178,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
       {message ? (
         <div className="mt-3 text-sm text-muted-foreground" role="status">
           <p>{message}</p>
-          {needsSignIn ? <Link href="/sign-in" className="mt-2 inline-flex font-semibold text-cyan-700 underline underline-offset-4 dark:text-cyan-300">Sign in to continue</Link> : null}
+          {needsSignIn ? <Link href="/login" className="mt-2 inline-flex font-semibold text-cyan-700 underline underline-offset-4 dark:text-cyan-300">Sign in to continue</Link> : null}
         </div>
       ) : null}
     </div>

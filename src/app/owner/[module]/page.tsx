@@ -15,7 +15,7 @@ export default async function OwnerModulePage({
   const module = ownerModules.find((item) => item.slug === slug)
   if (!module) notFound()
   const access = await getOwnerWorkspaceAccess()
-  if (!access) redirect("/sign-in?next=/owner")
+  if (!access) redirect("/login?next=/owner")
   if (!access.isPrimaryOwner && (!access.modules.includes(module.slug) || module.slug === "admins")) {
     redirect("/owner")
   }

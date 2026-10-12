@@ -27,7 +27,7 @@ function equalSecret(actual: string, expected: string) {
 
 function authErrorRedirect(requestUrl: string, error: "cancelled" | "failed" | "signup_required" | "signup_ip_used" | "otp_required") {
   const baseUrl = getAuthBaseUrl(requestUrl)
-  const destination = new URL("/sign-in", baseUrl)
+  const destination = new URL("/login", baseUrl)
   destination.searchParams.set("authError", error)
   return NextResponse.redirect(destination)
 }

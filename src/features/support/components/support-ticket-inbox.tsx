@@ -155,7 +155,7 @@ export function SupportTicketInbox() {
         <p className="mt-6 inline-flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> Loading your tickets...</p>
       ) : signedOut ? (
         <p className="mt-6 text-sm leading-6 text-muted-foreground">
-          <Link className="font-semibold text-cyan-800 underline underline-offset-4 dark:text-cyan-200" href="/sign-in?next=/support">Sign in</Link> to view your submitted tickets and team replies.
+          <Link className="font-semibold text-cyan-800 underline underline-offset-4 dark:text-cyan-200" href="/login?next=/support">Sign in</Link> to view your submitted tickets and team replies.
         </p>
       ) : data?.tickets.length ? (
         <div className="mt-6 divide-y divide-border border-y border-border">

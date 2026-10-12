@@ -303,7 +303,7 @@ export function SettingsPanel() {
       }
 
       setAccountStatus("signed-out")
-      router.replace("/sign-in")
+      router.replace("/login")
       router.refresh()
     } catch (error) {
       console.error("Sign out failed.", error)

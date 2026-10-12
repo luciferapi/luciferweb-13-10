@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 export default async function OwnerProjectRequestsHistoryRoutePage() {
   const access = await getOwnerWorkspaceAccess()
-  if (!access) redirect("/sign-in?next=/owner/project-requests/history")
+  if (!access) redirect("/login?next=/owner/project-requests/history")
 
   if (!access.isPrimaryOwner && !access.modules.includes("project-requests")) {
     redirect("/owner")

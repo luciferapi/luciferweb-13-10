@@ -334,7 +334,7 @@ export function WithdrawalMethodSettings() {
         <div className="mt-5 rounded-xl border border-border bg-background/50 p-4">
           <p className="text-sm text-muted-foreground">Sign in to add or manage a withdrawal method.</p>
           <Link
-            href="/sign-in?next=%2Fsettings"
+            href="/login?next=%2Fsettings"
             className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-lime px-4 py-2 text-sm font-semibold text-charcoal transition hover:bg-lime/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2"
           >
             Sign in

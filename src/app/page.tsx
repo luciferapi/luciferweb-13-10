@@ -212,7 +212,7 @@ export default function Home() {
     if (referralCode && /^[A-Za-z0-9_-]{1,32}$/.test(referralCode)) {
       query.set("ref", referralCode)
     }
-    router.replace(`/sign-in?${query.toString()}`)
+    router.replace(`/login?${query.toString()}`)
   }, [router])
 
   return (
