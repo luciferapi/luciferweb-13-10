@@ -178,9 +178,14 @@ export async function POST(request: Request) {
     const stream = createUIMessageStream({
       execute: ({ writer }) => {
         const textId = "openrouter-text"
-        writer.write({ type: "text-start", id: textId })
-        writer.write({ type: "text-delta", id: textId, delta: text })
-        writer.write({ type: "text-end", id: textId })
+
+        try {
+          writer.write({ type: "text-start", id: textId })
+          writer.write({ type: "text-delta", id: textId, delta: text })
+          writer.write({ type: "text-end", id: textId })
+        } catch (error) {
+          console.error("Failed to write the chat response stream.", error)
+        }
       },
     })
 
