@@ -2,16 +2,18 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react"
 import gsap from "gsap"
-import { isOwnerEmail } from "@/features/auth/server/owner-email"
+const OWNER_EMAIL = "kspgpraveen157@gmail.com"
+
+function isOwnerEmail(email: string | null) {
+  return typeof email === "string" && email.trim().toLowerCase() === OWNER_EMAIL
+}
 import { SocialAuthButtons } from "@/features/auth/components/social-auth-buttons"
 
 type AuthMode = "sign-in" | "create-account"
 
 export function SignInPage() {
-  const router = useRouter()
   const [mode, setMode] = useState<AuthMode>("sign-in")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
@@ -82,7 +84,7 @@ export function SignInPage() {
     fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
       .then((response) => {
         if (response.ok) {
-          router.replace("/")
+          window.location.replace("/")
           return
         }
         if (response.status !== 401) throw new Error("Could not verify your session right now.")
@@ -95,7 +97,7 @@ export function SignInPage() {
         setCheckingSession(false)
       })
     return () => controller.abort()
-  }, [router])
+  }, [])
 
   useEffect(() => {
     if (!pendingEmail || resendSeconds <= 0) return
@@ -356,7 +358,7 @@ export function SignInPage() {
   }
 
   function finishSignIn() {
-    router.replace("/")
+    window.location.replace("/")
   }
 
   return (
