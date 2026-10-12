@@ -186,7 +186,6 @@ export function SocialAuthButtons({
     return <p className="text-center text-xs text-muted-foreground" role="status">Loading sign-in options...</p>
   }
 
-  const hasProvider = Boolean(providers?.google || providers?.twitter || providers?.telegram)
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/70">
