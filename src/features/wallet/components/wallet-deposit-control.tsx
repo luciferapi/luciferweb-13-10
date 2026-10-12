@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ArrowDownToLine, LoaderCircle } from "lucide-react"
+import { RazorpayTestCredentials } from "@/features/payments/components/razorpay-test-credentials"
 import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import {
   Dialog,
@@ -168,6 +169,8 @@ export function WalletDepositControl() {
               Choose an amount from ₹50 to ₹1,000. Payment is securely processed by Razorpay.
             </DialogDescription>
           </DialogHeader>
+
+          <RazorpayTestCredentials />
 
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {presetAmounts.map((preset) => {
