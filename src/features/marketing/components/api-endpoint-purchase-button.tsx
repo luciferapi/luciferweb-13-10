@@ -5,7 +5,7 @@ import { Loader2, ShieldCheck } from "lucide-react"
 import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 import type { RazorpaySuccess } from "@/features/payments/server/razorpay-types"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
-import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
+import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
 export function ApiEndpointPurchaseButton({
@@ -17,7 +17,6 @@ export function ApiEndpointPurchaseButton({
 }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
   async function updatePendingOrder(orderId: string, status: "cancelled" | "failed") {
     const response = await fetch("/api/api-endpoints/purchase/status", {
@@ -36,14 +35,10 @@ export function ApiEndpointPurchaseButton({
 
   async function beginCheckout() {
     const analyticsAttempt = {}
-    if (!keyId) {
-      setMessage("Checkout is unavailable. Check the Razorpay public key and reload this page.")
-      return
-    }
-
     setBusy(true)
     setMessage("")
     try {
+      const keyId = await getRazorpayKeyId()
       const Razorpay = await loadRazorpayCheckout()
       const response = await fetch("/api/api-endpoints/purchase/create-order", {
         method: "POST",

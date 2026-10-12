@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Download, LoaderCircle, ShieldCheck } from "lucide-react"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
-import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
+import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
 export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }: {
@@ -18,7 +18,6 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
   const [downloadToken, setDownloadToken] = useState("")
   const [message, setMessage] = useState("")
   const [needsSignIn, setNeedsSignIn] = useState(false)
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
   async function updatePendingStatus(orderId: string, status: "cancelled" | "failed") {
     const response = await fetch("/api/transactions", {
@@ -71,15 +70,11 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
 
   async function beginCheckout() {
     const analyticsAttempt = {}
-    if (!keyId) {
-      setMessage("Checkout is unavailable. Check the Razorpay public key and reload the page.")
-      return
-    }
-
     setBusy(true)
     setMessage("")
     setNeedsSignIn(false)
     try {
+      const keyId = await getRazorpayKeyId()
       const Razorpay = await loadRazorpayCheckout()
       const orderResponse = await fetch("/api/create-order", {
         method: "POST",
@@ -112,7 +107,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
             if (typeof verification.download_token !== "string") throw new Error("Payment verified, but a download token was not returned.")
             sessionStorage.setItem(`source-download:${projectId}`, verification.download_token)
             setDownloadToken(verification.download_token)
-            setMessage("Payment verified. Your source code is ready to download.")
+            setMessage("Payment verified. Your source code is available for download.")
             void trackConversion("Project Source Purchased", analyticsAttempt)
           } catch (verificationError) {
             setMessage(verificationError instanceof Error ? verificationError.message : "Payment verification failed.")
@@ -178,7 +173,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
       {message ? (
         <div className="mt-3 text-sm text-muted-foreground" role="status">
           <p>{message}</p>
-          {needsSignIn ? <Link href="/sign-in" className="mt-2 inline-flex font-semibold text-cyan-700 underline underline-offset-4 dark:text-cyan-300">Sign in to continue</Link> : null}
+          {needsSignIn ? <Link href="/login" className="mt-2 inline-flex font-semibold text-cyan-700 underline underline-offset-4 dark:text-cyan-300">Sign in to continue</Link> : null}
         </div>
       ) : null}
     </div>

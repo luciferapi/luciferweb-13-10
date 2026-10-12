@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const access = await getOwnerWorkspaceAccess()
-  if (!access) redirect("/sign-in?next=/owner")
+  if (!access) redirect("/login?next=/owner")
 
   return <div className="owner-dashboard">{children}</div>
 }

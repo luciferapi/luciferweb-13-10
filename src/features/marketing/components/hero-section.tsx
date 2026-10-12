@@ -3,6 +3,7 @@
 import { motion, useScroll, useTransform, useSpring } from "framer-motion"
 import { useRef } from "react"
 import { FormEvent, useState } from "react"
+import Link from "next/link"
 
 const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 }
 
@@ -199,18 +200,16 @@ export function HeroSection() {
               custom={5}
               className="flex flex-wrap gap-3 pt-2"
             >
-              <motion.button
-                className="bg-[#AFFF00] text-[#121212] px-6 py-3 rounded-full font-bold text-sm tracking-wide flex items-center gap-2 group relative overflow-hidden"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring" as const, stiffness: 400, damping: 17 }}
+              <Link
+                href="/login"
+                className="bg-[#AFFF00] text-[#121212] px-6 py-3 rounded-full font-bold text-sm tracking-wide flex items-center gap-2 group relative overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full"
                   whileHover={{ x: "200%" }}
                   transition={{ duration: 0.6 }}
                 />
-                <span className="relative z-10">Sign Up & Save 25%</span>
+                <span className="relative z-10">Login</span>
                 <motion.svg
                   className="w-4 h-4 relative z-10"
                   fill="none"
@@ -222,7 +221,7 @@ export function HeroSection() {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </motion.svg>
-              </motion.button>
+              </Link>
               <motion.button
                 className="border-2 border-[#121212] text-[#121212] px-6 py-3 rounded-full font-bold text-sm tracking-wide relative overflow-hidden"
                 whileHover={{ scale: 1.02, backgroundColor: "#121212", color: "#fff" }}

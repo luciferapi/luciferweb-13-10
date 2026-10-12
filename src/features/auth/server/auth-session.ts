@@ -72,6 +72,6 @@ export async function getSignedInUser() {
 
 export async function requireSignedInUser(destination: string) {
   const user = await getSignedInUser()
-  if (!user) redirect(`/sign-in?next=${encodeURIComponent(destination)}`)
+  if (!user) redirect(`/login?next=${encodeURIComponent(destination)}`)
   return user
 }

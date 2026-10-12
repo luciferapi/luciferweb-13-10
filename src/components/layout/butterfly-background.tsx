@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 
-const hiddenRoutes = ["/api-explorer", "/projects", "/chat", "/contact", "/owner", "/wallet", "/transactions", "/sign-in"]
+const hiddenRoutes = ["/api-explorer", "/projects", "/chat", "/contact", "/owner", "/wallet", "/transactions", "/login"]
 
 export function ButterflyBackground() {
   const pathname = usePathname()

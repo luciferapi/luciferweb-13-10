@@ -120,7 +120,7 @@ export function SupportTicketForm() {
       {needsSignIn ? (
         <div className="border-l-2 border-cyan-600 py-1 pl-4 text-sm leading-6 text-muted-foreground dark:border-cyan-300">
           <Link
-            href="/sign-in?next=/support"
+            href="/login?next=/support"
             className="font-semibold text-cyan-800 underline underline-offset-4 hover:text-cyan-600 dark:text-cyan-200 dark:hover:text-cyan-100"
           >
             Sign in

@@ -145,7 +145,7 @@ export default function MagneticNav() {
       xPercent: menuOpen ? 0 : 100,
       autoAlpha: menuOpen ? 1 : 0,
       pointerEvents: menuOpen ? 'auto' : 'none',
-      duration: menuOpen ? 0.38 : 0.28,
+      duration: menuOpen ? 0.2 : 0.14,
       ease: menuOpen ? 'power3.out' : 'power2.in',
     }, 0);
 
@@ -206,7 +206,7 @@ export default function MagneticNav() {
         setAuthChecked(true);
       });
     return () => controller.abort();
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     if (!signedIn) {
@@ -372,7 +372,7 @@ export default function MagneticNav() {
     <aside aria-label="Primary navigation" className={`pointer-events-none fixed inset-y-0 right-0 z-50 hidden p-3 transition-[width] duration-300 ease-in-out xl:block ${sidebarExpanded ? "w-[17rem]" : "w-[5.75rem]"}`}>
       <div className="pointer-events-auto flex h-full overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-[0_16px_60px_rgba(0,0,0,0.2)] backdrop-blur-2xl">
         <div className={`flex shrink-0 flex-col items-center bg-background py-4 text-foreground transition-[width] duration-300 ${sidebarExpanded ? "w-[4.25rem]" : "w-full"}`}>
-          <Link href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-muted">
+          <Link prefetch href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-muted">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </Link>
           <button
@@ -436,7 +436,7 @@ export default function MagneticNav() {
                 <LogOut aria-hidden="true" size={18} />
               </button>
             ) : (
-              <Link href="/sign-in" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+              <Link prefetch href="/login" aria-label="Login" title="Login" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
                 <LogIn aria-hidden="true" size={18} />
               </Link>
             )
@@ -467,18 +467,25 @@ export default function MagneticNav() {
               if (href === "/pocket-money") {
                 return (
                   <div key={href}>
-                    <button
-                      type="button"
-                      aria-expanded={pocketMoneyOpen}
-                      onClick={() => setPocketMoneyOpen((open) => !open)}
-                      className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
+                    <div className={`flex min-h-10 w-full items-center rounded-xl text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}>
+                      <Link
+                        href={href}
+                        aria-current={pathname === href ? "page" : undefined}
+                        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2"
+                      >
                         <Icon aria-hidden="true" size={16} className={active ? "text-lime" : ""} />
                         <span>{label}</span>
-                      </span>
-                      <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
-                    </button>
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={`${pocketMoneyOpen ? "Collapse" : "Expand"} Pocket Money submenu`}
+                        aria-expanded={pocketMoneyOpen}
+                        onClick={() => setPocketMoneyOpen((open) => !open)}
+                        className="grid min-h-10 min-w-10 place-items-center rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+                      >
+                        <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
+                      </button>
+                    </div>
                     {pocketMoneyOpen ? (
                       <div className="ml-8 mt-1 flex flex-col gap-1 border-l border-border pl-2">
                         {POCKET_MONEY_SUB_ITEMS.map((item) => (
@@ -519,7 +526,7 @@ export default function MagneticNav() {
               </div>
             ) : null}
             {pathname !== "/chat" ? (
-              <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.14)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+              <Link prefetch href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.14)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 <Sparkles aria-hidden="true" size={16} /> Start chatting
               </Link>
             ) : null}
@@ -533,8 +540,8 @@ export default function MagneticNav() {
                 <LogOut aria-hidden="true" size={16} />{signingOut ? "Logging out..." : "Log out"}
               </button>
             ) : authChecked ? (
-              <Link href="/sign-in" className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
-                <LogIn aria-hidden="true" size={16} />Sign in
+              <Link prefetch href="/login" className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                <LogIn aria-hidden="true" size={16} />Login
               </Link>
             ) : null}
           </div>
@@ -579,7 +586,7 @@ export default function MagneticNav() {
 
     <header ref={mobileHeaderRef} className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
       <div className="pointer-events-auto mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-2xl sm:min-h-16 sm:px-4">
-        <Link href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
+        <Link prefetch href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
           <span className="relative size-9 overflow-hidden rounded-xl border border-lime/25 bg-muted shadow-[0_8px_20px_rgba(131,255,81,0.12)] sm:size-10">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover transition duration-300 group-hover:scale-110" />
           </span>
@@ -590,15 +597,15 @@ export default function MagneticNav() {
           <div className="flex shrink-0 items-center gap-2">
             {authChecked && !signedIn && !menuOpen ? (
               <Link
-                href="/sign-in"
-                aria-current={pathname === '/sign-in' ? 'page' : undefined}
-                className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/sign-in' ? 'border-lime/40 bg-lime/10 text-lime' : 'border-border bg-muted/30 text-foreground/75 hover:border-lime/40 hover:bg-lime/10 hover:text-lime dark:hover:text-lime'}`}
+                href="/login"
+                aria-current={pathname === '/login' ? 'page' : undefined}
+                className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/login' ? 'border-lime/40 bg-lime/10 text-lime' : 'border-border bg-muted/30 text-foreground/75 hover:border-lime/40 hover:bg-lime/10 hover:text-lime dark:hover:text-lime'}`}
               >
-                <LogIn aria-hidden="true" size={16} /> Sign in
+                <LogIn aria-hidden="true" size={16} /> Login
               </Link>
             ) : null}
             {pathname !== '/chat' && !menuOpen ? (
-              <Link href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-lime px-3.5 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.18)] transition hover:-translate-y-0.5 hover:bg-lime active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex">
+              <Link prefetch href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-lime px-3.5 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.18)] transition hover:-translate-y-0.5 hover:bg-lime active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex">
                 <Sparkles aria-hidden="true" size={15} /> Start chatting
               </Link>
             ) : null}
@@ -661,7 +668,7 @@ export default function MagneticNav() {
                             }).format((walletBalancePaise ?? 0) / 100)}
                       </p>
                       <DropdownMenuItem
-                        render={<Link href="/wallet">View wallet</Link>}
+                        render={<Link prefetch href="/wallet">View wallet</Link>}
                         className="min-h-8 cursor-pointer rounded-md px-2 text-xs"
                       />
                     </div>
@@ -678,7 +685,7 @@ export default function MagneticNav() {
                     <Pencil aria-hidden="true" />Change name
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    render={<Link href="/settings">Account settings</Link>}
+                    render={<Link prefetch href="/settings">Account settings</Link>}
                     className="min-h-10 cursor-pointer rounded-lg"
                   />
                   <DropdownMenuSeparator />
@@ -771,18 +778,26 @@ export default function MagneticNav() {
             if (item.href === "/pocket-money") {
               return (
                 <div key={item.href} data-mobile-nav-item>
-                  <button
-                    type="button"
-                    aria-expanded={pocketMoneyOpen}
-                    onClick={() => setPocketMoneyOpen((open) => !open)}
-                    className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}
-                  >
-                    <span className="group flex min-w-0 items-center gap-2.5">
+                  <div className={`flex min-h-11 w-full items-center gap-2 rounded-xl text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}>
+                    <Link
+                      href={item.href}
+                      aria-current={pathname === item.href ? 'page' : undefined}
+                      onClick={() => setMenuOpen(false)}
+                      className="group flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5"
+                    >
                       <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-lime' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-lime dark:group-hover:text-lime'} />
                       <span>{item.label}</span>
-                    </span>
-                    <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
-                  </button>
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`${pocketMoneyOpen ? 'Collapse' : 'Expand'} Pocket Money submenu`}
+                      aria-expanded={pocketMoneyOpen}
+                      onClick={() => setPocketMoneyOpen((open) => !open)}
+                      className="grid min-h-11 min-w-11 place-items-center rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+                    >
+                      <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
                   {pocketMoneyOpen ? (
                     <div className="ml-8 mt-1 flex flex-col gap-1 border-l border-border pl-2">
                       {POCKET_MONEY_SUB_ITEMS.map((subItem) => (
@@ -861,17 +876,17 @@ export default function MagneticNav() {
 
         {authChecked && !signedIn && (
           <Link
-            href="/sign-in"
-            aria-current={pathname === '/sign-in' ? 'page' : undefined}
+            href="/login"
+            aria-current={pathname === '/login' ? 'page' : undefined}
             onClick={() => setMenuOpen(false)}
-            className={`relative mt-2 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${pathname === '/sign-in' ? 'border-lime/25 bg-lime/10 text-lime' : 'border-border/70 text-foreground/75 hover:border-lime/25 hover:bg-muted hover:text-foreground'}`}
+            className={`relative mt-2 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${pathname === '/login' ? 'border-lime/25 bg-lime/10 text-lime' : 'border-border/70 text-foreground/75 hover:border-lime/25 hover:bg-muted hover:text-foreground'}`}
           >
-            Sign in <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
+            Login <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
           </Link>
         )}
 
         {pathname !== '/chat' ? (
-          <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
+          <Link prefetch href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
         ) : null}
       </div>
     {editingName ? (

@@ -309,7 +309,7 @@ export function WalletTransactionHistory() {
             Your project payments are linked to your account and visible only to you.
           </p>
           <Link
-            href="/sign-in"
+            href="/login"
             className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
           >
             Sign in

@@ -15,7 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         "/owner/",
         "/projects/",
         "/settings",
-        "/sign-in",
+        "/login",
         "/slow-internet",
         "/transactions",
         "/wallet/",
