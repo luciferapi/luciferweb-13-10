@@ -225,11 +225,6 @@ export function SocialAuthButtons({
         <div className="flex min-h-11 justify-center" ref={telegramMount} aria-label="Continue with Telegram" />
       )}
       {error ? <p role="alert" className="text-center text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
-      {!hasProvider && !error ? (
-        <p className="text-center text-xs leading-5 text-muted-foreground">
-          Social sign-in is not configured yet. Add provider credentials to enable it.
-        </p>
-      ) : null}
     </div>
   )
 }
