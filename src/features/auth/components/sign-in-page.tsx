@@ -83,7 +83,6 @@ export function SignInPage() {
       .then((response) => {
         if (response.ok) {
           router.replace("/")
-          router.refresh()
           return
         }
         if (response.status !== 401) throw new Error("Could not verify your session right now.")
@@ -358,7 +357,6 @@ export function SignInPage() {
 
   function finishSignIn() {
     router.replace("/")
-    router.refresh()
   }
 
   return (
