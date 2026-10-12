@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, BookOpenText, Cloud, Database, GraduationCap, Globe2, LayoutGrid, Smartphone } from "lucide-react"
 import { Footer } from "@/components/layout/footer"
 import { LiveBannerTicker } from "@/features/marketing/components/live-banner-ticker"
+import { LiveHomeStats } from "@/features/marketing/components/live-home-stats"
 
 const MotionLink = motion.create(Link)
 
@@ -220,6 +221,7 @@ export default function Home() {
       <LuciferHero />
 
       <LiveBannerTicker placement="hero-flow" />
+      <LiveHomeStats />
 
       <section id="services" className="border-t border-border bg-background px-4 py-20 text-foreground sm:px-6 lg:px-8 lg:py-28">
         <div className="mx-auto max-w-6xl">
