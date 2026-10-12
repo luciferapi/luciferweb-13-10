@@ -58,6 +58,10 @@ export async function getOwnerWorkspaceAccess(): Promise<OwnerWorkspaceAccess | 
   if (profileResult.error) throw profileResult.error
   const assignment = assignmentResult.data
   if (!assignment || profileResult.data?.is_blocked) return null
+  const verifiedByEmailOtp = token
+    ? await isEmailOtpSession(token)
+    : await hasSupabaseEmailOtpSession()
+  if (!verifiedByEmailOtp) return null
   if (!["co_owner", "admin", "customer_support"].includes(assignment.role)) {
     throw new Error("The staff role configuration is invalid.")
   }

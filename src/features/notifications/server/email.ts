@@ -70,8 +70,19 @@ export async function sendOwnerLoginOtp(email: string, otp: string, name: string
   })
 }
 
+export async function sendStaffLoginOtp(email: string, otp: string, name: string): Promise<void> {
+  await sendOtpEmail({
+    kind: "staff sign-in",
+    email,
+    otp,
+    name,
+    subject: "Your Lucifer AI staff sign-in code",
+    expiresIn: "5 minutes",
+  })
+}
+
 async function sendOtpEmail(input: {
-  kind: "registration" | "owner sign-in"
+  kind: "registration" | "owner sign-in" | "staff sign-in"
   email: string
   otp: string
   name: string

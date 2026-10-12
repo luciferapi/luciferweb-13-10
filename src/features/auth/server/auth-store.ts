@@ -400,7 +400,46 @@ export async function findUserBySupabaseAuthId(authUserId: string): Promise<Auth
   return profile ? toAuthUser(profile as ProfileRow) : null
 }
 
-export async function requestOwnerLoginOtp(
+export type OtpLoginType = "owner" | "staff"
+
+async function getOtpLoginType(
+  user: { id: string; email: string | null },
+): Promise<OtpLoginType | null> {
+  if (isOwnerEmail(user.email)) return "owner"
+
+  const { data: assignment, error } = await requireAdminClient()
+    .from("owner_admins")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+  if (error) throw error
+  return assignment ? "staff" : null
+}
+
+export async function getOtpLoginTypeByEmail(email: string): Promise<OtpLoginType | null> {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (isOwnerEmail(normalizedEmail)) return "owner"
+
+  const { data: user, error } = await requireAdminClient()
+    .from("auth_users")
+    .select("id,email,is_blocked")
+    .eq("email", normalizedEmail)
+    .maybeSingle()
+  if (error) throw error
+  return user ? getOtpLoginType(user) : null
+}
+
+export async function getOtpLoginTypeByUserId(userId: string): Promise<OtpLoginType | null> {
+  const { data: user, error } = await requireAdminClient()
+    .from("auth_users")
+    .select("id,email,is_blocked")
+    .eq("id", userId)
+    .maybeSingle()
+  if (error) throw error
+  return user ? getOtpLoginType(user) : null
+}
+
+export async function requestPrivilegedLoginOtp(
   email: string,
 ): Promise<
   | { status: "sent"; otp: string; name: string; retryAfterSeconds: number }
@@ -408,22 +447,21 @@ export async function requestOwnerLoginOtp(
   | { status: "cooldown"; retryAfterSeconds: number }
 > {
   const normalizedEmail = email.trim().toLowerCase()
-  if (!isOwnerEmail(normalizedEmail)) return { status: "missing" }
 
   const admin = requireAdminClient()
-  const { data: owner, error } = await admin
+  const { data: user, error } = await admin
     .from("auth_users")
-    .select("id,name")
+    .select("id,name,email,is_blocked")
     .eq("email", normalizedEmail)
     .maybeSingle()
   if (error) throw error
-  if (!owner) return { status: "missing" }
+  if (!user || user.is_blocked || !await getOtpLoginType(user)) return { status: "missing" }
 
   const otp = randomInt(0, 1_000_000).toString().padStart(6, "0")
   const expiresAt = new Date(Date.now() + OWNER_LOGIN_OTP_DURATION_SECONDS * 1000)
   const result = await callRpc<RpcResult>("auth_request_owner_login_otp", {
     p_email: normalizedEmail,
-    p_user_id: owner.id,
+    p_user_id: user.id,
     p_otp_hash: otpHash(otp),
     p_expires_at: expiresAt.toISOString(),
   })
@@ -437,12 +475,12 @@ export async function requestOwnerLoginOtp(
   return {
     status: "sent",
     otp,
-    name: owner.name as string,
+    name: user.name as string,
     retryAfterSeconds: OWNER_LOGIN_OTP_RESEND_SECONDS,
   }
 }
 
-export async function verifyOwnerLoginOtp(
+export async function verifyPrivilegedLoginOtp(
   email: string,
   otp: string,
 ): Promise<
@@ -450,7 +488,6 @@ export async function verifyOwnerLoginOtp(
   | { status: "invalid" | "missing" | "expired" | "attempts-exceeded" }
 > {
   const normalizedEmail = email.trim().toLowerCase()
-  if (!isOwnerEmail(normalizedEmail)) return { status: "missing" }
 
   const session = sessionToken()
   const result = await callRpc<RpcResult>("auth_verify_owner_login_otp", {

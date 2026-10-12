@@ -22,13 +22,39 @@ You can start editing the page by modifying `src/app/page.tsx`. The page auto-up
 
 ## Source layout
 
-- `src/app` contains routes, layouts, and API handlers.
+- `src/app` contains routes, layouts, and API handlers. Route pages connect URLs to
+  feature-owned screens; for example, sign-in UI and behavior live in
+  `src/features/auth`.
 - `src/features` groups feature-specific components and server-side logic.
 - `src/components` and `src/hooks` contain shared UI and hooks.
-- `src/lib` contains shared utilities and integrations.
+- `src/lib` contains shared integrations and low-level helpers; `src/lib/smtp-server.ts`
+  owns the SMTP transport, while `src/features/notifications/server/email.ts`
+  owns application email workflows and templates.
+- `src/features/auth/server` owns authentication rules and user/session persistence;
+  `src/features/storage/server/r2-storage.ts` is the shared Cloudflare R2 boundary.
 - `public` contains static web assets; `storage/project-catalog` contains local project media and source bundles.
 - `supabase` contains database configuration, migrations, and Edge Functions.
 - `docs` contains project documentation and archived design references.
+
+## Authentication, email, and file storage
+
+- **Email delivery:** Registration verification codes, password-reset links, and
+  owner/staff sign-in codes are sent through the shared Hostinger SMTP transport.
+  Route handlers validate and orchestrate requests; email templates and delivery
+  live in `src/features/notifications/server/email.ts`. Staff and owner accounts
+  use emailed one-time codes only; password, Google/X, and Telegram login paths
+  cannot create privileged sessions.
+- **User records:** Supabase Auth owns account credentials. The application profile
+  and public UID are stored in `public.auth_users`; provider links and hashed app
+  sessions are stored in `public.auth_identities` and `public.auth_sessions`.
+  Staff role and module access are stored in `public.owner_admins`. Feature data
+  such as projects, wallet activity, referrals, and support tickets remains in
+  their corresponding Supabase tables.
+- **Media files:** Image and demo-video bytes are uploaded to the public Cloudflare
+  R2 media bucket through `src/features/storage/server/r2-storage.ts`. Supabase
+  stores application records and references, not the media bytes. Source ZIPs and
+  maintenance settings use the separate private R2 bucket; protected download
+  routes return source files only after purchase verification.
 
 ## Supabase backend
 
@@ -99,10 +125,11 @@ Display name and date of birth can each be changed once from Settings. A
 confirmation is shown before either change, and customer support must handle
 later corrections. Chat remains publicly accessible.
 The forgot-password endpoint checks that an account exists before creating
-and sending a reset code. Owner sign-in codes are generated and verified by
-the app, sent through Hostinger SMTP, and require the server-only Supabase key.
-Owner access is restricted to the allowlisted email and an email-OTP-authenticated
-session. No Supabase Auth SMTP configuration is required.
+and sending a reset link. Owner and staff sign-in codes are generated and
+verified by the app, sent through Hostinger SMTP, and require the server-only
+Supabase key. Staff OTP issuance and verification are restricted to active staff
+assignments and checked again in the database. Owner/staff access requires an
+email-OTP-authenticated session. No Supabase Auth SMTP configuration is required.
 
 Set `PAYOUT_DATA_ENCRYPTION_KEY` to a strong, persistent server-only secret so
 saved payout details can be encrypted at rest. Registration, owner sign-in,

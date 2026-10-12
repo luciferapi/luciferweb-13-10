@@ -5,6 +5,7 @@ import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
 import {
   createSession,
   getOrCreateOAuthUser,
+  getOtpLoginTypeByUserId,
   OAuthSignupRequiredError,
   SignupIpAlreadyUsedError,
 } from "@/features/auth/server/auth-store"
@@ -112,6 +113,11 @@ export async function POST(request: Request) {
       referralCode: cookieStore.get("telegram_signup_referral")?.value,
       signupIpHash,
     })
+    if (await getOtpLoginTypeByUserId(user.id)) {
+      return NextResponse.json({
+        error: "This account must sign in using its emailed verification code.",
+      }, { status: 403 })
+    }
     const session = await createSession(user.id, "telegram")
     const response = NextResponse.json({ user })
     response.cookies.delete("telegram_login_state")

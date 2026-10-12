@@ -40,7 +40,7 @@ export const emailVerificationSchema = z.object({
   otp: z.string().regex(/^\d{6}$/),
 })
 
-export const ownerOtpRequestSchema = z.object({ email })
+export const loginCodeRequestSchema = z.object({ email })
 
 export const passwordResetSchema = z.object({
   token: z.string().regex(/^[A-Za-z0-9_-]{40,60}$/),

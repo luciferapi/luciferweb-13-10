@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://lucifer-website-development.vercel.app",
+        "HTTP-Referer": "https://luciferapi.com",
         "X-OpenRouter-Title": "LUCIFER AI",
       },
       body: JSON.stringify({

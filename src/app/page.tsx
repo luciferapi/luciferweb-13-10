@@ -75,11 +75,6 @@ function LuciferHero() {
         className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background dark:from-zinc-950 dark:via-zinc-950/85 dark:to-zinc-950"
         aria-hidden="true"
       />
-      <div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_78%_30%,rgba(175,255,0,0.10),transparent_42%),radial-gradient(circle_at_12%_80%,rgba(34,211,238,0.08),transparent_38%)]"
-        aria-hidden="true"
-      />
-
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <motion.div
           initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}

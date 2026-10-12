@@ -5,6 +5,7 @@ import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
 import {
   createSession,
   getOrCreateOAuthUser,
+  getOtpLoginTypeByUserId,
   OAuthSignupRequiredError,
   SignupIpAlreadyUsedError,
 } from "@/features/auth/server/auth-store"
@@ -163,6 +164,9 @@ export async function GET(
       })
     }
 
+    if (await getOtpLoginTypeByUserId(user.id)) {
+      return finish(authErrorRedirect(request.url, "otp_required"))
+    }
     const session = await createSession(user.id, "oauth")
     const response = NextResponse.redirect(new URL("/", baseUrl))
     setAuthSessionCookie(response, session, false, "user")

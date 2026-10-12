@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateUser, createSession } from "@/features/auth/server/auth-store"
+import { authenticateUser, createSession, getOtpLoginTypeByEmail } from "@/features/auth/server/auth-store"
 import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
 import { loginSchema } from "@/features/auth/server/auth-validation"
 import { getSupabaseServerClient } from "@/lib/supabase"
@@ -30,6 +30,10 @@ export async function POST(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
+    if (await getOtpLoginTypeByEmail(parsed.data.email)) {
+      return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 })
+    }
+
     const supabase = await getSupabaseServerClient()
     if (supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({

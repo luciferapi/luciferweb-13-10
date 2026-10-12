@@ -122,7 +122,7 @@ export default function MagneticNav() {
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       gsap.set(drawer, {
-        xPercent: menuOpen ? 0 : -100,
+        xPercent: menuOpen ? 0 : 100,
         autoAlpha: menuOpen ? 1 : 0,
         pointerEvents: menuOpen ? 'auto' : 'none',
       });
@@ -142,7 +142,7 @@ export default function MagneticNav() {
       ease: 'power2.out',
     }, 0);
     timeline.to(drawer, {
-      xPercent: menuOpen ? 0 : -100,
+      xPercent: menuOpen ? 0 : 100,
       autoAlpha: menuOpen ? 1 : 0,
       pointerEvents: menuOpen ? 'auto' : 'none',
       duration: menuOpen ? 0.38 : 0.28,
@@ -726,6 +726,7 @@ export default function MagneticNav() {
           </div>
         </div>
       </div>
+    </header>
 
       <button
         ref={mobileBackdropRef}
@@ -745,10 +746,10 @@ export default function MagneticNav() {
         aria-modal={menuOpen || undefined}
         aria-hidden={!menuOpen}
         inert={!menuOpen}
-        className="pointer-events-none fixed inset-y-0 left-0 z-[70] flex w-[min(20rem,calc(100vw-3rem))] flex-col overflow-y-auto overscroll-contain border-r border-lime/15 bg-background/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl xl:hidden sm:p-5"
+        className="pointer-events-none fixed inset-y-0 right-0 z-[70] flex w-[min(17rem,calc(100vw-1.5rem))] flex-col overflow-y-auto overscroll-contain border-l border-lime/15 bg-background/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl xl:hidden sm:p-5"
         style={{ opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}
       >
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 size-48 rounded-full bg-lime/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -left-12 -top-20 size-48 rounded-full bg-lime/10 blur-3xl" />
         <div className="relative mb-5 flex items-center justify-between gap-3 border-b border-border pb-4">
           <div>
             <p className="font-heading text-sm font-bold tracking-wide text-foreground">LUCIFER <span className="text-lime">AI</span></p>
@@ -873,7 +874,6 @@ export default function MagneticNav() {
           <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
         ) : null}
       </div>
-    </header>
     {editingName ? (
       <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
         <section
