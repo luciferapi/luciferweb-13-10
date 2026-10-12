@@ -206,7 +206,7 @@ export default function MagneticNav() {
         setAuthChecked(true);
       });
     return () => controller.abort();
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     if (!signedIn) {
