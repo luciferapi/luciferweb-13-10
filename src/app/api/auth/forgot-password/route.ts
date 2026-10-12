@@ -2,16 +2,13 @@ import { NextResponse } from "next/server"
 import { createPasswordResetToken, deletePasswordResetToken } from "@/features/auth/server/auth-store"
 import { loginSchema } from "@/features/auth/server/auth-validation"
 import { sendPasswordResetEmail, verifySmtpConfiguration } from "@/features/notifications/server/email"
+import { isSmtpConfigured } from "@/lib/smtp-server"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 const GENERIC_RESPONSE = {
   message: "If an account exists for that email, password reset instructions will be sent.",
-}
-
-function hasSmtpConfiguration(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD)
 }
 
 export async function POST(request: Request) {
@@ -47,7 +44,7 @@ export async function POST(request: Request) {
   resetUrl.searchParams.set("reset", token)
 
   try {
-    if (!hasSmtpConfiguration()) {
+    if (!isSmtpConfigured()) {
       if (process.env.NODE_ENV !== "production") {
         console.info(`Password reset URL for ${parsed.data.email}: ${resetUrl.toString()}`)
         return NextResponse.json(GENERIC_RESPONSE)

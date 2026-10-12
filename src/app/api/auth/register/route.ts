@@ -86,7 +86,10 @@ export async function POST(request: Request) {
       await discardPendingRegistration(parsed.data.email)
       throw error
     }
-    return NextResponse.json({ verificationRequired: true })
+    return NextResponse.json({
+      verificationRequired: true,
+      message: "The email server accepted your verification code. Check your inbox and spam or junk folder.",
+    })
   } catch (error) {
     if (error instanceof SignupIpAlreadyUsedError) {
       return NextResponse.json({ error: error.message }, { status: 409 })

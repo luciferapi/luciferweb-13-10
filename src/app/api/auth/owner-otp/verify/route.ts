@@ -5,7 +5,6 @@ import { emailVerificationSchema } from "@/features/auth/server/auth-validation"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
-import { enforceRateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -21,13 +20,6 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter the owner email and six-digit sign-in code." }, { status: 400 })
   }
-
-  const rateLimitResponse = await enforceRateLimit(request, "owner-otp-verify", {
-    capacity: 10,
-    refillSeconds: 10 * 60,
-    identifiers: [parsed.data.email],
-  })
-  if (rateLimitResponse) return rateLimitResponse
 
   if (!isOwnerEmail(parsed.data.email)) {
     return NextResponse.json({ error: "Owner sign-in is not available for this email address." }, { status: 403 })

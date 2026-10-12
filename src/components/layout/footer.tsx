@@ -121,7 +121,7 @@ export function Footer() {
             </Link>
             <Link
               href="/contact/process"
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border px-6 py-3 text-center text-sm font-semibold text-foreground transition hover:-translate-y-px hover:border-cyan-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border px-6 py-3 text-center text-sm font-semibold text-foreground transition hover:-translate-y-px hover:border-lime/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
             >
               See how it works
             </Link>
@@ -166,7 +166,7 @@ export function Footer() {
                         <button
                           type="button"
                           onClick={() => window.dispatchEvent(new Event(COOKIE_SETTINGS_EVENT))}
-                          className="inline-block font-mono text-xs text-muted-foreground transition-colors hover:text-cyan-700 dark:hover:text-cyan-300"
+                          className="inline-block font-mono text-xs text-muted-foreground transition-colors hover:text-lime"
                         >
                           {item.label}
                         </button>
@@ -175,7 +175,7 @@ export function Footer() {
                           href={item.href}
                           target={item.external ? "_blank" : undefined}
                           rel={item.external ? "noreferrer" : undefined}
-                          className="inline-block font-mono text-xs text-muted-foreground transition-colors hover:text-cyan-700 dark:hover:text-cyan-300"
+                          className="inline-block font-mono text-xs text-muted-foreground transition-colors hover:text-lime"
                         >
                           {item.label}
                         </Link>
@@ -200,9 +200,9 @@ export function Footer() {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring" as const, stiffness: 400, damping: 17 }}
           >
-            <span className="flex items-center gap-3 text-xl font-black">
-              <span className="size-9 overflow-hidden rounded-xl border border-fuchsia-400/40"><img src="/images/luciferai-brand-logo.jpg" alt="LUCIFER AI cat mascot logo" className="size-full object-cover" /></span>
-              <span><span className="text-foreground">LUCIFER</span> <span className="text-cyan-700 dark:text-cyan-300">AI</span></span>
+            <span className="flex items-center gap-3 font-heading text-xl font-bold">
+              <span className="size-9 overflow-hidden rounded-xl border border-lime/40"><img src="/images/luciferai-brand-logo.jpg" alt="LUCIFER AI cat mascot logo" className="size-full object-cover" /></span>
+              <span><span className="text-foreground">LUCIFER</span> <span className="text-lime dark:text-lime">AI</span></span>
             </span>
           </motion.div>
 

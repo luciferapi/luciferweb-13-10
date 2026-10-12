@@ -183,23 +183,23 @@ export function SocialAuthButtons({
   }
 
   if (!providers && !error) {
-    return <p className="text-center text-xs text-white/45" role="status">Loading sign-in options...</p>
+    return <p className="text-center text-xs text-muted-foreground" role="status">Loading sign-in options...</p>
   }
 
   const hasProvider = Boolean(providers?.google || providers?.twitter || providers?.telegram)
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-[11px] font-medium text-white/40">
-        <span className="h-px flex-1 bg-white/10" />
+      <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground/70">
+        <span className="h-px flex-1 bg-border" />
         <span>Or continue with</span>
-        <span className="h-px flex-1 bg-white/10" />
+        <span className="h-px flex-1 bg-border" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => startOAuth("google")}
           disabled={!providers?.google}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white px-3 text-sm font-semibold text-[#171717] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold text-[#171717] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white"
         >
           <span aria-hidden="true" className="font-bold text-[#4285f4]">G</span> Google
         </button>
@@ -207,7 +207,7 @@ export function SocialAuthButtons({
           type="button"
           onClick={() => startOAuth("twitter")}
           disabled={!providers?.twitter}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#191919] px-3 text-sm font-semibold text-white transition hover:bg-[#252525] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-[#191919] px-3 text-sm font-semibold text-white transition hover:bg-[#252525] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span aria-hidden="true" className="font-semibold">𝕏</span> X / Twitter
         </button>
@@ -224,9 +224,9 @@ export function SocialAuthButtons({
       ) : (
         <div className="flex min-h-11 justify-center" ref={telegramMount} aria-label="Continue with Telegram" />
       )}
-      {error ? <p role="alert" className="text-center text-sm text-rose-300">{error}</p> : null}
+      {error ? <p role="alert" className="text-center text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
       {!hasProvider && !error ? (
-        <p className="text-center text-xs leading-5 text-white/45">
+        <p className="text-center text-xs leading-5 text-muted-foreground">
           Social sign-in is not configured yet. Add provider credentials to enable it.
         </p>
       ) : null}

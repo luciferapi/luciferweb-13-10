@@ -6,7 +6,6 @@ import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 import { isSupabaseSchemaUnavailable } from "@/lib/supabase-errors"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
-import { enforceRateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -23,13 +22,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid owner email address." }, { status: 400 })
   }
 
-  const rateLimitResponse = await enforceRateLimit(request, "owner-otp-request", {
-    capacity: 5,
-    refillSeconds: 10 * 60,
-    identifiers: [parsed.data.email],
-  })
-  if (rateLimitResponse) return rateLimitResponse
-
   if (!isOwnerEmail(parsed.data.email)) {
     return NextResponse.json({ error: "Owner sign-in is not available for this email address." }, { status: 403 })
   }
@@ -44,20 +36,20 @@ export async function POST(request: Request) {
     const result = await requestOwnerLoginOtp(parsed.data.email)
     if (result.status === "missing") {
       return NextResponse.json({
-        message: "If owner sign-in is available, a code has been sent.",
+        message: "If owner sign-in is available, check the configured owner inbox and spam folder.",
         retryAfterSeconds: 120,
       })
     }
     if (result.status === "cooldown") {
       return NextResponse.json({
-        message: "If owner sign-in is available, a code has been sent.",
+        message: "A code was requested recently and was not resent. Check your inbox and spam folder for the earlier email; you can request another when the timer ends.",
         retryAfterSeconds: result.retryAfterSeconds,
       })
     }
 
     await sendOwnerLoginOtp(parsed.data.email, result.otp, result.name)
     return NextResponse.json({
-      message: "If owner sign-in is available, a code has been sent.",
+      message: "The email server accepted the sign-in code. Check your inbox and spam or junk folder.",
       retryAfterSeconds: result.retryAfterSeconds,
     })
   } catch (error) {

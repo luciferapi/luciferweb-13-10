@@ -178,7 +178,7 @@ export default function SignInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
-      const result = await response.json() as { error?: string; verificationRequired?: boolean }
+      const result = await response.json() as { error?: string; verificationRequired?: boolean; message?: string }
       if (!response.ok) throw new Error(result.error ?? "Authentication failed.")
 
       if (mode === "create-account" && result.verificationRequired) {
@@ -186,6 +186,7 @@ export default function SignInPage() {
         setVerificationCode("")
         setVerificationType("signup")
         setResendSeconds(60)
+        setNotice(result.message ?? "Check your inbox and spam or junk folder for the verification code.")
         return
       }
 
@@ -269,7 +270,7 @@ export default function SignInPage() {
       setOwnerOtpRequested(true)
       setOwnerResendSeconds(result.retryAfterSeconds)
       setVerificationCode("")
-      setNotice(result.message ?? "A sign-in code has been sent. Any previous code is now invalid.")
+      setNotice(result.message ?? "Check your inbox and spam or junk folder for the sign-in code.")
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not send the owner sign-in code.")
     } finally {
@@ -359,34 +360,34 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080b] px-4 py-20 text-white sm:px-6 lg:px-8">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-20 text-foreground sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.10),transparent_45%),linear-gradient(135deg,transparent_45%,rgba(217,70,239,0.04))]" />
       {checkingSession ? (
-        <p className="relative text-sm text-white/65" role="status">Checking your sign-in...</p>
+        <p className="relative text-sm text-muted-foreground" role="status">Checking your sign-in...</p>
       ) : (
-      <section ref={authPanelRef} className="relative w-full max-w-lg rounded-[28px] border border-white/10 bg-[#101014]/95 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-7 lg:p-8" aria-labelledby="sign-in-title">
-        <Link href="/" className="mb-7 inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-cyan-200">
+      <section ref={authPanelRef} className="relative w-full max-w-lg rounded-[28px] border border-border bg-card/95 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-7 lg:p-8" aria-labelledby="sign-in-title">
+        <Link href="/" className="mb-7 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-cyan-700 dark:hover:text-cyan-200">
           <ArrowLeft aria-hidden="true" size={16} /> Home
         </Link>
 
         <div className="mb-7 flex items-center gap-3">
-          <span className="size-11 overflow-hidden rounded-xl border border-cyan-200/20 bg-white/5">
+          <span className="size-11 overflow-hidden rounded-xl border border-cyan-200/20 bg-muted/40">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </span>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">LUCIFER AI</p>
-            <h1 id="sign-in-title" className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-black tracking-[-0.06em] text-white">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : ownerOtpRequested ? "Owner sign-in" : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">LUCIFER AI</p>
+            <h1 id="sign-in-title" className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-black tracking-[-0.06em] text-foreground">{resetToken ? "Choose a new password" : forgotPassword ? "Reset your password" : ownerOtpRequested ? "Owner sign-in" : pendingEmail ? "Verify your email" : mode === "sign-in" ? "Welcome back" : "Create your account"}</h1>
           </div>
         </div>
 
         {sessionWarning ? (
-          <p role="status" className="mb-4 rounded-xl border border-amber-200/20 bg-amber-300/10 px-3.5 py-3 text-sm leading-5 text-amber-100">
+          <p role="status" className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-3 text-sm leading-5 text-amber-800 dark:text-amber-100">
             {sessionWarning}
           </p>
         ) : null}
 
         {!pendingEmail && !ownerOtpRequested && !forgotPassword && !resetToken && !resetComplete ? (
-          <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-black/20 p-1" role="tablist" aria-label="Authentication mode">
+          <div className="mb-6 grid grid-cols-2 rounded-xl border border-border bg-muted/40 p-1" role="tablist" aria-label="Authentication mode">
             {(["sign-in", "create-account"] as const).map((option) => (
               <button
                 key={option}
@@ -394,7 +395,7 @@ export default function SignInPage() {
                 role="tab"
                 aria-selected={mode === option}
                 onClick={() => { setMode(option); setError(""); }}
-                className={`rounded-lg px-3 py-2.5 text-sm font-semibold tracking-[-0.02em] transition ${mode === option ? "bg-white/10 text-white shadow-inner shadow-black/20" : "text-white/45 hover:text-white/75"}`}
+                className={`rounded-lg px-3 py-2.5 text-sm font-semibold tracking-[-0.02em] transition ${mode === option ? "bg-muted text-foreground shadow-inner shadow-black/5 dark:bg-white/10 dark:shadow-black/20" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {option === "sign-in" ? "Login" : "Create account"}
               </button>
@@ -405,52 +406,52 @@ export default function SignInPage() {
         <div ref={authStageRef}>
         {resetComplete ? (
           <div className="space-y-4">
-            <p role="status" className="text-sm leading-6 text-emerald-300">Your password has been reset. You can now sign in with your new password.</p>
-            <button type="button" onClick={() => { setResetComplete(false); setMode("sign-in"); }} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200">Back to sign in</button>
+            <p role="status" className="text-sm leading-6 text-emerald-700 dark:text-emerald-300">Your password has been reset. You can now sign in with your new password.</p>
+            <button type="button" onClick={() => { setResetComplete(false); setMode("sign-in"); }} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200">Back to sign in</button>
           </div>
         ) : resetToken ? (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <>
-                <label className="block space-y-2 text-sm font-medium text-white/75">
+                <label className="block space-y-2 text-sm font-medium text-foreground/80">
                   New password
-                  <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                    <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                    <input name="password" type="password" autoComplete="new-password" minLength={8} maxLength={128} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                  <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                    <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                    <input name="password" type="password" autoComplete="new-password" minLength={8} maxLength={128} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none" />
                   </span>
                 </label>
-                <label className="block space-y-2 text-sm font-medium text-white/75">
+                <label className="block space-y-2 text-sm font-medium text-foreground/80">
                   Confirm new password
-                  <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                    <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                    <input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                  <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                    <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                    <input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none" />
                   </span>
                 </label>
-                {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
-                <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? "Updating..." : "Update password"}</button>
+                {error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
+                <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? "Updating..." : "Update password"}</button>
             </>
           </form>
         ) : forgotPassword ? (
           <form onSubmit={handleForgotPassword} className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">Enter your account email. If it matches an account, we’ll send a secure reset link.</p>
-            <label className="block space-y-2 text-sm font-medium text-white/75">
+            <p className="text-sm leading-6 text-muted-foreground">Enter your account email. If it matches an account, we’ll send a secure reset link.</p>
+            <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Email address
-              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                <input name="email" type="email" autoComplete="email" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                <Mail aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                <input name="email" type="email" autoComplete="email" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none" />
               </span>
             </label>
-            {notice ? <p role="status" className="text-sm text-emerald-300">{notice}</p> : null}
-            {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
-            <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? "Sending..." : "Send reset link"}</button>
-            <button type="button" onClick={() => { setForgotPassword(false); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/50 transition hover:text-white">Back to sign in</button>
+            {notice ? <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
+            {error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
+            <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? "Sending..." : "Send reset link"}</button>
+            <button type="button" onClick={() => { setForgotPassword(false); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-muted-foreground transition hover:text-foreground">Back to sign in</button>
           </form>
         ) : pendingEmail ? (
           <form onSubmit={handleVerifyEmail} className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">We requested a six-digit code for <span className="font-semibold text-white">{pendingEmail}</span>. Check your inbox and spam folder. The code expires in 10 minutes.</p>
-            <label className="block space-y-2 text-sm font-medium text-white/75">
+            <p className="text-sm leading-6 text-muted-foreground">We requested a six-digit code for <span className="font-semibold text-foreground">{pendingEmail}</span>. Check your inbox and spam folder. The code expires in 10 minutes.</p>
+            <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Verification code
-              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                <Mail aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
                 <input
                   name="otp"
                   type="text"
@@ -469,46 +470,46 @@ export default function SignInPage() {
                   aria-describedby="verification-code-help"
                   autoFocus
                   required
-                  className="h-full min-w-0 flex-1 bg-transparent text-center font-mono text-lg font-semibold tracking-[0.45em] text-white outline-none placeholder:text-white/30"
+                  className="h-full min-w-0 flex-1 bg-transparent text-center font-mono text-lg font-semibold tracking-[0.45em] text-foreground outline-none placeholder:text-muted-foreground/50"
                 />
               </span>
-              <span id="verification-code-help" className="block text-xs text-white/45">Enter the six digits from the email. Numbers only.</span>
+              <span id="verification-code-help" className="block text-xs text-muted-foreground/70">Enter the six digits from the email. Numbers only.</span>
             </label>
             {error ? (
-              <p role="alert" className="text-sm text-rose-300">
+              <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">
                 {error}
                 {error.toLowerCase().includes("expired") && resendSeconds > 0
                   ? ` You can resend a new code in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}.`
                   : ""}
               </p>
             ) : null}
-            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? "Verifying..." : "Verify email"}
             </button>
-            {notice ? <p role="status" className="text-sm text-emerald-300">{notice}</p> : null}
+            {notice ? <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
             <button
               type="button"
               onClick={() => void handleResendCode()}
               disabled={isSubmitting || resendSeconds > 0}
-              className="w-full py-2 text-sm text-cyan-200 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/35"
+              className="w-full py-2 text-sm text-cyan-700 dark:text-cyan-200 transition hover:text-cyan-600 dark:hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-muted-foreground/60"
             >
               {resendSeconds > 0
                 ? `Resend code in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
                 : "Resend verification code"}
             </button>
-            <button type="button" onClick={() => { setPendingEmail(""); setVerificationCode(""); setError(""); }} className="w-full py-2 text-sm text-white/50 transition hover:text-white">
+            <button type="button" onClick={() => { setPendingEmail(""); setVerificationCode(""); setError(""); }} className="w-full py-2 text-sm text-muted-foreground transition hover:text-foreground">
               Back to account form
             </button>
           </form>
         ) : ownerOtpRequested ? (
           <form onSubmit={handleVerifyOwnerOtp} className="space-y-4">
-            <p className="text-sm leading-6 text-white/65">
-              Enter the six-digit sign-in code sent to <span className="font-semibold text-white">{emailInput}</span>. It expires in 5 minutes. Requesting a new code invalidates the previous one.
+            <p className="text-sm leading-6 text-muted-foreground">
+              Enter the six-digit sign-in code for <span className="font-semibold text-foreground">{emailInput}</span>. Check your inbox and spam or junk folder. It expires in 5 minutes; requesting a new code invalidates the previous one.
             </p>
-            <label className="block space-y-2 text-sm font-medium text-white/75">
+            <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Sign-in code
-              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                <Mail aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
                 <input
                   name="ownerOtp"
                   type="text"
@@ -526,26 +527,26 @@ export default function SignInPage() {
                   aria-label="Six-digit owner sign-in code"
                   autoFocus
                   required
-                  className="h-full min-w-0 flex-1 bg-transparent text-center font-mono text-lg font-semibold tracking-[0.45em] text-white outline-none placeholder:text-white/30"
+                  className="h-full min-w-0 flex-1 bg-transparent text-center font-mono text-lg font-semibold tracking-[0.45em] text-foreground outline-none placeholder:text-muted-foreground/50"
                 />
               </span>
             </label>
-            {error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
-            {notice ? <p role="status" className="text-sm text-emerald-300">{notice}</p> : null}
-            <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
+            {error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
+            {notice ? <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
+            <button type="submit" disabled={isSubmitting} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? "Verifying..." : "Verify and sign in"}
             </button>
             <button
               type="button"
               onClick={() => void handleRequestOwnerOtp()}
               disabled={isSubmitting || ownerResendSeconds > 0}
-              className="w-full py-2 text-sm text-cyan-200 transition hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-white/35"
+              className="w-full py-2 text-sm text-cyan-700 dark:text-cyan-200 transition hover:text-cyan-600 dark:hover:text-cyan-100 disabled:cursor-not-allowed disabled:text-muted-foreground/60"
             >
               {ownerResendSeconds > 0
                 ? `Resend sign-in code in ${String(Math.floor(ownerResendSeconds / 60)).padStart(2, "0")}:${String(ownerResendSeconds % 60).padStart(2, "0")}`
                 : "Resend sign-in code"}
             </button>
-            <button type="button" onClick={() => { setOwnerOtpRequested(false); setVerificationCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/50 transition hover:text-white">
+            <button type="button" onClick={() => { setOwnerOtpRequested(false); setVerificationCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-muted-foreground transition hover:text-foreground">
               Back to sign in
             </button>
           </form>
@@ -561,31 +562,31 @@ export default function SignInPage() {
           }}
           className="space-y-4"
         >
-          <label className="block space-y-2 text-sm font-medium text-white/75">
+          <label className="block space-y-2 text-sm font-medium text-foreground/80">
             Email address
-            <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-              <Mail aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-              <input name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={emailInput} onChange={(event) => { setEmailInput(event.target.value); setOwnerOtpRequested(false); setError(""); setNotice(""); }} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+            <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+              <Mail aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+              <input name="email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={emailInput} onChange={(event) => { setEmailInput(event.target.value); setOwnerOtpRequested(false); setError(""); setNotice(""); }} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
             </span>
           </label>
           {!showEmailCredentials ? (
-            <p className="text-sm text-white/50" role="status">Enter your email address to continue with email.</p>
+            <p className="text-sm text-muted-foreground" role="status">Enter your email address to continue with email.</p>
           ) : null}
-          {!showEmailCredentials && socialError ? <p role="alert" className="text-sm text-rose-300">{socialError}</p> : null}
+          {!showEmailCredentials && socialError ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{socialError}</p> : null}
 
           {mode === "create-account" && (
             showEmailCredentials ? (
             <>
-              <label className="block space-y-2 text-sm font-medium text-white/75">
+              <label className="block space-y-2 text-sm font-medium text-foreground/80">
                 Full name
-                <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                  <UserRound aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                  <input name="name" type="text" autoComplete="name" maxLength={100} placeholder="Your name" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+                <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                  <UserRound aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                  <input name="name" type="text" autoComplete="name" maxLength={100} placeholder="Your name" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
                 </span>
               </label>
-              <label className="block space-y-2 text-sm font-medium text-white/75">
-                Referral code <span className="text-white/45">(optional)</span>
-                <span className="flex h-12 items-center rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
+              <label className="block space-y-2 text-sm font-medium text-foreground/80">
+                Referral code <span className="text-muted-foreground">(optional)</span>
+                <span className="flex h-12 items-center rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
                   <input
                     name="referralCode"
                     type="text"
@@ -595,7 +596,7 @@ export default function SignInPage() {
                     placeholder="Enter a referral code if you have one"
                     value={referralCode}
                     onChange={(event) => setReferralCode(event.target.value)}
-                    className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                    className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                   />
                 </span>
               </label>
@@ -604,12 +605,12 @@ export default function SignInPage() {
           )}
 
           {showEmailCredentials && !ownerOtpSignIn ? (
-            <label className="block space-y-2 text-sm font-medium text-white/75">
+            <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Password
-              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "create-account" ? 8 : undefined} maxLength={128} placeholder={mode === "create-account" ? "At least 8 characters" : "Enter your password"} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
-                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="grid size-8 shrink-0 place-items-center rounded-lg text-white/45 transition hover:bg-white/5 hover:text-white">
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                <input name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "create-account" ? 8 : undefined} maxLength={128} placeholder={mode === "create-account" ? "At least 8 characters" : "Enter your password"} required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
+                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)} className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground dark:hover:bg-white/5">
                   {showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
                 </button>
               </span>
@@ -617,26 +618,26 @@ export default function SignInPage() {
           ) : null}
 
           {mode === "create-account" && showEmailCredentials ? (
-            <label className="block space-y-2 text-sm font-medium text-white/75">
+            <label className="block space-y-2 text-sm font-medium text-foreground/80">
               Confirm password
-              <span className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3.5 focus-within:border-cyan-300/60">
-                <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-white/35" />
-                <input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} placeholder="Re-enter password" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+              <span className="flex h-12 items-center gap-3 rounded-xl border border-border bg-muted/50 px-3.5 dark:bg-black/25 focus-within:border-cyan-500/60 dark:focus-within:border-cyan-300/60">
+                <LockKeyhole aria-hidden="true" size={17} className="shrink-0 text-muted-foreground/60" />
+                <input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} placeholder="Re-enter password" required className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60" />
               </span>
             </label>
           ) : null}
 
           {mode === "create-account" && showEmailCredentials ? (
-            <label className="flex items-start gap-3 text-sm leading-6 text-white/70">
+            <label className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
               <input
                 name="privacyAccepted"
                 type="checkbox"
                 required
-                className="mt-1 size-4 shrink-0 accent-cyan-300"
+                className="mt-1 size-4 shrink-0 accent-cyan-500 dark:accent-cyan-300"
               />
               <span>
                 I have read and accept the{" "}
-                <Link href="/privacy" target="_blank" className="text-cyan-200 underline underline-offset-4 hover:text-cyan-100">
+                <Link href="/privacy" target="_blank" className="text-cyan-700 underline underline-offset-4 hover:text-cyan-600 dark:text-cyan-200 dark:hover:text-cyan-100">
                   Privacy Policy
                 </Link>
                 .
@@ -645,27 +646,27 @@ export default function SignInPage() {
           ) : null}
 
           {mode === "sign-in" && showEmailCredentials && !ownerOtpSignIn ? (
-            <label className="flex items-center gap-2.5 text-sm text-white/70">
+            <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
               <input
                 name="rememberMe"
                 type="checkbox"
-                className="size-4 shrink-0 accent-cyan-300"
+                className="size-4 shrink-0 accent-cyan-500 dark:accent-cyan-300"
               />
               <span>Remember me</span>
             </label>
           ) : null}
 
-          {mode === "create-account" && error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
+          {mode === "create-account" && error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
           {mode === "create-account" && showEmailCredentials ? (
-            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? "Please wait..." : "Create account"}
             </button>
           ) : null}
-          {mode === "sign-in" && error ? <p role="alert" className="text-sm text-rose-300">{error}</p> : null}
+          {mode === "sign-in" && error ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
           {ownerOtpSignIn ? (
             <div className="space-y-3">
-              <p className="text-sm leading-6 text-cyan-100/75">Owner sign-in uses an emailed one-time code. Password and social sign-in are disabled for this account.</p>
-              <button type="button" onClick={() => void handleRequestOwnerOtp()} disabled={isSubmitting || ownerResendSeconds > 0} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+              <p className="text-sm leading-6 text-cyan-700/80 dark:text-cyan-100/75">Owner sign-in uses an emailed one-time code. Password and social sign-in are disabled for this account.</p>
+              <button type="button" onClick={() => void handleRequestOwnerOtp()} disabled={isSubmitting || ownerResendSeconds > 0} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
                 {isSubmitting
                   ? "Sending code..."
                   : ownerResendSeconds > 0
@@ -675,7 +676,7 @@ export default function SignInPage() {
             </div>
           ) : null}
           {mode === "sign-in" && showEmailCredentials && !ownerOtpSignIn ? (
-            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071014] transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101014] disabled:cursor-wait disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? "Please wait..." : "Sign in"}
             </button>
           ) : null}
@@ -691,7 +692,7 @@ export default function SignInPage() {
           ) : null}
 
           {mode === "sign-in" && showEmailCredentials && !ownerOtpSignIn ? (
-            <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-sm text-cyan-200/75 transition hover:text-cyan-100">
+            <button type="button" onClick={() => { setForgotPassword(true); setError(""); }} className="text-sm text-cyan-700/80 transition hover:text-cyan-600 dark:text-cyan-200/75 dark:hover:text-cyan-100">
               Forgot password?
             </button>
           ) : null}

@@ -25,7 +25,7 @@ export default async function OpenGraphImage() {
           padding: 68,
           color: "#f4f4f5",
           background: "linear-gradient(135deg, #09090b 0%, #111827 100%)",
-          fontFamily: "Arial, sans-serif",
+          fontFamily: "Inter, sans-serif",
         }}
       >
         <img
@@ -36,7 +36,7 @@ export default async function OpenGraphImage() {
           style={{ objectFit: "cover", borderRadius: 28 }}
         />
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-          <div style={{ color: "#67e8f9", fontSize: 22, fontWeight: 700, letterSpacing: 5 }}>
+          <div style={{ color: "#67e8f9", fontFamily: "Space Grotesk, sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: 5 }}>
             LUCIFER AI
           </div>
           <div style={{ display: "flex", marginTop: 28, fontSize: 54, fontWeight: 700, lineHeight: 1.12 }}>

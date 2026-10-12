@@ -93,6 +93,18 @@ function createR2Client(config: NonNullable<ReturnType<typeof getCloudflareR2Con
   })
 }
 
+async function withR2Client<T>(
+  config: NonNullable<ReturnType<typeof getCloudflareR2Config>>,
+  operation: (client: S3Client) => Promise<T>,
+): Promise<T> {
+  const client = createR2Client(config)
+  try {
+    return await operation(client)
+  } finally {
+    client.destroy()
+  }
+}
+
 export function buildPublicStorageUrl(objectKey: string) {
   const config = getCloudflareR2Config()
   if (!config?.publicUrl) return null
@@ -118,13 +130,13 @@ export async function uploadToCloudflareR2(
   const bucket = isPublic ? config.bucket : config.privateBucket
   if (!bucket) throw new Error("Set CLOUDFLARE_R2_PRIVATE_BUCKET to a separate, non-public bucket for private source ZIPs.")
 
-  await createR2Client(config).send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: objectKey.replace(/^\/+/, ""),
-    Body: body,
-    ContentType: contentType,
-    CacheControl: isPublic ? "public, max-age=31536000" : "private, no-store",
-  }))
+  await withR2Client(config, (client) => client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey.replace(/^\/+/, ""),
+      Body: body,
+      ContentType: contentType,
+      CacheControl: isPublic ? "public, max-age=31536000" : "private, no-store",
+    })))
 
   return { url: isPublic ? buildPublicStorageUrl(objectKey) : null }
 }
@@ -132,15 +144,16 @@ export async function uploadToCloudflareR2(
 export async function getCloudflareR2ObjectSize(objectKey: string) {
   const config = getCloudflareR2Config()
   if (!config) return null
-  if (!config.privateBucket) {
+  const privateBucket = config.privateBucket
+  if (!privateBucket) {
     throw new Error("Set CLOUDFLARE_R2_PRIVATE_BUCKET to a separate, non-public bucket for private source ZIPs.")
   }
 
   try {
-    const result = await createR2Client(config).send(new HeadObjectCommand({
-      Bucket: config.privateBucket,
+    const result = await withR2Client(config, (client) => client.send(new HeadObjectCommand({
+      Bucket: privateBucket,
       Key: objectKey.replace(/^\/+/, ""),
-    }))
+    })))
     return result.ContentLength ?? null
   } catch (error) {
     if (notFound(error)) return null
@@ -151,17 +164,20 @@ export async function getCloudflareR2ObjectSize(objectKey: string) {
 export async function downloadFromCloudflareR2(objectKey: string) {
   const config = getCloudflareR2Config()
   if (!config) return null
-  if (!config.privateBucket) {
+  const privateBucket = config.privateBucket
+  if (!privateBucket) {
     throw new Error("Set CLOUDFLARE_R2_PRIVATE_BUCKET to a separate, non-public bucket for private source ZIPs.")
   }
 
   try {
-    const result = await createR2Client(config).send(new GetObjectCommand({
-      Bucket: config.privateBucket,
-      Key: objectKey.replace(/^\/+/, ""),
-    }))
-    if (!result.Body) throw new Error("Cloudflare R2 returned an empty object body.")
-    return Buffer.from(await result.Body.transformToByteArray())
+    return await withR2Client(config, async (client) => {
+      const result = await client.send(new GetObjectCommand({
+        Bucket: privateBucket,
+        Key: objectKey.replace(/^\/+/, ""),
+      }))
+      if (!result.Body) throw new Error("Cloudflare R2 returned an empty object body.")
+      return Buffer.from(await result.Body.transformToByteArray())
+    })
   } catch (error) {
     if (notFound(error)) return null
     throw error

@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { JetBrains_Mono, Geist } from "next/font/google"
+import { Inter, Space_Grotesk } from "next/font/google"
 import { LenisProvider } from "@/components/layout/lenis-provider"
 import ClickSpark from "@/components/layout/click-spark"
 import MagneticNav from "@/components/layout/magnetic-nav"
@@ -14,11 +14,16 @@ import { ServiceWorkerRegister } from "@/components/layout/service-worker-regist
 import "./globals.css"
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
-
-const _jetbrainsMono = JetBrains_Mono({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-mono",
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: "700",
+  variable: "--font-space-grotesk",
 })
 
 export const metadata: Metadata = {
@@ -58,11 +63,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={cn("font-sans", geist.variable)}>
-      <body className={`${geist.variable} ${_jetbrainsMono.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={cn("font-sans", inter.variable, spaceGrotesk.variable)}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <ClickSpark
-            sparkColor="#67e8f9"
+            sparkColor="#AFFF00"
             sparkSize={12}
             sparkRadius={20}
             sparkCount={8}

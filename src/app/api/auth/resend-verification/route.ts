@@ -39,7 +39,11 @@ export async function POST(request: Request) {
 
     await sendRegistrationOtp(parsed.data.email, result.otp, result.name)
 
-    return NextResponse.json({ message: "A new verification code has been sent. Check your inbox and spam folder.", retryAfterSeconds: 60, verificationType: "signup" })
+    return NextResponse.json({
+      message: "The email server accepted a new verification code. Check your inbox and spam or junk folder.",
+      retryAfterSeconds: 60,
+      verificationType: "signup",
+    })
   } catch (error) {
     console.error("Could not resend the verification email.", error)
     return NextResponse.json({ error: "Could not send a new code. Please try again after the resend timer." }, { status: 503 })

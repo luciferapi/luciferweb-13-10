@@ -27,24 +27,28 @@ const themeOptions = [
     label: "Use device setting",
     description: "Match the appearance preference on your device.",
     Icon: Monitor,
+    palette: ["#edf0f7", "#ffffff", "#6547d5"],
   },
   {
     value: "light",
     label: "Light",
     description: "Use a light background and dark text.",
     Icon: Sun,
+    palette: ["#f0eff7", "#ffffff", "#6547d5"],
   },
   {
     value: "dark",
     label: "Dark",
     description: "Use a dark background and light text.",
     Icon: Moon,
+    palette: ["#17151f", "#292431", "#b195ff"],
   },
   {
     value: "dark-blue",
     label: "Dark blue",
     description: "Use a deep blue background with cool blue surfaces.",
     Icon: MoonStar,
+    palette: ["#0b1929", "#142a41", "#62c9e9"],
   },
 ] as const
 
@@ -565,7 +569,7 @@ export function SettingsPanel() {
 
         <fieldset className="mt-5 grid gap-3">
           <legend className="sr-only">Choose a theme</legend>
-          {themeOptions.map(({ value, label, description, Icon }) => {
+          {themeOptions.map(({ value, label, description, Icon, palette }) => {
             const selected = mounted && theme === value
 
             return (
@@ -574,16 +578,16 @@ export function SettingsPanel() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setTheme(value)}
-                className={`flex min-h-20 w-full items-center gap-4 rounded-xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime active:scale-[0.99] ${
+                className={`flex min-h-20 w-full items-center gap-3 rounded-xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime active:scale-[0.99] sm:gap-4 ${
                   selected
-                    ? "border-lime/60 bg-lime/10"
-                    : "border-border bg-background/50 hover:border-lime/30 hover:bg-muted/50"
+                    ? "border-primary/60 bg-primary/10 shadow-sm"
+                    : "border-border bg-card/60 hover:border-primary/35 hover:bg-card"
                 }`}
               >
                 <span
-                  className={`grid size-11 shrink-0 place-items-center rounded-xl ${
+                  className={`grid size-11 shrink-0 place-items-center rounded-xl transition-colors ${
                     selected
-                      ? "bg-lime text-charcoal"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
@@ -597,11 +601,19 @@ export function SettingsPanel() {
                 </span>
                 <span
                   aria-hidden="true"
+                  className="hidden h-9 w-14 shrink-0 items-center gap-1 rounded-lg border border-border/70 p-1 sm:flex"
+                  style={{ backgroundColor: palette[0] }}
+                >
+                  <span className="h-full flex-1 rounded-sm" style={{ backgroundColor: palette[1] }} />
+                  <span className="h-full w-2 rounded-sm" style={{ backgroundColor: palette[2] }} />
+                </span>
+                <span
+                  aria-hidden="true"
                   className={`grid size-5 shrink-0 place-items-center rounded-full border ${
-                    selected ? "border-lime bg-lime" : "border-muted-foreground/50"
+                    selected ? "border-primary bg-primary" : "border-muted-foreground/50"
                   }`}
                 >
-                  {selected ? <span className="size-2 rounded-full bg-charcoal" /> : null}
+                  {selected ? <span className="size-2 rounded-full bg-primary-foreground" /> : null}
                 </span>
               </button>
             )

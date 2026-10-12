@@ -1,57 +1,23 @@
-import nodemailer from "nodemailer"
 import { OWNER_EMAIL } from "@/features/auth/server/owner-email"
+import {
+  getSmtpSender,
+  sendSmtpMessage,
+  verifySmtpConfiguration,
+} from "@/lib/smtp-server"
 import type { PayoutDetails } from "@/features/wallet/server/withdrawal-method-store"
 
-function getTransporter() {
-  const SMTP_HOST = process.env.SMTP_HOST?.trim() || "smtp.hostinger.com"
-  const SMTP_USER = process.env.SMTP_USER?.trim()
-  const SMTP_PASSWORD = process.env.SMTP_PASSWORD
-  const port = Number(process.env.SMTP_PORT ?? "465")
-  if (!SMTP_USER || !SMTP_PASSWORD) {
-    throw new Error("SMTP_USER and SMTP_PASSWORD are required to send email.")
-  }
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error("SMTP_PORT must be a valid TCP port.")
-  }
-
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port,
-    secure: port === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-  })
-}
-
-export async function verifySmtpConfiguration(): Promise<void> {
-  const transporter = getTransporter()
-  try {
-    await transporter.verify()
-  } finally {
-    transporter.close()
-  }
-}
+export { verifySmtpConfiguration }
 
 export async function sendSmtpTestEmail(): Promise<void> {
-  const SMTP_USER = process.env.SMTP_USER?.trim()
-  if (!SMTP_USER) {
-    throw new Error("SMTP_USER is required to send a test email.")
-  }
+  const SMTP_USER = getSmtpSender()
 
-  const transporter = getTransporter()
-  try {
-    await transporter.sendMail({
-      from: { name: "Lucifer AI", address: SMTP_USER },
-      to: SMTP_USER,
-      subject: "Lucifer AI SMTP test",
-      text: "This is a test email confirming that Hostinger SMTP is configured correctly.",
-      html: "<p>This is a test email confirming that Hostinger SMTP is configured correctly.</p>",
-    })
-  } finally {
-    transporter.close()
-  }
+  await sendSmtpMessage({
+    from: { name: "Lucifer AI", address: SMTP_USER },
+    to: SMTP_USER,
+    subject: "Lucifer AI SMTP test",
+    text: "This is a test email confirming that Hostinger SMTP is configured correctly.",
+    html: "<p>This is a test email confirming that Hostinger SMTP is configured correctly.</p>",
+  })
 }
 
 export async function sendBroadcastEmails(input: {
@@ -59,58 +25,81 @@ export async function sendBroadcastEmails(input: {
   subject: string
   message: string
 }): Promise<{ accepted: number; failed: number }> {
-  const SMTP_USER = process.env.SMTP_USER?.trim()
-  if (!SMTP_USER) throw new Error("SMTP_USER is required to send broadcast email.")
+  const SMTP_USER = getSmtpSender()
 
-  const transporter = getTransporter()
   let accepted = 0
   let failed = 0
-  try {
-    for (let offset = 0; offset < input.recipients.length; offset += 25) {
-      const batch = input.recipients.slice(offset, offset + 25)
-      try {
-        const result = await transporter.sendMail({
-          from: { name: "Lucifer AI", address: SMTP_USER },
-          bcc: batch,
-          subject: input.subject,
-          text: `${input.message}\n\nThanks,\nLucifer AI`,
-        })
-        accepted += result.accepted.length
-        failed += batch.length - result.accepted.length
-      } catch (error) {
-        failed += batch.length
-        console.error("A broadcast email batch failed.", error instanceof Error ? error.message : "Unknown SMTP error.")
-      }
+  for (let offset = 0; offset < input.recipients.length; offset += 25) {
+    const batch = input.recipients.slice(offset, offset + 25)
+    try {
+      const result = await sendSmtpMessage({
+        from: { name: "Lucifer AI", address: SMTP_USER },
+        bcc: batch,
+        subject: input.subject,
+        text: `${input.message}\n\nThanks,\nLucifer AI`,
+      })
+      accepted += result.accepted.length
+      failed += batch.length - result.accepted.length
+    } catch (error) {
+      failed += batch.length
+      console.error("A broadcast email batch failed.", error instanceof Error ? error.message : "Unknown SMTP error.")
     }
-  } finally {
-    transporter.close()
   }
   return { accepted, failed }
 }
 
 export async function sendRegistrationOtp(email: string, otp: string, name: string): Promise<void> {
-  const transporter = getTransporter()
-  const SMTP_USER = process.env.SMTP_USER!.trim()
-  const safeName = escapeHtml(name)
-  await transporter.sendMail({
-    from: { name: "Lucifer AI", address: SMTP_USER! },
-    to: email,
+  await sendOtpEmail({
+    kind: "registration",
+    email,
+    otp,
+    name,
     subject: "Your Lucifer AI verification OTP",
-    text: `Hi, ${name}\n\nYour One-Time Password (OTP) is:\n\n${otp}\n\nThis OTP is valid for 1 minute. Please do not share this code with anyone.\n\nIf you did not request this OTP, you can safely ignore this email.\n\nThanks,\nluciferapi`,
-    html: `<p>Hi, ${safeName}</p><p>Your One-Time Password (OTP) is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px"><strong>${otp}</strong></p><p>This OTP is valid for <strong>1 minute</strong>. Please do not share this code with anyone.</p><p>If you did not request this OTP, you can safely ignore this email.</p><p>Thanks,<br><strong>luciferapi</strong></p>`,
+    expiresIn: "10 minutes",
   })
 }
 
 export async function sendOwnerLoginOtp(email: string, otp: string, name: string): Promise<void> {
-  const transporter = getTransporter()
-  const SMTP_USER = process.env.SMTP_USER!.trim()
-  const safeName = escapeHtml(name)
-  await transporter.sendMail({
-    from: { name: "Lucifer AI", address: SMTP_USER! },
-    to: email,
+  await sendOtpEmail({
+    kind: "owner sign-in",
+    email,
+    otp,
+    name,
     subject: "Your Lucifer AI owner sign-in code",
-    text: `Hi, ${name}\n\nYour One-Time Password (OTP) is:\n\n${otp}\n\nThis OTP is valid for 5 minutes. Please do not share this code with anyone.\n\nIf you did not request this OTP, you can safely ignore this email.\n\nThanks,\nluciferapi`,
-    html: `<p>Hi, ${safeName}</p><p>Your One-Time Password (OTP) is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px"><strong>${otp}</strong></p><p>This OTP is valid for <strong>5 minutes</strong>. Please do not share this code with anyone.</p><p>If you did not request this OTP, you can safely ignore this email.</p><p>Thanks,<br><strong>luciferapi</strong></p>`,
+    expiresIn: "5 minutes",
+  })
+}
+
+async function sendOtpEmail(input: {
+  kind: "registration" | "owner sign-in"
+  email: string
+  otp: string
+  name: string
+  subject: string
+  expiresIn: string
+}) {
+  const SMTP_USER = getSmtpSender()
+  const safeName = escapeHtml(input.name)
+
+  const result = await sendSmtpMessage({
+    from: { name: "Lucifer AI", address: SMTP_USER },
+    to: input.email,
+    subject: input.subject,
+    text: `Hi, ${input.name}\n\nYour One-Time Password (OTP) is:\n\n${input.otp}\n\nThis OTP is valid for ${input.expiresIn}. Please do not share this code with anyone.\n\nIf you did not request this OTP, you can safely ignore this email.\n\nThanks,\nluciferapi`,
+    html: `<p>Hi, ${safeName}</p><p>Your One-Time Password (OTP) is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px"><strong>${input.otp}</strong></p><p>This OTP is valid for <strong>${input.expiresIn}</strong>. Please do not share this code with anyone.</p><p>If you did not request this OTP, you can safely ignore this email.</p><p>Thanks,<br><strong>luciferapi</strong></p>`,
+  })
+
+  const recipientWasAccepted = result.accepted.some((recipient: string | { address: string }) => {
+    const address = typeof recipient === "string" ? recipient : recipient.address
+    return address.trim().toLowerCase() === input.email.trim().toLowerCase()
+  })
+  if (!recipientWasAccepted) {
+    throw new Error("The SMTP server did not accept the OTP recipient.")
+  }
+
+  console.info("OTP email accepted by the SMTP relay.", {
+    kind: input.kind,
+    messageId: result.messageId,
   })
 }
 
@@ -128,10 +117,9 @@ type TeamEmailInput = {
 }
 
 async function sendTeamEmail(input: TeamEmailInput): Promise<void> {
-  const transporter = getTransporter()
-  const SMTP_USER = process.env.SMTP_USER!.trim()
-  await transporter.sendMail({
-    from: { name: "Lucifer AI", address: SMTP_USER! },
+  const SMTP_USER = getSmtpSender()
+  await sendSmtpMessage({
+    from: { name: "Lucifer AI", address: SMTP_USER },
     to: input.to,
     replyTo: input.replyTo,
     subject: input.subject,
@@ -146,14 +134,14 @@ async function sendTeamEmail(input: TeamEmailInput): Promise<void> {
 }
 
 export async function sendPasswordResetEmail(email: string, url: string): Promise<void> {
-  const transporter = getTransporter()
-  const SMTP_USER = process.env.SMTP_USER!.trim()
-  await transporter.sendMail({
-    from: { name: "Lucifer AI", address: SMTP_USER! },
+  const SMTP_USER = getSmtpSender()
+  const safeUrl = escapeHtml(url)
+  await sendSmtpMessage({
+    from: { name: "Lucifer AI", address: SMTP_USER },
     to: email,
     subject: "Reset your Lucifer AI password",
     text: `Use this link to reset your password: ${url}\n\nThis link expires in one hour. If you did not request a reset, you can ignore this email.`,
-    html: `<p>We received a request to reset your Lucifer AI password.</p><p><a href="${url}">Reset password</a></p><p>This link expires in one hour. If you did not request a reset, you can ignore this email.</p>`,
+    html: `<p>We received a request to reset your Lucifer AI password.</p><p><a href="${safeUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request a reset, you can ignore this email.</p>`,
   })
 }
 
@@ -272,25 +260,20 @@ export async function sendSupportTicketReplyNotification(input: {
     throw new Error("NEXT_PUBLIC_SITE_URL must use HTTP or HTTPS.")
   }
   const supportUrl = new URL("/support", siteUrl).toString()
-  const transporter = getTransporter()
-  const sender = process.env.SMTP_USER!.trim()
+  const sender = getSmtpSender()
   const userName = escapeHtml(input.userName)
   const staffName = escapeHtml(input.staffName)
   const ticketId = escapeHtml(input.ticketId)
   const response = escapeHtml(input.response)
   const subject = `Update to your support ticket ${input.ticketId}`
-  try {
-    await transporter.sendMail({
-      from: { name: "Lucifer AI Support", address: sender },
-      to: input.userEmail,
-      replyTo: sender,
-      subject,
-      text: `Hi ${input.userName},\n\n${input.staffName} replied to your ${input.issueType} support ticket ${input.ticketId}:\n\n${input.response}\n\nYou can view the full conversation and reply at ${supportUrl}.\n\nLucifer AI Support`,
-      html: `<p>Hi ${userName},</p><p>${staffName} replied to your <strong>${escapeHtml(input.issueType)}</strong> support ticket <strong>${ticketId}</strong>:</p><blockquote style="white-space:pre-wrap;border-left:3px solid #0891b2;padding:8px 16px;margin:16px 0">${response}</blockquote><p><a href="${escapeHtml(supportUrl)}">View the conversation and reply</a></p><p>Lucifer AI Support</p>`,
-    })
-  } finally {
-    transporter.close()
-  }
+  await sendSmtpMessage({
+    from: { name: "Lucifer AI Support", address: sender },
+    to: input.userEmail,
+    replyTo: sender,
+    subject,
+    text: `Hi ${input.userName},\n\n${input.staffName} replied to your ${input.issueType} support ticket ${input.ticketId}:\n\n${input.response}\n\nYou can view the full conversation and reply at ${supportUrl}.\n\nLucifer AI Support`,
+    html: `<p>Hi ${userName},</p><p>${staffName} replied to your <strong>${escapeHtml(input.issueType)}</strong> support ticket <strong>${ticketId}</strong>:</p><blockquote style="white-space:pre-wrap;border-left:3px solid #0891b2;padding:8px 16px;margin:16px 0">${response}</blockquote><p><a href="${escapeHtml(supportUrl)}">View the conversation and reply</a></p><p>Lucifer AI Support</p>`,
+  })
 }
 
 export async function sendSupportTicketFollowupNotification(input: {

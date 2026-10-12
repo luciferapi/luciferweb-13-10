@@ -371,8 +371,8 @@ export default function MagneticNav() {
     <>
     <aside aria-label="Primary navigation" className={`pointer-events-none fixed inset-y-0 right-0 z-50 hidden p-3 transition-[width] duration-300 ease-in-out xl:block ${sidebarExpanded ? "w-[17rem]" : "w-[5.75rem]"}`}>
       <div className="pointer-events-auto flex h-full overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-[0_16px_60px_rgba(0,0,0,0.2)] backdrop-blur-2xl">
-        <div className={`flex shrink-0 flex-col items-center bg-[#08080b] py-4 text-white transition-[width] duration-300 ${sidebarExpanded ? "w-[4.25rem]" : "w-full"}`}>
-          <Link href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-white/15 bg-white/5">
+        <div className={`flex shrink-0 flex-col items-center bg-background py-4 text-foreground transition-[width] duration-300 ${sidebarExpanded ? "w-[4.25rem]" : "w-full"}`}>
+          <Link href="/" aria-label="Lucifer AI home" className="mb-6 grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-muted">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </Link>
           <button
@@ -380,7 +380,7 @@ export default function MagneticNav() {
             aria-label={sidebarExpanded ? "Collapse navigation" : "Expand navigation"}
             aria-expanded={sidebarExpanded}
             onClick={() => setSidebarExpanded((expanded) => !expanded)}
-            className="mb-3 grid size-10 place-items-center rounded-xl text-white/65 transition hover:bg-white/10 hover:text-white"
+            className="mb-3 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
             {sidebarExpanded ? <PanelLeftClose aria-hidden="true" size={18} /> : <PanelLeftOpen aria-hidden="true" size={18} />}
           </button>
@@ -399,7 +399,7 @@ export default function MagneticNav() {
                       setSidebarExpanded(true);
                       setPocketMoneyOpen(true);
                     }}
-                    className={`grid size-10 place-items-center rounded-xl transition ${active ? "bg-white/15 text-cyan-200 ring-1 ring-white/10" : "text-white/65 hover:bg-white/10 hover:text-white"}`}
+                    className={`grid size-10 place-items-center rounded-xl transition ${active ? "bg-muted text-lime ring-1 ring-border" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                   >
                     <Icon aria-hidden="true" size={18} />
                   </button>
@@ -411,15 +411,15 @@ export default function MagneticNav() {
                   href={href}
                   aria-label={label}
                   aria-current={active ? "page" : undefined}
-                  className={`grid size-10 place-items-center rounded-xl transition ${active ? "bg-white/15 text-cyan-200 ring-1 ring-white/10" : "text-white/65 hover:bg-white/10 hover:text-white"}`}
+                  className={`grid size-10 place-items-center rounded-xl transition ${active ? "bg-muted text-lime ring-1 ring-border" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                 >
                   <Icon aria-hidden="true" size={18} />
                 </Link>
               );
             })}
-          </nav>
-          {!sidebarExpanded && signedIn && profile ? (
-            <div aria-label={`Signed in as ${profile.name}`} title={`${profile.name} · ${profile.email}`} className="mb-2 grid size-10 place-items-center rounded-xl border border-cyan-200/20 bg-cyan-300/10 text-xs font-bold text-cyan-100">
+            </nav>
+            {!sidebarExpanded && signedIn && profile ? (
+            <div aria-label={`Signed in as ${profile.name}`} title={`${profile.name} · ${profile.email}`} className="mb-2 grid size-10 place-items-center rounded-xl border border-lime/20 bg-lime/10 text-xs font-bold text-lime">
               {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
             </div>
           ) : null}
@@ -431,12 +431,12 @@ export default function MagneticNav() {
                 title={signingOut ? "Logging out" : "Log out"}
                 onClick={() => void handleSignOut()}
                 disabled={signingOut}
-                className="mb-2 grid size-10 place-items-center rounded-xl text-white/65 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
               >
                 <LogOut aria-hidden="true" size={18} />
               </button>
             ) : (
-              <Link href="/sign-in" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-white/65 transition hover:bg-white/10 hover:text-white">
+              <Link href="/sign-in" aria-label="Sign in" title="Sign in" className="mb-2 grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
                 <LogIn aria-hidden="true" size={18} />
               </Link>
             )
@@ -446,7 +446,7 @@ export default function MagneticNav() {
             aria-label="Appearance settings"
             aria-expanded={settingsOpen}
             onClick={() => setSettingsOpen((open) => !open)}
-            className="grid size-10 place-items-center rounded-xl text-white/65 transition hover:bg-white/10 hover:text-white"
+            className="grid size-10 place-items-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
             <Settings2 aria-hidden="true" size={18} />
           </button>
@@ -455,7 +455,7 @@ export default function MagneticNav() {
         {sidebarExpanded ? <div className="flex min-w-0 flex-1 flex-col px-3 py-5">
           <div className="mb-6 flex items-center justify-between gap-2 px-2">
             <div className="min-w-0">
-              <p className="truncate text-base font-black tracking-tight text-foreground">LUCIFER <span className="text-cyan-600 dark:text-cyan-300">AI</span></p>
+              <p className="truncate font-heading text-base font-bold tracking-tight text-foreground">LUCIFER <span className="text-lime">AI</span></p>
               <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Explore</p>
             </div>
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
@@ -474,7 +474,7 @@ export default function MagneticNav() {
                       className={`flex min-h-10 w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <Icon aria-hidden="true" size={16} className={active ? "text-cyan-700 dark:text-cyan-200" : ""} />
+                        <Icon aria-hidden="true" size={16} className={active ? "text-lime" : ""} />
                         <span>{label}</span>
                       </span>
                       <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
@@ -498,7 +498,7 @@ export default function MagneticNav() {
                   aria-current={active ? "page" : undefined}
                   className={`flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${active ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
                 >
-                  <Icon aria-hidden="true" size={16} className={active ? "text-cyan-700 dark:text-cyan-200" : ""} />
+                  <Icon aria-hidden="true" size={16} className={active ? "text-lime" : ""} />
                   <span>{label}</span>
                 </Link>
               );
@@ -508,7 +508,7 @@ export default function MagneticNav() {
           <div className="mt-auto space-y-2 border-t border-border pt-3">
             {signedIn && profile ? (
               <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/70 bg-muted/40 p-2.5">
-                <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-cyan-300/15 text-xs font-bold text-cyan-800 dark:text-cyan-200">
+                <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-lime/15 text-xs font-bold text-lime">
                   {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
                 </span>
                 <span className="min-w-0">
@@ -519,7 +519,7 @@ export default function MagneticNav() {
               </div>
             ) : null}
             {pathname !== "/chat" ? (
-              <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-sky-300 px-3 text-sm font-bold text-slate-950 shadow-[0_6px_24px_rgba(34,211,238,0.14)] transition hover:brightness-105">
+              <Link href="/chat" className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.14)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 <Sparkles aria-hidden="true" size={16} /> Start chatting
               </Link>
             ) : null}
@@ -568,7 +568,7 @@ export default function MagneticNav() {
               key={value}
               type="button"
               onClick={() => { setTheme(value); setSettingsOpen(false); }}
-              className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${mounted && (theme === value || (value === "system" && !theme)) ? "bg-cyan-300/10 text-cyan-700 dark:text-cyan-200" : "text-foreground/70 hover:bg-muted hover:text-foreground"}`}
+              className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition ${mounted && (theme === value || (value === "system" && !theme)) ? "bg-lime/10 text-lime" : "text-foreground/70 hover:bg-muted hover:text-foreground"}`}
             >
               <Icon aria-hidden="true" size={15} />{label}
             </button>
@@ -578,43 +578,27 @@ export default function MagneticNav() {
     </aside>
 
     <header ref={mobileHeaderRef} className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
-      <div className="pointer-events-auto mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-3 px-3 sm:min-h-16 sm:px-5">
+      <div className="pointer-events-auto mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-2xl sm:min-h-16 sm:px-4">
         <Link href="/" aria-label="Lucifer AI home" className="group flex min-w-0 shrink-0 items-center gap-2.5">
-          <span className="relative size-9 overflow-hidden rounded-xl border border-cyan-200/25 bg-white/5 sm:size-10">
+          <span className="relative size-9 overflow-hidden rounded-xl border border-lime/25 bg-muted shadow-[0_8px_20px_rgba(131,255,81,0.12)] sm:size-10">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover transition duration-300 group-hover:scale-110" />
           </span>
-          <span className="truncate text-sm font-black tracking-[0.04em] text-foreground sm:text-base">LUCIFER <span className="text-cyan-300">AI</span></span>
+          <span className="truncate font-heading text-sm font-bold tracking-[0.04em] text-foreground sm:text-base">LUCIFER <span className="text-lime">AI</span></span>
         </Link>
 
-        <div className="ml-auto flex shrink-0 items-center gap-3">
-          <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl border border-border/70 bg-muted/40 p-1 xl:flex">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={`relative rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${active ? 'bg-cyan-300/10 text-cyan-700 shadow-sm dark:text-cyan-200' : 'text-foreground/65 hover:bg-background/70 hover:text-foreground'}`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <div className="flex shrink-0 items-center gap-2">
             {authChecked && !signedIn && !menuOpen ? (
               <Link
                 href="/sign-in"
                 aria-current={pathname === '/sign-in' ? 'page' : undefined}
-                className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/sign-in' ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-700 dark:text-cyan-200' : 'border-border text-foreground/75 hover:border-cyan-300/40 hover:text-cyan-700 dark:hover:text-cyan-200'}`}
+                className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition sm:inline-flex ${pathname === '/sign-in' ? 'border-lime/40 bg-lime/10 text-lime' : 'border-border bg-muted/30 text-foreground/75 hover:border-lime/40 hover:bg-lime/10 hover:text-lime dark:hover:text-lime'}`}
               >
                 <LogIn aria-hidden="true" size={16} /> Sign in
               </Link>
             ) : null}
             {pathname !== '/chat' && !menuOpen ? (
-              <Link href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-cyan-300 px-3.5 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-200 active:translate-y-0 sm:inline-flex">
+              <Link href="/chat" className="hidden min-h-10 items-center gap-2 rounded-xl bg-lime px-3.5 text-sm font-bold text-charcoal shadow-[0_6px_24px_rgba(175,255,0,0.18)] transition hover:-translate-y-0.5 hover:bg-lime active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex">
                 <Sparkles aria-hidden="true" size={15} /> Start chatting
               </Link>
             ) : null}
@@ -632,9 +616,9 @@ export default function MagneticNav() {
                       type="button"
                       aria-label={`Open profile menu for ${profile.name}`}
                       title={profile.name}
-                      className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-1.5 text-sm font-semibold text-foreground transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-1.5 text-sm font-semibold text-foreground transition hover:border-lime/40 hover:bg-lime/10 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
                     >
-                    <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-slate-950">
+                    <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-lime text-xs font-bold text-charcoal">
                       {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
                     </span>
                     <span className="hidden max-w-28 truncate font-mono text-xs tabular-nums sm:inline">
@@ -645,7 +629,7 @@ export default function MagneticNav() {
                 />
                 <DropdownMenuContent align="end" sideOffset={10} className="w-72 rounded-xl border-border bg-card p-2">
                   <DropdownMenuLabel className="flex min-w-0 items-center gap-3 px-2 py-2">
-                    <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-cyan-300/15 text-sm font-bold text-cyan-800 dark:text-cyan-200">
+                    <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-lime/15 text-sm font-bold text-lime">
                       {profile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -735,7 +719,7 @@ export default function MagneticNav() {
               aria-expanded={menuOpen}
               aria-controls="mobile-navigation"
               onClick={() => setMenuOpen((open) => !open)}
-              className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-muted/40 text-foreground/80 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-cyan-700 active:scale-[0.97] dark:hover:text-cyan-200 xl:hidden"
+              className="grid size-10 shrink-0 place-items-center rounded-xl border border-lime/25 bg-lime/10 text-lime shadow-[0_0_0_1px_rgba(131,255,81,0.08)] transition hover:border-lime/50 hover:bg-lime/15 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
             >
               {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
             </button>
@@ -761,13 +745,13 @@ export default function MagneticNav() {
         aria-modal={menuOpen || undefined}
         aria-hidden={!menuOpen}
         inert={!menuOpen}
-        className="pointer-events-none fixed inset-y-0 left-0 z-[70] flex w-[min(20rem,calc(100vw-3rem))] flex-col overflow-y-auto overscroll-contain border-r border-cyan-300/15 bg-background/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl xl:hidden sm:p-5"
+        className="pointer-events-none fixed inset-y-0 left-0 z-[70] flex w-[min(20rem,calc(100vw-3rem))] flex-col overflow-y-auto overscroll-contain border-r border-lime/15 bg-background/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-2xl xl:hidden sm:p-5"
         style={{ opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}
       >
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 size-48 rounded-full bg-cyan-300/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 size-48 rounded-full bg-lime/10 blur-3xl" />
         <div className="relative mb-5 flex items-center justify-between gap-3 border-b border-border pb-4">
           <div>
-            <p className="text-sm font-black tracking-wide text-foreground">LUCIFER <span className="text-cyan-600 dark:text-cyan-300">AI</span></p>
+            <p className="font-heading text-sm font-bold tracking-wide text-foreground">LUCIFER <span className="text-lime">AI</span></p>
             <p className="mt-1 text-xs text-muted-foreground">Explore</p>
           </div>
           <button
@@ -793,7 +777,7 @@ export default function MagneticNav() {
                     className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}
                   >
                     <span className="group flex min-w-0 items-center gap-2.5">
-                      <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-cyan-700 dark:text-cyan-200' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-cyan-700 dark:group-hover:text-cyan-200'} />
+                      <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-lime' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-lime dark:group-hover:text-lime'} />
                       <span>{item.label}</span>
                     </span>
                     <ChevronDown aria-hidden="true" size={15} className={`transition-transform ${pocketMoneyOpen ? "rotate-180" : ""}`} />
@@ -826,10 +810,10 @@ export default function MagneticNav() {
                 className={`group flex min-h-11 items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? 'bg-muted text-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}
               >
                 <span className="flex min-w-0 items-center gap-2.5">
-                  <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-cyan-700 dark:text-cyan-200' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-cyan-700 dark:group-hover:text-cyan-200'} />
+                  <Icon aria-hidden="true" size={17} className={active ? 'shrink-0 text-lime' : 'shrink-0 text-muted-foreground transition-colors group-hover:text-lime dark:group-hover:text-lime'} />
                   <span>{item.label}</span>
                 </span>
-                <span aria-hidden="true" className={`text-xs ${active ? 'text-cyan-700 dark:text-cyan-200' : 'text-muted-foreground'}`}>↗</span>
+                <span aria-hidden="true" className={`text-xs ${active ? 'text-lime' : 'text-muted-foreground'}`}>↗</span>
               </Link>
             );
           })}
@@ -866,7 +850,7 @@ export default function MagneticNav() {
                   setSettingsOpen(false);
                   setMenuOpen(false);
                 }}
-                className={`flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2 text-left text-sm transition ${mounted && (theme === value || (value === "system" && !theme)) ? "bg-cyan-300/10 text-cyan-700 dark:text-cyan-200" : "text-foreground/70 hover:bg-muted hover:text-foreground"}`}
+                className={`flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2 text-left text-sm transition ${mounted && (theme === value || (value === "system" && !theme)) ? "bg-lime/10 text-lime" : "text-foreground/70 hover:bg-muted hover:text-foreground"}`}
               >
                 <Icon aria-hidden="true" size={15} />{label}
               </button>
@@ -879,14 +863,14 @@ export default function MagneticNav() {
             href="/sign-in"
             aria-current={pathname === '/sign-in' ? 'page' : undefined}
             onClick={() => setMenuOpen(false)}
-            className={`relative mt-2 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${pathname === '/sign-in' ? 'border-cyan-300/25 bg-cyan-300/10 text-cyan-700 dark:text-cyan-200' : 'border-border/70 text-foreground/75 hover:border-cyan-300/25 hover:bg-muted hover:text-foreground'}`}
+            className={`relative mt-2 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${pathname === '/sign-in' ? 'border-lime/25 bg-lime/10 text-lime' : 'border-border/70 text-foreground/75 hover:border-lime/25 hover:bg-muted hover:text-foreground'}`}
           >
             Sign in <LogIn aria-hidden="true" size={16} className="text-muted-foreground" />
           </Link>
         )}
 
         {pathname !== '/chat' ? (
-          <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
+          <Link href="/chat" onClick={() => setMenuOpen(false)} className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-lime px-4 py-3 text-sm font-bold text-charcoal transition hover:bg-lime"><Sparkles aria-hidden="true" size={16} />Start chatting <span aria-hidden="true">↗</span></Link>
         ) : null}
       </div>
     </header>
@@ -924,7 +908,7 @@ export default function MagneticNav() {
               maxLength={100}
               required
               autoFocus
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-lime focus:ring-2 focus:ring-lime/20"
             />
             {nameError ? <p role="alert" className="text-sm text-red-500">{nameError}</p> : null}
             <div className="flex justify-end gap-2">
@@ -939,7 +923,7 @@ export default function MagneticNav() {
               <button
                 type="submit"
                 disabled={savingName || !nameDraft.trim()}
-                className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-lime px-4 py-2.5 text-sm font-bold text-charcoal transition hover:bg-lime disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {savingName ? 'Saving...' : 'Save name'}
               </button>

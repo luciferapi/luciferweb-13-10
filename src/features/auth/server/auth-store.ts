@@ -1,9 +1,8 @@
 import "server-only"
 import { createHash, createHmac, randomBytes, randomInt, randomUUID, scrypt as scryptCallback, timingSafeEqual } from "node:crypto"
 import { promisify } from "node:util"
-import { createClient } from "@supabase/supabase-js"
 import { getSupabaseAdminClient } from "@/lib/supabase-admin"
-import { getSupabaseEnv } from "@/lib/supabase"
+import { getSupabaseAuthServerClient } from "@/lib/supabase-auth-server"
 import { generatePublicUserId } from "@/features/auth/server/public-user-id"
 import { SignupIpUnavailableError } from "@/features/auth/server/signup-ip"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
@@ -65,18 +64,6 @@ function requireAdminClient() {
   const client = getSupabaseAdminClient()
   if (!client) throw new Error("Supabase server credentials are not configured.")
   return client
-}
-
-function getPublicAuthClient() {
-  const { url, key, enabled } = getSupabaseEnv()
-  if (!enabled || !url || !key) throw new Error("Supabase Auth is not configured.")
-  return createClient(url, key, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-  })
 }
 
 async function callRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
@@ -359,7 +346,7 @@ export async function verifyEmailRegistration(
 }
 
 export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
-  const { data, error } = await getPublicAuthClient().auth.signInWithPassword({
+  const { data, error } = await getSupabaseAuthServerClient().auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
   })
