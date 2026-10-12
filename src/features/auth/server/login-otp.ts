@@ -32,13 +32,6 @@ export async function requestLoginOtp(request: Request) {
     return NextResponse.json({ error: "Enter a valid owner or staff email address." }, { status: 400 })
   }
 
-  const rateLimitResponse = await enforceRateLimit(request, "privileged-login-code", {
-    capacity: 5,
-    refillSeconds: 15 * 60,
-    identifiers: [parsed.data.email],
-  })
-  if (rateLimitResponse) return rateLimitResponse
-
   if (!getSupabaseAdminClient()) {
     return NextResponse.json({
       error: "Email-code sign-in is unavailable because server-side Supabase credentials are not configured.",
