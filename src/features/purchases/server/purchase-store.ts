@@ -132,6 +132,20 @@ export async function markProjectPurchaseFailed(orderId: string, userId: string)
   return markPendingPurchase(orderId, userId, "failed")
 }
 
+export async function hasPaidProjectPurchase(userId: string, projectCode: string, paymentId: string): Promise<boolean> {
+  const { data, error } = await getAdminClient()
+    .from("project_purchases")
+    .select("payment_id")
+    .eq("user_id", userId)
+    .eq("project_code", projectCode)
+    .eq("payment_id", paymentId)
+    .eq("status", "paid")
+    .maybeSingle()
+
+  if (error) throw error
+  return Boolean(data?.payment_id)
+}
+
 export async function listUserProjectPurchases(userId: string): Promise<ProjectPurchase[]> {
   const { data, error } = await getAdminClient()
     .from("project_purchases")
