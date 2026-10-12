@@ -69,7 +69,10 @@ export function getSmtpTransporter(): SmtpTransporter {
     return cachedTransporter
   }
 
-  cachedTransporter?.close()
+  // Do not close the previous transporter here. A concurrent request may still
+  // be using it, and closing it can terminate its writable stream mid-message.
+  // Nodemailer transporters are safe to reuse across concurrent sends; the old
+  // instance will be released by the runtime once no request references it.
   cachedConfiguration = configuration
   cachedTransporter = createSmtpTransporter(configuration)
   return cachedTransporter
