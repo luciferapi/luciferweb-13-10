@@ -13,7 +13,7 @@ import { OwnerAnalyticsPanel } from "@/features/owner/components/owner-analytics
 import { OwnerBroadcastsPanel } from "@/features/owner/components/owner-broadcasts-panel"
 import { OwnerMaintenancePanel } from "@/features/owner/components/owner-maintenance-panel"
 import { OwnerWorkspaceShell } from "@/features/owner/components/owner-workspace-shell"
-import type { OwnerModule } from "@/features/owner/owner-modules"
+import { ownerModules, type OwnerModule } from "@/features/owner/owner-modules"
 
 export function OwnerModuleWorkspace({
   module,
@@ -80,9 +80,6 @@ export function OwnerModuleWorkspace({
 }
 
 function moduleIndex(slug: string) {
-  const order = [
-    "projects", "project-requests", "apis", "users", "referrals", "wallet", "payments", "admins", "support",
-    "escalations", "analytics", "enhancements", "banners", "broadcasts", "maintenance",
-  ]
-  return order.indexOf(slug) + 1
+  const index = ownerModules.findIndex((item) => item.slug === slug)
+  return index >= 0 ? index + 1 : 0
 }
