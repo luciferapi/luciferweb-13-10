@@ -112,7 +112,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
             if (typeof verification.download_token !== "string") throw new Error("Payment verified, but a download token was not returned.")
             sessionStorage.setItem(`source-download:${projectId}`, verification.download_token)
             setDownloadToken(verification.download_token)
-            setMessage("Payment verified. Your source code is ready to download.")
+            setMessage("Payment verified. Your source code is available for download.")
             void trackConversion("Project Source Purchased", analyticsAttempt)
           } catch (verificationError) {
             setMessage(verificationError instanceof Error ? verificationError.message : "Payment verification failed.")
