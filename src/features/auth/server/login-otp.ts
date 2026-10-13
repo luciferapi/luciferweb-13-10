@@ -14,7 +14,7 @@ import {
 } from "@/features/notifications/server/email"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
-import { isMysqlConfigured, isMysqlSchemaUnavailable } from "@/lib/mysql"
+import { isMysqlSchemaUnavailable } from "@/lib/mysql"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
 export async function requestLoginOtp(request: Request) {
@@ -30,12 +30,13 @@ export async function requestLoginOtp(request: Request) {
     return NextResponse.json({ error: "Enter a valid owner or staff email address." }, { status: 400 })
   }
 
-  if (!isMysqlConfigured()) {
-    return NextResponse.json({
-      error: "Email-code sign-in is unavailable because the MySQL connection is not configured.",
-    }, { status: 503 })
-  }
-  if (!process.env.AUTH_OTP_HMAC_SECRET?.trim()) {
+  const otpSecretConfigured = [
+    process.env.AUTH_OTP_HMAC_SECRET,
+    process.env.AUTH_OTP_HMAC_SECRET_2,
+    process.env.AUTH_OTP_HMAC_SECRET_3,
+    process.env.AUTH_OTP_HMAC_SECRET_4,
+  ].some((value) => value?.trim())
+  if (!otpSecretConfigured) {
     return NextResponse.json({
       error: "Email-code sign-in is unavailable because AUTH_OTP_HMAC_SECRET is not configured.",
     }, { status: 503 })
@@ -86,12 +87,6 @@ export async function verifyLoginOtp(request: Request) {
   const parsed = emailVerificationSchema.safeParse(body.value)
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter the owner or staff email and six-digit sign-in code." }, { status: 400 })
-  }
-
-  if (!isMysqlConfigured()) {
-    return NextResponse.json({
-      error: "Email-code sign-in is unavailable because the MySQL connection is not configured.",
-    }, { status: 503 })
   }
 
   try {
