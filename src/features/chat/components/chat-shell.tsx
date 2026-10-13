@@ -213,13 +213,22 @@ try {
           signal: controller.signal,
         })
 
-if (!response.ok) {
-          throw new Error(
-            `Request failed (${response.status}). Please try again.`,
-          )
+        if (!response.ok) {
+          let message = `Request failed (${response.status}). Please try again.`
+
+          try {
+            const payload = (await response.clone().json()) as { error?: unknown }
+            if (typeof payload.error === "string" && payload.error.trim()) {
+              message = payload.error
+            }
+          } catch {
+            // Keep the actionable status message when the server response is not JSON.
+          }
+
+          throw new Error(message)
         }
 
-if (!response.body) {
+        if (!response.body) {
           throw new Error("The server returned no response body.")
         }
 

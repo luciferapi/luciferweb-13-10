@@ -165,7 +165,7 @@ export function MessageList({
             What are we building today?
           </h1>
           <p data-intro-item className="mt-2 max-w-lg text-sm leading-5 text-slate-400 sm:mt-3 sm:text-base sm:leading-6">
-            Ask a question, share an idea, or choose a starting point.
+            A focused AI workspace for debugging, planning, and turning ideas into working products.
           </p>
 
           <div className="mt-4 grid w-full grid-cols-1 gap-2 text-left sm:mt-8 sm:grid-cols-3 sm:gap-3">

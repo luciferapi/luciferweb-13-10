@@ -142,7 +142,11 @@ export async function POST(request: Request) {
     }
 
     return result.toUIMessageStreamResponse()
-  } catch {
-    return NextResponse.json({ error: "The OpenRouter request failed." }, { status: 500 })
+  } catch (error) {
+    console.error("[chat] AI Gateway request failed", error)
+    return NextResponse.json(
+      { error: "LUCIFER AI could not complete that response. Please try again." },
+      { status: 502 },
+    )
   }
 }
