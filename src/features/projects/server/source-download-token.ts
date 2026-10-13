@@ -1,3 +1,5 @@
+import "server-only"
+
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto"
 
 type SourceDownloadClaims = {
@@ -8,7 +10,8 @@ type SourceDownloadClaims = {
 }
 
 function tokenSecret() {
-  return process.env.RAZORPAY_KEY_SECRET
+  // Keep the payment-secret fallback for existing deployments until the dedicated key is configured.
+  return process.env.SOURCE_DOWNLOAD_TOKEN_SECRET?.trim() || process.env.RAZORPAY_KEY_SECRET
 }
 
 export function createSourceDownloadToken(projectId: string, paymentId: string) {

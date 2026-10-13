@@ -1,3 +1,5 @@
+import "server-only"
+
 import { OWNER_EMAIL } from "@/features/auth/server/owner-email"
 import {
   getSmtpSender,

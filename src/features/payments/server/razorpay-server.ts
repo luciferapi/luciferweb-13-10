@@ -1,3 +1,5 @@
+import "server-only"
+
 function getPaymentEnvironmentValue(name: string, suffix: string): string | undefined {
   return process.env[`${name}${suffix}`]?.trim()
 }

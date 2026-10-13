@@ -1,3 +1,5 @@
+import "server-only"
+
 import { createHash, randomBytes } from "node:crypto"
 
 export const OAUTH_COOKIE_MAX_AGE = 10 * 60
