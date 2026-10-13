@@ -25,6 +25,8 @@ function isRateLimitResult(value: unknown): value is RateLimitResult {
 
 function getRateLimitSecret(): string {
   const secret = process.env.RATE_LIMIT_HMAC_SECRET?.trim() ||
+    process.env.DB_PASSWORD_2?.trim() ||
+    process.env.DB_PASSWORD?.trim() ||
     process.env.SUPABASE_SECRET_KEY?.trim() ||
     process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
   if (!secret) throw new Error("A server-only secret is required for API rate-limit keys.")
