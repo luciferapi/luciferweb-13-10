@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   const rateLimitResponse = await enforceRateLimit(request, "project-request-order", {
     capacity: 5,
-    refillSeconds: 60 * 60,
+    refillSeconds: 10 * 60,
     identifiers: [user.id],
   })
   if (rateLimitResponse) return rateLimitResponse
