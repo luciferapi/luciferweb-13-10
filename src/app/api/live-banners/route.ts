@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server"
 import { listOwnerLiveBanners } from "@/features/owner/server/owner-live-banners"
-import { isMysqlSchemaUnavailable } from "@/lib/mysql"
+import { getCloudflareR2Config } from "@/features/storage/server/r2-storage"
+import { isMysqlConfigured, isMysqlSchemaUnavailable } from "@/lib/mysql"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
+  // Live banners are optional during preview and before the backing services are configured.
+  // Return an empty collection so the homepage remains usable without a noisy client error.
+  const storageConfig = getCloudflareR2Config()
+  if (!isMysqlConfigured() || !storageConfig?.privateBucket) {
+    return NextResponse.json(
+      { banners: [] },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    )
+  }
+
   try {
     return NextResponse.json(
       { banners: await listOwnerLiveBanners(true) },

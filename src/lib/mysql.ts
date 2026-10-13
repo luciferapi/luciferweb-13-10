@@ -17,8 +17,12 @@ declare global {
   var __luciferMysqlPool: Pool | undefined
 }
 
+function environmentValue(name: string): string | undefined {
+  return process.env[name]?.trim()
+}
+
 function requiredEnvironmentValue(name: string): string {
-  const value = process.env[name]?.trim()
+  const value = environmentValue(name)
   if (!value) throw new Error(`${name} is required to connect to the MySQL database.`)
   return value
 }
@@ -52,10 +56,10 @@ function getMysqlConfig(): MysqlConfig {
 
 export function isMysqlConfigured(): boolean {
   return Boolean(
-    process.env.DB_HOST?.trim() &&
-    process.env.DB_USER?.trim() &&
-    process.env.DB_PASSWORD &&
-    process.env.DB_NAME?.trim(),
+    environmentValue("DB_HOST") &&
+    environmentValue("DB_USER") &&
+    process.env.DB_PASSWORD !== undefined &&
+    environmentValue("DB_NAME"),
   )
 }
 
@@ -117,7 +121,7 @@ export async function selectMysqlRows<T extends RowDataPacket>(
 
 export function getOpenRouterConfig() {
   return {
-    apiKey: process.env.OPENROUTER_API_KEY_2?.trim() || process.env.OPENROUTER_API_KEY?.trim() || null,
-    url: process.env.OPENROUTER_URL_3?.trim() || process.env.OPENROUTER_URL?.trim() || "https://openrouter.ai/api/v1/chat/completions",
+    apiKey: process.env.OPENROUTER_API_KEY?.trim() || null,
+    url: process.env.OPENROUTER_URL?.trim() || null,
   }
 }

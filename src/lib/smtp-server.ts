@@ -10,19 +10,18 @@ export type SmtpConfiguration = {
 
 export type SmtpTransporter = ReturnType<typeof nodemailer.createTransport>
 
-const DEFAULT_SMTP_HOST = "smtp.hostinger.com"
-
 let cachedConfiguration: SmtpConfiguration | null = null
 let cachedTransporter: SmtpTransporter | null = null
 
 export function resolveSmtpConfiguration(): SmtpConfiguration {
   const user = process.env.SMTP_USER?.trim()
   const password = process.env.SMTP_PASSWORD
-  const host = process.env.SMTP_HOST?.trim() || DEFAULT_SMTP_HOST
-  const port = Number(process.env.SMTP_PORT ?? "465")
+  const host = process.env.SMTP_HOST?.trim()
+  const portValue = process.env.SMTP_PORT?.trim()
+  const port = Number(portValue)
 
-  if (!user || !password) {
-    throw new Error("SMTP_USER and SMTP_PASSWORD are required to send email.")
+  if (!user || !password || !host) {
+    throw new Error("SMTP_HOST, SMTP_USER, and SMTP_PASSWORD are required to send email.")
   }
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -33,7 +32,12 @@ export function resolveSmtpConfiguration(): SmtpConfiguration {
 }
 
 export function isSmtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASSWORD)
+  return Boolean(
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASSWORD &&
+    process.env.SMTP_HOST?.trim() &&
+    process.env.SMTP_PORT?.trim(),
+  )
 }
 
 export function getSmtpSender(): string {

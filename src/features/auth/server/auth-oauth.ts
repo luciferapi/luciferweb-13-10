@@ -35,8 +35,11 @@ export function getSafeAuthDestination(value: string | null | undefined) {
     return "/chat"
   }
   try {
-    const destination = new URL(value, process.env.AUTH_BASE_URL || "http://localhost")
-    const base = new URL(process.env.AUTH_BASE_URL || "http://localhost")
+  const authBaseUrl = process.env.AUTH_BASE_URL?.trim()
+  if (!authBaseUrl) throw new Error("AUTH_BASE_URL is required for OAuth redirects.")
+
+  const destination = new URL(value, authBaseUrl)
+  const base = new URL(authBaseUrl)
     return destination.origin === base.origin
       ? `${destination.pathname}${destination.search}${destination.hash}`
       : "/chat"

@@ -177,7 +177,8 @@ export async function sendProjectRequestNotification(input: {
   preferredLanguage: string
   desiredDuration: string
 }): Promise<void> {
-  const recipient = process.env.PROJECT_REQUEST_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL
+  const recipient = process.env.PROJECT_REQUEST_NOTIFICATION_EMAIL?.trim()
+  if (!recipient) throw new Error("PROJECT_REQUEST_NOTIFICATION_EMAIL is required.")
   if (!recipient) throw new Error("Set PROJECT_REQUEST_NOTIFICATION_EMAIL for project request notifications.")
 
   const projectName = escapeHtml(input.projectName)
@@ -359,7 +360,8 @@ export async function sendWithdrawalRequestNotification(input: {
   amountPaise: number
   payoutDetails: PayoutDetails
 }): Promise<void> {
-  const recipient = process.env.WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL
+  const recipient = process.env.WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL?.trim()
+  if (!recipient) throw new Error("WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL is required.")
   if (!recipient) {
     throw new Error("Set WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL for withdrawal notifications.")
   }

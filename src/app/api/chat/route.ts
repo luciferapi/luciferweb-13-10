@@ -6,7 +6,6 @@ import { readLimitedJson } from "@/lib/server/read-limited-json"
 
 import { getOpenRouterConfig } from "@/lib/mysql"
 
-const { url: OPENROUTER_URL } = getOpenRouterConfig()
 const DEFAULT_MODEL = "openai/gpt-4o"
 const ALLOWED_MODELS = new Set([
   "google/gemini-2.5-flash",
@@ -122,10 +121,10 @@ export async function POST(request: Request) {
     })
     if (rateLimitResponse) return rateLimitResponse
 
-    const { apiKey } = getOpenRouterConfig()
+    const { apiKey, url } = getOpenRouterConfig()
 
-    if (!apiKey) {
-      return NextResponse.json({ error: "OpenRouter API key is not configured." }, { status: 500 })
+    if (!apiKey || !url) {
+      return NextResponse.json({ error: "OpenRouter configuration is incomplete." }, { status: 500 })
     }
 
     const userName = user.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100)
@@ -134,7 +133,7 @@ export async function POST(request: Request) {
       ? ` The signed-in user's name is ${JSON.stringify(userName)}. Address them by name naturally when appropriate, but do not force their name into every reply.`
       : ""
 
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

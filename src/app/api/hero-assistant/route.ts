@@ -36,15 +36,16 @@ export async function POST(request: Request) {
   })
   if (rateLimitResponse) return rateLimitResponse
 
-  const apiKey = process.env.OPENROUTER_API_KEY_2 ?? process.env.OPENROUTER_API_KEY
-  if (!apiKey) {
-    console.error("Hero assistant is unavailable because the OpenRouter API key is not configured.")
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim()
+  const openRouterUrl = process.env.OPENROUTER_URL?.trim()
+  if (!apiKey || !openRouterUrl) {
+    console.error("Hero assistant is unavailable because OpenRouter configuration is incomplete.")
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 503 })
   }
 
   let response: Response
   try {
-    response = await fetch(process.env.OPENROUTER_URL ?? "https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(openRouterUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
