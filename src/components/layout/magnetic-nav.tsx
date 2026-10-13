@@ -585,7 +585,7 @@ export default function MagneticNav() {
     </aside>
 
     <header ref={mobileHeaderRef} className="pointer-events-none fixed inset-x-0 top-0 z-[80] px-3 pt-3 sm:px-6 sm:pt-5 xl:hidden">
-      <div className="pointer-events-auto mx-auto flex min-h-14 w-full max-w-6xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-2xl sm:min-h-16 sm:px-4">
+      <div className="pointer-events-auto mx-auto flex min-h-14 w-full max-w-6xl items-center justify-between gap-3 rounded-2xl bg-background/95 px-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-2xl sm:min-h-16 sm:px-4">
         <Link prefetch href="/" aria-label="Lucifer AI home" className="group flex min-w-0 flex-1 items-center gap-2.5">
           <span className="relative size-9 overflow-hidden rounded-xl border border-lime/25 bg-muted shadow-[0_8px_20px_rgba(131,255,81,0.12)] sm:size-10">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover transition duration-300 group-hover:scale-110" />
@@ -726,7 +726,7 @@ export default function MagneticNav() {
               aria-expanded={menuOpen}
               aria-controls="mobile-navigation"
               onClick={() => setMenuOpen((open) => !open)}
-              className="grid size-10 shrink-0 place-items-center rounded-xl border border-lime/25 bg-lime/10 text-lime shadow-[0_0_0_1px_rgba(131,255,81,0.08)] transition hover:border-lime/50 hover:bg-lime/15 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
+              className="grid size-10 shrink-0 place-items-center rounded-xl bg-lime/10 text-lime transition hover:bg-lime/15 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
             >
               {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
             </button>
