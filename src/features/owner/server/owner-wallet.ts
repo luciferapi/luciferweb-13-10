@@ -70,7 +70,7 @@ export async function getOwnerWalletDashboard(): Promise<OwnerWalletDashboard> {
          COALESCE((SELECT SUM(amount_paise) FROM wallet_withdrawal_requests WHERE status = 'pending'), 0) AS pending_withdrawals_paise,
          COALESCE((SELECT SUM(amount_paise) FROM wallet_withdrawal_requests WHERE status = 'paid'), 0) AS paid_withdrawals_paise,
          COALESCE((
-           SELECT SUM(GREATEST(COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0), 0))
+           SELECT SUM(GREATEST(COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0) - COALESCE(p.total, 0), 0))
            FROM auth_users u
            LEFT JOIN (
              SELECT user_id, SUM(amount_paise) AS total FROM wallet_deposits
@@ -83,6 +83,9 @@ export async function getOwnerWalletDashboard(): Promise<OwnerWalletDashboard> {
            LEFT JOIN (
              SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
            ) a ON a.user_id = u.id
+           LEFT JOIN (
+             SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits GROUP BY user_id
+           ) p ON p.user_id = u.id
          ), 0) AS wallet_balance_paise`,
     ),
     selectMysqlRows<ActivityRow & { order_id: string; deposit_id: string }>(
@@ -217,7 +220,7 @@ export async function listOwnerWalletUsers(page: number, search: string) {
       balance_paise: number | string
     }>(
       `SELECT u.id, u.public_uid, u.name, u.email,
-              GREATEST(COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0), 0) AS balance_paise
+              GREATEST(COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0) - COALESCE(p.total, 0), 0) AS balance_paise
        FROM auth_users u
        LEFT JOIN (
          SELECT user_id, SUM(amount_paise) AS total FROM wallet_deposits
@@ -230,6 +233,9 @@ export async function listOwnerWalletUsers(page: number, search: string) {
        LEFT JOIN (
          SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
        ) a ON a.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits GROUP BY user_id
+       ) p ON p.user_id = u.id
        WHERE 1 = 1 ${where}
        ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?`,
       [...values, WALLET_USER_PAGE_SIZE, offset],

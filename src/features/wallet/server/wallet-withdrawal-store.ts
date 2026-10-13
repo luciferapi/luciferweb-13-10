@@ -124,6 +124,8 @@ export async function createWalletWithdrawalRequest(input: {
          - COALESCE((SELECT SUM(amount_paise) FROM wallet_withdrawal_requests
                      WHERE user_id = ? AND status IN ('pending', 'paid')), 0)
          + COALESCE((SELECT SUM(amount_paise) FROM owner_wallet_adjustments
+                     WHERE user_id = ?), 0)
+         - COALESCE((SELECT SUM(amount_paise) FROM wallet_purchase_debits
                      WHERE user_id = ?), 0) AS balance_paise`,
       [input.userId, input.userId, input.userId, input.userId],
     )

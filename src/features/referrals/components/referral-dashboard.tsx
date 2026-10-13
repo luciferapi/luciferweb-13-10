@@ -195,6 +195,9 @@ export function ReferralDashboard() {
     { label: "For your invite", rule: data.program.refereeReward },
   ] : []
   const conditions = data ? [
+    data.program.conditions.minPurchaseAmount === null
+      ? null
+      : `Minimum qualifying purchase ₹${data.program.conditions.minPurchaseAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     data.program.conditions.validUntil === null ? null : `Valid until ${new Date(data.program.conditions.validUntil).toLocaleDateString()}`,
     data.program.conditions.maxReferrals === null ? null : `Maximum ${data.program.conditions.maxReferrals} referrals per user`,
   ].filter((condition): condition is string => condition !== null) : []
