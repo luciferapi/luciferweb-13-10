@@ -11,22 +11,15 @@ function getPaymentEnvironmentValue(name: string, suffix: string): string | unde
   return value
 }
 export function getRazorpayCredentials() {
-  // Use the documented production variables first. Suffixed variables are kept
-  // only as a backwards-compatible fallback for older hosting configurations.
-  const suffixes = ["", "_2", "_3", "_4"]
-  for (const suffix of suffixes) {
-    const keyId = getPaymentEnvironmentValue("RAZORPAY_KEY_ID", suffix)
-    const keySecret = getPaymentEnvironmentValue("RAZORPAY_KEY_SECRET", suffix)
-    if (!keyId || !keySecret) continue
+  const keyId = getPaymentEnvironmentValue("RAZORPAY_KEY_ID", "")
+  const keySecret = getPaymentEnvironmentValue("RAZORPAY_KEY_SECRET", "")
+  if (!keyId || !keySecret) return null
 
-    return {
-      keyId,
-      keySecret,
-      authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
-    }
+  return {
+    keyId,
+    keySecret,
+    authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
   }
-
-  return null
 }
 
 export type RazorpayOrder = {
