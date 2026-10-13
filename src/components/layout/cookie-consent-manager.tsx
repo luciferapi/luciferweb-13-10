@@ -35,8 +35,8 @@ export function CookieConsentManager() {
   const [savedConsent, setSavedConsent] = useState<ConsentRecord | null>(null)
   const [saveError, setSaveError] = useState("")
   const [AnalyticsComponent, setAnalyticsComponent] = useState<ComponentType<AnalyticsProps> | null>(null)
-  const [settingsPosition, setSettingsPosition] = useState({ right: 20, bottom: 20 })
-  const dragState = useRef<{ pointerId: number; startX: number; startY: number; right: number; bottom: number } | null>(null)
+  const [settingsPosition, setSettingsPosition] = useState({ left: 20, bottom: 20 })
+  const dragState = useRef<{ pointerId: number; startX: number; startY: number; left: number; bottom: number } | null>(null)
 
   function handleSettingsPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
     if (event.button !== 0) return
@@ -44,7 +44,7 @@ export function CookieConsentManager() {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      right: settingsPosition.right,
+      left: settingsPosition.left,
       bottom: settingsPosition.bottom,
     }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -54,7 +54,7 @@ export function CookieConsentManager() {
     const drag = dragState.current
     if (!drag || drag.pointerId !== event.pointerId) return
     setSettingsPosition({
-      right: Math.max(12, Math.min(window.innerWidth - 180, drag.right - (event.clientX - drag.startX))),
+      left: Math.max(12, Math.min(window.innerWidth - 180, drag.left + (event.clientX - drag.startX))),
       bottom: Math.max(12, Math.min(window.innerHeight - 52, drag.bottom - (event.clientY - drag.startY))),
     })
   }
@@ -250,7 +250,7 @@ export function CookieConsentManager() {
           onPointerCancel={handleSettingsPointerUp}
           aria-label="Open cookie and privacy settings"
           title="Drag to move cookie settings"
-          style={{ right: settingsPosition.right, bottom: settingsPosition.bottom, touchAction: "none" }}
+          style={{ left: settingsPosition.left, bottom: settingsPosition.bottom, touchAction: "none" }}
           className="fixed z-[69] inline-flex min-h-11 cursor-grab items-center gap-2 rounded-full border border-border/80 bg-card/95 px-4 text-sm font-semibold text-foreground shadow-[0_8px_28px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:-translate-y-px hover:border-cyan-400/50 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing active:scale-[0.98]"
         >
           <Cookie aria-hidden="true" className="size-4 text-cyan-300" strokeWidth={1.8} />
