@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, Search } from "lucide-react"
 import { PROJECT_CATEGORIES, type Project } from "@/features/projects/server/projects"
-import { parsePriceToPaise } from "@/features/projects/server/project-pricing"
+import { formatPriceInr, parsePriceToPaise } from "@/features/projects/server/project-pricing"
 import { ProjectCheckout } from "@/features/projects/components/project-checkout"
 
 export function ProjectSearch({
@@ -27,7 +27,7 @@ export function ProjectSearch({
 
   return (
     <>
-      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-border bg-card/40 p-3 sm:flex-row sm:items-center">
+      <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-border bg-card/70 p-3 shadow-[0_14px_40px_color-mix(in_oklch,var(--catalog-glow)_7%,transparent)] backdrop-blur sm:flex-row sm:items-center">
         <label className="relative block min-w-0 flex-1">
           <span className="sr-only">Search {searchLabel}</span>
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -50,19 +50,19 @@ export function ProjectSearch({
         ) : null}
       </div>
       {filteredProjects.length > 0 ? (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
+        <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
           {filteredProjects.map((project) => {
             const { code, title, description, imageUrl, category: projectCategory, technologies } = project
             const amountPaise = parsePriceToPaise(project.price)
             return (
-            <article key={code} className="group overflow-hidden rounded-2xl border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:border-cyan-500/50">
+            <article key={code} className="group overflow-hidden rounded-[1.35rem] border border-border bg-card shadow-[0_12px_40px_color-mix(in_oklch,var(--foreground)_5%,transparent)] transition duration-300 hover:-translate-y-1 hover:border-[var(--catalog-glow)] hover:shadow-[0_18px_50px_color-mix(in_oklch,var(--catalog-glow)_14%,transparent)]">
               <Link href={`/projects/${code}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset">
               <div className="aspect-[16/10] overflow-hidden bg-muted">
                 <img
                   src={imageUrl || "/images/luciferai-brand-logo.jpg"}
                   alt={`${title} project preview`}
                   loading="lazy"
-                  className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="px-4 py-4 sm:px-5">
@@ -85,7 +85,7 @@ export function ProjectSearch({
               </Link>
               {amountPaise ? (
                 <div className="border-t border-border px-4 pb-4 sm:px-5">
-                  <ProjectCheckout projectId={code} title={title} amountPaise={amountPaise} purchaseLabel={`Buy project · ${project.price}`} />
+                  <ProjectCheckout projectId={code} title={title} amountPaise={amountPaise} purchaseLabel={`Buy · ${formatPriceInr(amountPaise)}`} />
                 </div>
               ) : null}
             </article>

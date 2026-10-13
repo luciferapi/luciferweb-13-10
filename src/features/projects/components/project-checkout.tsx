@@ -156,7 +156,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-4 text-center text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
         >
           {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <ShieldCheck aria-hidden="true" className="size-4" />}
-          {purchaseLabel ?? `Buy for ${formatPriceInr(amountPaise)}`}
+          {purchaseLabel ?? `Buy · ${formatPriceInr(amountPaise)}`}
         </button>
         {downloadToken ? (
           <button
