@@ -200,7 +200,7 @@ export async function updateOwnerUser(
     .from("auth_identities")
     .select("provider_user_id")
     .eq("user_id", id)
-    .eq("provider", "supabase")
+    .in("provider", ["email", "supabase"])
     .maybeSingle()
   if (identityError) throw identityError
 
@@ -345,7 +345,7 @@ export async function deleteOwnerUser(
     .from("auth_identities")
     .select("provider_user_id")
     .eq("user_id", targetUserId)
-    .eq("provider", "supabase")
+    .in("provider", ["email", "supabase"])
     .maybeSingle()
   if (identityError) throw identityError
 

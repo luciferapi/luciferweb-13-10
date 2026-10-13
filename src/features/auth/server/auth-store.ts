@@ -364,7 +364,7 @@ export async function authenticateUser(email: string, password: string): Promise
   const { data: identity, error: identityError } = await requireAdminClient()
     .from("auth_identities")
     .select("user_id")
-    .eq("provider", "supabase")
+    .in("provider", ["email", "supabase"])
     .eq("provider_user_id", data.user.id)
     .maybeSingle()
   if (identityError) throw identityError
@@ -385,7 +385,7 @@ export async function findUserBySupabaseAuthId(authUserId: string): Promise<Auth
   const { data: identity, error: identityError } = await admin
     .from("auth_identities")
     .select("user_id")
-    .eq("provider", "supabase")
+    .in("provider", ["email", "supabase"])
     .eq("provider_user_id", authUserId)
     .maybeSingle()
   if (identityError) throw identityError
