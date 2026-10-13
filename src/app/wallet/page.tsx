@@ -8,7 +8,7 @@ import {
 import { WalletAnimated } from "@/features/wallet/components/wallet-animated"
 import { WalletDepositControl } from "@/features/wallet/components/wallet-deposit-control"
 import { WalletTransactionHistory } from "@/features/wallet/components/wallet-transaction-history"
-import { requireSignedInUser } from "@/features/auth/server/auth-session"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { getAvailableWalletBalancePaise } from "@/features/wallet/server/wallet-withdrawal-store"
 
 const quickActions = [
@@ -36,7 +36,39 @@ const historyTiles = [
 ] as const
 
 export default async function WalletPage() {
-  const user = await requireSignedInUser("/wallet")
+  const user = await getSignedInUser()
+  if (!user) {
+    return (
+      <WalletAnimated>
+        <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#dbeafe_42%,transparent),transparent_42%),#f4f5fb] text-[#172033] dark:bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#172554_28%,transparent),transparent_40%),#101216] dark:text-slate-100">
+          <section className="mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
+            <div className="w-full max-w-2xl rounded-2xl border border-blue-100 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none sm:p-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700 dark:text-blue-300">LUCIFER AI WALLET</p>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">Your wallet is ready</h1>
+              <p className="mt-3 max-w-[58ch] text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Sign in to view your balance, add funds securely, and review wallet activity. Your financial information is only available inside your account.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/login?next=%2Fwallet"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-[0.98]"
+                >
+                  Sign in to wallet
+                </Link>
+                <Link
+                  href="/"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-[0.98] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Back to home
+                </Link>
+              </div>
+            </div>
+          </section>
+        </main>
+      </WalletAnimated>
+    )
+  }
+
   const balancePaise = await getAvailableWalletBalancePaise(user.id)
 
   return (
