@@ -1,12 +1,11 @@
 import "server-only"
 import { randomBytes } from "node:crypto"
-import { getMysqlPool, selectMysqlRows } from "@/lib/mysql"
-import type { ResultSetHeader, RowDataPacket } from "mysql2"
+import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 import type { ReferralEntry, ReferralProgram, ReferralStatus } from "@/features/referrals/server/referral-types"
 
 export type { ReferralEntry, ReferralProgram, ReferralStatus } from "@/features/referrals/server/referral-types"
 
-type ReferralRow = RowDataPacket & {
+type ReferralRow = {
   id: string
   referrer_id: string
   referee_id: string
@@ -19,7 +18,7 @@ type ReferralRow = RowDataPacket & {
   signup_at: Date | string
 }
 
-type ReferralProgramRow = RowDataPacket & {
+type ReferralProgramRow = {
   referrer_reward_type: "fixed" | "percentage"
   referrer_reward_amount: number | string
   referrer_reward_currency: string
@@ -31,57 +30,65 @@ type ReferralProgramRow = RowDataPacket & {
   max_referrals: number | string | null
 }
 
+function getAdminClient() {
+  const client = getSupabaseAdminClient()
+  if (!client) throw new Error("Supabase admin access is not configured.")
+  return client
+}
+
 export async function findReferralOwner(code: string): Promise<string | null> {
-  const rows = await selectMysqlRows<RowDataPacket & { user_id: string }>(
-    "SELECT user_id FROM referral_profiles WHERE referral_code = ? LIMIT 1",
-    [code.trim().toUpperCase()],
-  )
-  return rows[0]?.user_id ?? null
+  const { data, error } = await getAdminClient()
+    .from("referral_profiles")
+    .select("user_id")
+    .eq("referral_code", code.trim().toUpperCase())
+    .maybeSingle()
+  if (error) throw error
+  return data?.user_id ?? null
 }
 
 export async function isReferralCodeAvailable(code: string): Promise<boolean> {
-  const pool = getMysqlPool()
-  const owners = await selectMysqlRows<RowDataPacket & { user_id: string }>(
-    "SELECT user_id FROM referral_profiles WHERE referral_code = ? LIMIT 1",
-    [code.trim().toUpperCase()],
-  )
-  const owner = owners[0]
-  if (!owner) return false
+  const client = getAdminClient()
+  const owner = await client
+    .from("referral_profiles")
+    .select("user_id")
+    .eq("referral_code", code.trim().toUpperCase())
+    .maybeSingle()
+  if (owner.error) throw owner.error
+  if (!owner.data) return false
 
-  const [settingsRows] = await pool.execute<(RowDataPacket & {
-    max_referrals: number | string | null
-    valid_until: Date | string | null
-  })[]>(
-    "SELECT max_referrals, valid_until FROM referral_program_settings WHERE program_id = 1 LIMIT 1",
-  )
-  const [countRows] = await pool.execute<(RowDataPacket & {
-    referral_count: number | string
-  })[]>(
-    "SELECT COUNT(*) AS referral_count FROM referrals WHERE referrer_id = ?",
-    [owner.user_id],
-  )
-  const settings = settingsRows[0]
-  if (!settings) return false
-  const notExpired = settings.valid_until === null ||
-    new Date(settings.valid_until).getTime() > Date.now()
-  const referralCount = Number(countRows[0]?.referral_count ?? 0)
+  const [settings, referrals] = await Promise.all([
+    client
+      .from("referral_program_settings")
+      .select("max_referrals, valid_until")
+      .eq("program_id", 1)
+      .maybeSingle(),
+    client
+      .from("referrals")
+      .select("id", { count: "exact", head: true })
+      .eq("referrer_id", owner.data.user_id),
+  ])
+  if (settings.error) throw settings.error
+  if (referrals.error) throw referrals.error
+  if (!settings.data) return false
+
+  const notExpired = settings.data.valid_until === null ||
+    new Date(settings.data.valid_until).getTime() > Date.now()
   return Boolean(
     notExpired &&
-    (settings.max_referrals === null || referralCount < Number(settings.max_referrals)),
+    (settings.data.max_referrals === null || (referrals.count ?? 0) < Number(settings.data.max_referrals)),
   )
 }
 
 export async function getReferralProgram(): Promise<ReferralProgram> {
-  const rows = await selectMysqlRows<ReferralProgramRow>(
-    `SELECT referrer_reward_type, referrer_reward_amount, referrer_reward_currency,
-            referee_reward_type, referee_reward_amount, referee_reward_currency,
-            min_purchase_amount, valid_until, max_referrals
-     FROM referral_program_settings WHERE program_id = 1 LIMIT 1`,
-  )
-  const row = rows[0]
+  const { data: row, error } = await getAdminClient()
+    .from("referral_program_settings")
+    .select("referrer_reward_type, referrer_reward_amount, referrer_reward_currency, referee_reward_type, referee_reward_amount, referee_reward_currency, min_purchase_amount, valid_until, max_referrals")
+    .eq("program_id", 1)
+    .maybeSingle()
+  if (error) throw error
   if (!row) throw new Error("The referral program settings have not been initialized.")
 
-  const settings = row
+  const settings = row as ReferralProgramRow
   return {
     referrerReward: {
       type: settings.referrer_reward_type,
@@ -107,58 +114,45 @@ export async function updateReferralProgram(program: ReferralProgram): Promise<v
     : null
   if (validUntil && Number.isNaN(validUntil.getTime())) throw new Error("The program expiry date is invalid.")
 
-  const [result] = await getMysqlPool().execute<ResultSetHeader>(
-    `UPDATE referral_program_settings
-     SET referrer_reward_type = ?, referrer_reward_amount = ?, referrer_reward_currency = 'INR',
-         referee_reward_type = ?, referee_reward_amount = ?, referee_reward_currency = 'INR',
-         min_purchase_amount = ?, valid_until = ?, max_referrals = ?, updated_at = CURRENT_TIMESTAMP(3)
-     WHERE program_id = 1`,
-    [
-      program.referrerReward.type,
-      program.referrerReward.amount,
-      program.refereeReward.type,
-      program.refereeReward.amount,
-      program.conditions.minPurchaseAmount,
-      validUntil?.toISOString() ?? null,
-      program.conditions.maxReferrals,
-    ],
-  )
-  if (result.affectedRows === 0) {
-    const existing = await selectMysqlRows<RowDataPacket & { program_id: number }>(
-      "SELECT program_id FROM referral_program_settings WHERE program_id = 1 LIMIT 1",
-    )
-    if (existing.length === 0) throw new Error("The referral program settings have not been initialized.")
-  }
+  const { error } = await getAdminClient()
+    .from("referral_program_settings")
+    .update({
+      referrer_reward_type: program.referrerReward.type,
+      referrer_reward_amount: program.referrerReward.amount,
+      referrer_reward_currency: "INR",
+      referee_reward_type: program.refereeReward.type,
+      referee_reward_amount: program.refereeReward.amount,
+      referee_reward_currency: "INR",
+      min_purchase_amount: program.conditions.minPurchaseAmount,
+      valid_until: validUntil?.toISOString() ?? null,
+      max_referrals: program.conditions.maxReferrals,
+    })
+    .eq("program_id", 1)
+  if (error) throw error
 }
 
 export async function createReferralCode(userId: string): Promise<string> {
-  const pool = getMysqlPool()
-  const existingRows = await selectMysqlRows<RowDataPacket & { referral_code: string }>(
-    "SELECT referral_code FROM referral_profiles WHERE user_id = ? LIMIT 1",
-    [userId],
-  )
-  const existing = existingRows[0]
+  const client = getAdminClient()
+  const { data: existing, error: lookupError } = await client
+    .from("referral_profiles")
+    .select("referral_code")
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (lookupError) throw lookupError
   if (existing) return existing.referral_code
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = randomBytes(6).toString("hex").toUpperCase()
-    try {
-      await pool.execute(
-        "INSERT INTO referral_profiles (user_id, referral_code) VALUES (?, ?)",
-        [userId, code],
-      )
-      return code
-    } catch (error) {
-      if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_ENTRY")) {
-        throw error
-      }
-    }
+    const { error } = await client.from("referral_profiles").insert({ user_id: userId, referral_code: code })
+    if (!error) return code
+    if (error.code !== "23505") throw error
 
-    const concurrentRows = await selectMysqlRows<RowDataPacket & { referral_code: string }>(
-      "SELECT referral_code FROM referral_profiles WHERE user_id = ? LIMIT 1",
-      [userId],
-    )
-    const concurrentProfile = concurrentRows[0]
+    const { data: concurrentProfile, error: concurrentLookupError } = await client
+      .from("referral_profiles")
+      .select("referral_code")
+      .eq("user_id", userId)
+      .maybeSingle()
+    if (concurrentLookupError) throw concurrentLookupError
     if (concurrentProfile) return concurrentProfile.referral_code
   }
   throw new Error("Could not generate a unique referral code.")
@@ -166,29 +160,11 @@ export async function createReferralCode(userId: string): Promise<string> {
 
 export async function getUserReferralTree(userId: string): Promise<{ code: string; referrals: ReferralEntry[] }> {
   const code = await createReferralCode(userId)
-  const rows = await selectMysqlRows<ReferralRow>(
-    `WITH RECURSIVE referral_tree
-       (id, referrer_id, referee_id, status, status_reason, created_at, depth, visited_ids) AS (
-       SELECT referrals.id, referrals.referrer_id, referrals.referee_id, referrals.status,
-              referrals.status_reason, referrals.created_at, 1,
-              CAST(CONCAT(',', referrals.referrer_id, ',', referrals.referee_id, ',') AS CHAR(8000))
-       FROM referrals WHERE referrals.referrer_id = ?
-       UNION ALL
-       SELECT child.id, child.referrer_id, child.referee_id, child.status,
-              child.status_reason, child.created_at, referral_tree.depth + 1,
-              CONCAT(referral_tree.visited_ids, child.referee_id, ',')
-       FROM referrals AS child
-       INNER JOIN referral_tree ON child.referrer_id = referral_tree.referee_id
-       WHERE LOCATE(CONCAT(',', child.referee_id, ','), referral_tree.visited_ids) = 0
-     )
-     SELECT referral_tree.id, users.name, users.email, referral_tree.status,
-            referral_tree.status_reason, referral_tree.depth, referral_tree.created_at,
-            users.created_at AS signup_at
-     FROM referral_tree
-     INNER JOIN auth_users AS users ON users.id = referral_tree.referee_id
-     ORDER BY referral_tree.depth, referral_tree.created_at DESC`,
-    [userId],
-  )
+  const { data, error } = await getAdminClient().rpc("get_user_referral_tree", {
+    p_user_id: userId,
+  })
+  if (error) throw error
+  const rows = (data ?? []) as ReferralRow[]
   return {
     code,
     referrals: rows.map((row) => ({
@@ -204,35 +180,43 @@ export async function getUserReferralTree(userId: string): Promise<{ code: strin
 }
 
 export async function listAllReferrals(): Promise<ReferralEntry[]> {
-  const rows = await selectMysqlRows<ReferralRow>(
-    `SELECT referrals.id, referrals.referrer_id, referrals.referee_id, users.name, users.email,
-            referrals.status, referrals.status_reason, 0 AS depth,
-            referrals.created_at, users.created_at AS signup_at
-     FROM referrals
-     INNER JOIN auth_users AS users ON users.id = referrals.referee_id
-     ORDER BY referrals.created_at DESC`,
-  )
-  return rows.map((row) => ({
+  const client = getAdminClient()
+  const { data: referrals, error: referralsError } = await client
+    .from("referrals")
+    .select("id, referrer_id, referee_id, status, status_reason, created_at")
+    .order("created_at", { ascending: false })
+  if (referralsError) throw referralsError
+  if (!referrals?.length) return []
+
+  const refereeIds = [...new Set(referrals.map((row) => row.referee_id))]
+  const { data: users, error: usersError } = await client
+    .from("auth_users")
+    .select("id, name, email, created_at")
+    .in("id", refereeIds)
+  if (usersError) throw usersError
+  const usersById = new Map((users ?? []).map((user) => [user.id, user]))
+
+  return referrals.flatMap((row) => {
+    const user = usersById.get(row.referee_id)
+    if (!user) return []
+    return [{
       id: row.id,
-      name: `${row.name} (${row.email})`,
-      status: row.status,
+      name: `${user.name} (${user.email})`,
+      status: row.status as ReferralStatus,
       statusReason: row.status_reason,
       depth: 0,
       createdAt: new Date(row.created_at).toISOString(),
-      signupAt: new Date(row.signup_at).toISOString(),
-    }))
+      signupAt: new Date(user.created_at).toISOString(),
+    }]
+  })
 }
 
 export async function updateReferralStatus(id: string, status: ReferralStatus, reason: string | null): Promise<boolean> {
-  const [result] = await getMysqlPool().execute<ResultSetHeader>(
-    `UPDATE referrals SET status = ?, status_reason = ?, updated_at = CURRENT_TIMESTAMP(3)
-     WHERE id = ?`,
-    [status, reason, id],
-  )
-  if (result.affectedRows > 0) return true
-  const rows = await selectMysqlRows<RowDataPacket & { id: string }>(
-    "SELECT id FROM referrals WHERE id = ? LIMIT 1",
-    [id],
-  )
-  return rows.length === 1
+  const { data, error } = await getAdminClient()
+    .from("referrals")
+    .update({ status, status_reason: reason, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id")
+  if (error) throw error
+  return (data?.length ?? 0) === 1
 }

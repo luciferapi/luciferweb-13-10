@@ -33,7 +33,7 @@ You can start editing the page by modifying `src/app/page.tsx`. The page auto-up
 - `src/features/auth/server` owns authentication rules and user/session persistence;
   `src/features/storage/server/r2-storage.ts` is the shared Cloudflare R2 boundary.
 - `public` contains static web assets; `storage/project-catalog` contains local project media and source bundles.
-- `database/migrations` contains the Hostinger MySQL schema.
+- `supabase` contains database configuration, migrations, and Edge Functions.
 - `docs` contains project documentation and archived design references.
 
 ## Authentication, email, and file storage
@@ -44,63 +44,28 @@ You can start editing the page by modifying `src/app/page.tsx`. The page auto-up
   live in `src/features/notifications/server/email.ts`. Staff and owner accounts
   use emailed one-time codes only; password, Google/X, and Telegram login paths
   cannot create privileged sessions.
-- **User records:** The application manages account credentials and sessions in
-  Hostinger MySQL. Profiles and public UIDs are stored in `auth_users`; provider
-  links and hashed app sessions are stored in `auth_identities` and
-  `auth_sessions`. Staff role and module access are stored in `owner_admins`.
-  Projects, wallet activity, referrals, support tickets, and other application
-  records use the same MySQL database.
+- **User records:** Supabase Auth owns account credentials. The application profile
+  and public UID are stored in `public.auth_users`; provider links and hashed app
+  sessions are stored in `public.auth_identities` and `public.auth_sessions`.
+  Staff role and module access are stored in `public.owner_admins`. Feature data
+  such as projects, wallet activity, referrals, and support tickets remains in
+  their corresponding Supabase tables.
 - **Media files:** Image and demo-video bytes are uploaded to the public Cloudflare
-  R2 media bucket through `src/features/storage/server/r2-storage.ts`. MySQL stores
-  application records and references, not the media bytes. Source ZIPs and
+  R2 media bucket through `src/features/storage/server/r2-storage.ts`. Supabase
+  stores application records and references, not the media bytes. Source ZIPs and
   maintenance settings use the separate private R2 bucket; protected download
   routes return source files only after purchase verification.
 
-## Hostinger MySQL backend
+## Supabase backend
 
 The Next.js app stores authentication records, sessions, projects, purchases,
-wallet activity, payout methods, referrals, and project requests in Hostinger
-MySQL through server-only `mysql2` connections. Copy `.env.example` to
-`.env.local` and set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and
-`DB_NAME`. Set `DB_SSL=true` if the database host requires verified TLS, and
-adjust `DB_CONNECTION_LIMIT` for the deployment's connection budget. Never use
-`NEXT_PUBLIC_` variables for database credentials.
-
-Import `database/migrations/001_initial_schema.sql` into the selected Hostinger
-database using Hostinger's database manager/phpMyAdmin or the MySQL command-line
-client. The application does not create or migrate tables at runtime. Apply the
-schema, then `database/migrations/002_auth_user_access_columns.sql` to safely
-upgrade older `auth_users` tables, before starting the app. Back up the database
-before any production data cutover. `.env.local` is not tracked by Git; keep all
-database credentials private and configure them in production hosting as well.
-Set `AUTH_OTP_HMAC_SECRET` to a strong, persistent secret of at least 32 random
-bytes (hex-encoded) for owner/staff email codes.
-
-### One-time Supabase data cutover
-
-The runtime no longer uses Supabase. To copy the existing profiles and
-application records, pause writes to the old app, take a source backup, and
-configure `SOURCE_DATABASE_URL` in `.env.local` with a direct PostgreSQL
-connection URL that can read both `public` and `auth.identities`. Apply the
-MySQL schema to a clean target first. Keep the existing
-`PAYOUT_DATA_ENCRYPTION_KEY` if saved withdrawal methods were encrypted with it.
-
-Run a preflight, then the import:
-
-```bash
-npm run migrate:supabase -- --dry-run
-npm run migrate:supabase -- --apply
-```
-
-The importer refuses non-empty application tables and reports row counts. It
-copies matching columns for profiles, projects, purchases, wallet records,
-referrals, support, owner settings, and other application data. It also maps
-existing Google, X, and Telegram identities. Password hashes, password reset
-tokens, OTPs, and sessions are intentionally not copied. Existing users must
-reset their passwords and sign in again. The source connection variable is for
-this one-time import only; remove it after cutover and do not configure it in
-production runtime settings. Verify table counts, user sign-in/reset, payouts,
-and payment/support records before reopening writes.
+wallet activity, payout methods, referrals, and project requests in Supabase
+Postgres through server-side Supabase clients. It has no MySQL runtime fallback.
+Copy `.env.example` to `.env.local`
+and configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+and the server-only `SUPABASE_SECRET_KEY` (or
+`SUPABASE_SERVICE_ROLE_KEY`). Never expose the server key through a
+`NEXT_PUBLIC_` variable.
 
 App-managed email uses Hostinger SMTP (`smtp.hostinger.com`, port `465`) by
 default. Configure `SMTP_USER` and `SMTP_PASSWORD` with the Hostinger mailbox
@@ -110,9 +75,24 @@ To send a delivery test, make a same-origin `POST` request to
 verification code. It sends a fixed test message to `SMTP_USER`; it does not
 accept arbitrary recipients.
 
+Apply the database schema to the intended Supabase project with the Supabase CLI:
+
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
+```
+
+The migration enables row-level security and grants application table access
+only to the server-side service role. Keep that key private and configure it in
+the production hosting environment as well as local development. These schema
+migrations create the Supabase tables but do not transfer existing MySQL
+accounts, payment history, or project records; plan and verify any legacy-data
+import separately before switching a live deployment.
+
 Owner uploads for project images, demo videos, homepage banner images, maintenance images,
 and source ZIPs are stored in Cloudflare R2. Homepage banner text, link paths, enabled state,
-and display order are stored in MySQL. Banner image URLs are stored as private
+and display order remain in Supabase. Banner image URLs are stored as private
 R2 metadata keyed by banner ID, and uploaded image bytes are stored in the public R2 bucket.
 Set `CLOUDFLARE_R2_ACCOUNT_ID`, `CLOUDFLARE_R2_ACCESS_KEY_ID`,
 `CLOUDFLARE_R2_SECRET_ACCESS_KEY`, and `CLOUDFLARE_R2_BUCKET` in `.env.local` and
@@ -129,11 +109,12 @@ the R2 access key permission to read and write both buckets. New owner uploads f
 than silently falling back to local disk if R2 is unavailable. Legacy files already on local
 disk can still be read until they are migrated. The variable names are listed in `.env.example`.
 
-The application manages account credentials and stores the normalized email,
-name, and unique public UID in MySQL; date of birth is optional and can be added
-later in Settings. Profiles also support optional Telegram and X usernames.
+Supabase Auth manages account credentials. The application profile stores the
+normalized email, name, and a unique public UID in Supabase; date of birth is
+optional and can be added later in Settings. The profile also supports optional
+Telegram and X usernames.
 Sign-in sessions use random HTTP-only cookies; only their SHA-256 hashes are
-stored in MySQL.
+stored in Supabase.
 New signups are limited to one account per public IP across email, Google, X,
 and Telegram. Only a SHA-256 hash of the signup IP is stored. The deployment
 proxy must set a trusted `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`
@@ -144,10 +125,11 @@ Display name and date of birth can each be changed once from Settings. A
 confirmation is shown before either change, and customer support must handle
 later corrections. Chat remains publicly accessible.
 The forgot-password endpoint checks that an account exists before creating
-and sending a reset link. Owner and staff sign-in codes are generated and verified by the app and sent
-through Hostinger SMTP. Staff OTP issuance and verification are restricted to
-active staff assignments and checked again in MySQL. Owner/staff access requires
-an email-OTP-authenticated session.
+and sending a reset link. Owner and staff sign-in codes are generated and
+verified by the app, sent through Hostinger SMTP, and require the server-only
+Supabase key. Staff OTP issuance and verification are restricted to active staff
+assignments and checked again in the database. Owner/staff access requires an
+email-OTP-authenticated session. No Supabase Auth SMTP configuration is required.
 
 Set `PAYOUT_DATA_ENCRYPTION_KEY` to a strong, persistent server-only secret so
 saved payout details can be encrypted at rest. Registration, owner sign-in,
@@ -182,7 +164,7 @@ Google OAuth is implemented as a server-side authorization-code flow. To enable 
 The callback URI must match exactly between Google Cloud Console and
 `AUTH_BASE_URL`. The app uses the provider's verified email, stores the Google
 identity against the account, and creates its own session cookie. Identity and
-session records are stored in MySQL.
+session records are stored in Supabase.
 
 ### Paid project requests
 
@@ -217,10 +199,8 @@ deposit IDs start with `DEP`, and withdrawal IDs start with `WIT`.
 
 Withdrawal requests require a payout method saved in Settings. Requests are
 limited to ₹50-₹1,500 each, up to four requests per user per day (India
-Standard Time), and cannot exceed the available wallet balance. Pending
-requests reserve their amount immediately; rejecting or cancelling a request
-releases that reservation. New requests are emailed to
-`WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL`, falling back to
+Standard Time), and cannot exceed the available wallet balance. New requests
+are emailed to `WITHDRAWAL_REQUEST_NOTIFICATION_EMAIL`, falling back to
 `PROJECT_REQUEST_NOTIFICATION_EMAIL` and then `SMTP_USER`. The notification
 contains the request amount and a masked payout destination; full payout
 details remain encrypted at rest. Configure `PAYOUT_DATA_ENCRYPTION_KEY` for

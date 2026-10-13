@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { deleteSession } from "@/features/auth/server/auth-store"
+import { getSupabaseServerClient } from "@/lib/supabase"
 
 export const runtime = "nodejs"
 
@@ -10,6 +11,12 @@ export async function POST() {
   const ownerToken = cookieStore.get("lucifer_owner_session")?.value
 
   try {
+    const supabase = await getSupabaseServerClient()
+    if (supabase) {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    }
+
     if (userToken) await deleteSession(userToken)
     if (ownerToken) await deleteSession(ownerToken)
   } catch (error) {

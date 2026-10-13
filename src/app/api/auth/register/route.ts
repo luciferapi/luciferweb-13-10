@@ -8,7 +8,8 @@ import { registrationSchema } from "@/features/auth/server/auth-validation"
 import { sendRegistrationOtp } from "@/features/notifications/server/email"
 import { isReferralCodeAvailable } from "@/features/referrals/server/referral-store"
 import { getSignupIpHash, SignupIpUnavailableError } from "@/features/auth/server/signup-ip"
-import { isMysqlConfigured } from "@/lib/mysql"
+import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { isSupabaseSchemaUnavailable } from "@/lib/supabase-errors"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 
@@ -23,9 +24,9 @@ function isEmailAlreadyRegistered(error: unknown) {
     /a user with this email address has already been registered/i.test(message)
 }
 
-function databaseSetupError() {
+function supabaseSetupError() {
   return NextResponse.json({
-    error: "Account registration is temporarily unavailable. Configure the Hostinger MySQL connection and apply the database schema, then try again.",
+    error: "Account registration is temporarily unavailable. Configure the server-only Supabase secret and apply the Supabase migrations, then try again.",
   }, { status: 503 })
 }
 
@@ -53,9 +54,9 @@ export async function POST(request: Request) {
   })
   if (rateLimitResponse) return rateLimitResponse
 
-  if (!isMysqlConfigured()) {
-    console.error("Account registration is unavailable because the MySQL connection is not configured.")
-    return databaseSetupError()
+  if (!getSupabaseAdminClient()) {
+    console.error("Account registration is unavailable because server-side Supabase credentials are not configured.")
+    return supabaseSetupError()
   }
 
   if (parsed.data.referralCode) {
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       console.error("Could not validate the referral code.", error)
+      if (isSupabaseSchemaUnavailable(error)) return supabaseSetupError()
       return NextResponse.json({
         error: "Referral code validation is temporarily unavailable. The code is optional; clear it and try again, or retry later.",
       }, { status: 503 })
@@ -104,9 +106,10 @@ export async function POST(request: Request) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_ENTRY") {
       return NextResponse.json({ error: "An account with this email already exists. Sign in instead." }, { status: 409 })
     }
+    if (isSupabaseSchemaUnavailable(error)) return supabaseSetupError()
     console.error("Account verification email could not be sent.", error)
     return NextResponse.json({
-      error: "We could not create your verification request. Check the MySQL connection and app SMTP settings, then try again.",
+      error: "We could not create your verification request. Check the Supabase server credentials and app SMTP settings, then try again.",
     }, { status: 503 })
   }
 }

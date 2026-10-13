@@ -75,8 +75,9 @@ function getDatabaseError(error: unknown) {
   if (typeof error !== "object" || error === null) return null
   const code = "code" in error && typeof error.code === "string" ? error.code : ""
   const message = "message" in error && typeof error.message === "string" ? error.message : ""
-  const errno = "errno" in error && typeof error.errno === "number" ? error.errno : 0
-  return { code, message, errno }
+  const details = "details" in error && typeof error.details === "string" ? error.details : ""
+  const hint = "hint" in error && typeof error.hint === "string" ? error.hint : ""
+  return { code, message, details, hint, combined: `${message} ${details}` }
 }
 
 function getBannerSaveError(error: unknown) {
@@ -90,10 +91,13 @@ function getBannerSaveError(error: unknown) {
     return { status: 503, message: error.message }
   }
   const databaseError = getDatabaseError(error)
-  if (databaseError?.code === "ER_NO_SUCH_TABLE" || databaseError?.errno === 1146) {
+  if (
+    databaseError?.code === "42P01" ||
+    (databaseError?.code === "PGRST205" && databaseError.combined.includes("owner_live_banners"))
+  ) {
     return {
       status: 409,
-      message: "The live banner table is missing. Apply `database/migrations/001_initial_schema.sql`, then retry.",
+      message: "The live banner table is missing. Apply the project migrations with `npx supabase db push`, then retry.",
     }
   }
   return null
@@ -105,6 +109,8 @@ function logBannerSaveFailure(operation: string, error: unknown) {
     console.error(operation, {
       code: databaseError.code || undefined,
       message: databaseError.message || undefined,
+      details: databaseError.details || undefined,
+      hint: databaseError.hint || undefined,
     })
     return
   }

@@ -1,12 +1,11 @@
 import "server-only"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import { findUserBySession } from "@/features/auth/server/auth-store"
-import { getSignedInUser, hasEmailOtpSession } from "@/features/auth/server/auth-session"
+import { findUserBySession, isEmailOtpSession } from "@/features/auth/server/auth-store"
+import { getSignedInUser, hasSupabaseEmailOtpSession } from "@/features/auth/server/auth-session"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { ownerModules } from "@/features/owner/owner-modules"
-import { selectMysqlRows } from "@/lib/mysql"
-import type { RowDataPacket } from "mysql2"
+import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 
 export type OwnerWorkspaceAccess = {
   user: { id: string; email: string | null; name: string }
@@ -37,7 +36,9 @@ export async function getOwnerWorkspaceAccess(): Promise<OwnerWorkspaceAccess | 
   if (!user?.email) return null
 
   if (isOwnerEmail(user.email)) {
-    const verifiedByEmailOtp = await hasEmailOtpSession(token)
+    const verifiedByEmailOtp = token
+      ? await isEmailOtpSession(token)
+      : await hasSupabaseEmailOtpSession()
     if (!verifiedByEmailOtp) return null
     return {
       user: { id: user.id, email: user.email, name: user.name },
@@ -47,42 +48,28 @@ export async function getOwnerWorkspaceAccess(): Promise<OwnerWorkspaceAccess | 
     }
   }
 
-  const [assignments, profiles] = await Promise.all([
-    selectMysqlRows<RowDataPacket & {
-      role: string
-      allowed_modules: string[] | string
-    }>(
-      "SELECT role, allowed_modules FROM owner_admins WHERE user_id = ? LIMIT 1",
-      [user.id],
-    ),
-    selectMysqlRows<RowDataPacket & { is_blocked: boolean | number }>(
-      "SELECT is_blocked FROM auth_users WHERE id = ? LIMIT 1",
-      [user.id],
-    ),
+  const client = getSupabaseAdminClient()
+  if (!client) throw new Error("Supabase admin access is not configured.")
+  const [assignmentResult, profileResult] = await Promise.all([
+    client.from("owner_admins").select("role, allowed_modules").eq("user_id", user.id).maybeSingle(),
+    client.from("auth_users").select("is_blocked").eq("id", user.id).maybeSingle(),
   ])
-  const assignment = assignments[0]
-  const profile = profiles[0]
-  if (!assignment || profile?.is_blocked) return null
-  const verifiedByEmailOtp = await hasEmailOtpSession(token)
+  if (assignmentResult.error) throw assignmentResult.error
+  if (profileResult.error) throw profileResult.error
+  const assignment = assignmentResult.data
+  if (!assignment || profileResult.data?.is_blocked) return null
+  const verifiedByEmailOtp = token
+    ? await isEmailOtpSession(token)
+    : await hasSupabaseEmailOtpSession()
   if (!verifiedByEmailOtp) return null
-  if (
-    assignment.role !== "co_owner"
-    && assignment.role !== "admin"
-    && assignment.role !== "customer_support"
-  ) {
+  if (!["co_owner", "admin", "customer_support"].includes(assignment.role)) {
     throw new Error("The staff role configuration is invalid.")
-  }
-  const allowedModules: unknown = typeof assignment.allowed_modules === "string"
-    ? JSON.parse(assignment.allowed_modules)
-    : assignment.allowed_modules
-  if (!Array.isArray(allowedModules) || !allowedModules.every((module) => typeof module === "string")) {
-    throw new Error("The staff module configuration is invalid.")
   }
   return {
     user: { id: user.id, email: user.email, name: user.name },
     isPrimaryOwner: false,
     role: assignment.role,
-    modules: allowedModules,
+    modules: assignment.allowed_modules,
   }
 }
 
