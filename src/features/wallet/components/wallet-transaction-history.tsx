@@ -159,7 +159,7 @@ export function WalletTransactionHistory() {
   }, [])
 
   useEffect(() => {
-    if (activeFilter !== "deposit") return
+    if (activeFilter !== "deposit" && activeFilter !== "all") return
     const controller = new AbortController()
     async function loadDeposits() {
       setDepositLoading(true)
@@ -231,9 +231,21 @@ export function WalletTransactionHistory() {
   const paidTransactions = transactions.filter((transaction) => transaction.status === "paid")
   const paidTotalPaise = paidTransactions.reduce((total, transaction) => total + transaction.amountPaise, 0)
   const visibleTransactions = activeFilter === "all" ? transactions : []
-  const filterLoading = activeFilter === "all" ? loading : activeFilter === "deposit" ? depositLoading : false
-  const filterError = activeFilter === "all" ? error : activeFilter === "deposit" ? depositError : ""
-  const filteredItemCount = activeFilter === "all" ? visibleTransactions.length : activeFilter === "deposit" ? deposits.length : 1
+  const filterLoading = activeFilter === "all"
+    ? loading || depositLoading
+    : activeFilter === "deposit"
+      ? depositLoading
+      : false
+  const filterError = activeFilter === "all"
+    ? error || depositError
+    : activeFilter === "deposit"
+      ? depositError
+      : ""
+  const filteredItemCount = activeFilter === "all"
+    ? visibleTransactions.length + deposits.length
+    : activeFilter === "deposit"
+      ? deposits.length
+      : 1
   const filterOptions = [
     { label: "All", value: "all", href: "/wallet#transaction-history" },
     { label: "Deposits", value: "deposit", href: "/wallet?history=deposit#transaction-history" },
@@ -279,7 +291,7 @@ export function WalletTransactionHistory() {
       {activeFilter === "all" && signedIn && !loading && !error ? (
         <section aria-label="Payment summary" className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-5">
           <div>
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Total paid</p>
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Paid for projects</p>
             <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{formatPriceInr(paidTotalPaise)}</p>
           </div>
           <div className="border-l border-slate-200 pl-4 dark:border-slate-700 sm:pl-6">
@@ -323,14 +335,14 @@ export function WalletTransactionHistory() {
               ? "No deposits yet"
               : activeFilter === "withdraw"
                 ? "No withdrawals yet"
-                : "No purchases yet"}
+                : "No wallet activity yet"}
           </h3>
           <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
             {activeFilter === "deposit"
               ? "Your wallet deposit payments will appear here after checkout."
               : activeFilter === "withdraw"
                 ? "Withdrawal requests you submit will appear here with their review status."
-                : "Project payments will appear here with their status and payment references."}
+                : "Your wallet deposits and project purchases will appear here with their status and payment references."}
           </p>
           {activeFilter === "all" ? (
             <Link
@@ -432,8 +444,50 @@ export function WalletTransactionHistory() {
           </p>
         </section>
       ) : (
-        <section aria-label="Purchases" className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+        <div className="mt-5 space-y-5">
+          {deposits.length > 0 ? (
+            <section aria-label="Wallet deposits" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+              <h3 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-white sm:px-5">Wallet deposits</h3>
+              <ul>
+                {deposits.map((deposit, index) => {
+                  const statusLabel = deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)
+                  const StatusIcon = deposit.status === "paid" ? Check : deposit.status === "pending" ? Clock3 : CircleAlert
+                  return (
+                    <li key={`deposit-${deposit.orderId}`} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                      <article className="flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${statusIconStyles[deposit.status]}`}>
+                            <StatusIcon aria-hidden="true" size={18} />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">Wallet deposit</h4>
+                              <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[deposit.status]}`}>
+                                {statusLabel}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(deposit.paidAt ?? deposit.createdAt)}</p>
+                            <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Deposit ID {deposit.depositId}</p>
+                            {deposit.paymentId ? (
+                              <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Razorpay payment ID {deposit.paymentId}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                          +{formatPriceInr(deposit.amountPaise)}
+                        </p>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          ) : null}
+          <section aria-label="Project purchases" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
           <ul>
+            {visibleTransactions.length === 0 ? (
+              <li className="p-4 text-sm text-slate-600 dark:text-slate-300">No project purchases yet.</li>
+            ) : null}
             {visibleTransactions.map((transaction, index) => {
               const statusLabel = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)
               const StatusIcon = transaction.status === "paid" ? Check : transaction.status === "pending" ? Clock3 : CircleAlert
@@ -502,7 +556,8 @@ export function WalletTransactionHistory() {
               )
             })}
           </ul>
-        </section>
+          </section>
+        </div>
       )}
     </section>
   )
