@@ -18,6 +18,7 @@ export interface Message {
 
 const STORAGE_KEY = "chat-messages"
 const MODEL_STORAGE_KEY = "chat-selected-model"
+const OLLAMA_MODEL_STORAGE_KEY = "ollama-custom-model"
 
 function extractStreamText(value: string) {
   if (!value.includes("data:") && !value.includes("text-delta")) return value
@@ -96,6 +97,7 @@ export function ChatShell() {
 const [selectedModel, setSelectedModel] = useState<AIModel>(
     "openai/gpt-4o",
   )
+  const [ollamaModel, setOllamaModel] = useState("llama3.2")
 
 const requestRef = useRef<AbortController | null>(null)
 
@@ -103,6 +105,7 @@ useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       const savedModel = localStorage.getItem(MODEL_STORAGE_KEY)
+      const savedOllamaModel = localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
 
 if (stored) {
         setMessages(restoreMessages(stored))
@@ -110,8 +113,11 @@ if (stored) {
 
 const model = AI_MODELS.find((item) => item.id === savedModel)
 
-if (model) {
+      if (model) {
         setSelectedModel(model.id)
+      }
+      if (savedOllamaModel?.trim()) {
+        setOllamaModel(savedOllamaModel.trim())
       }
     } catch {
       // Storage can be unavailable or contain invalid data.
@@ -204,7 +210,7 @@ try {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: selectedModel,
+            model: selectedModel === "ollama/llama3.2" ? `ollama/${ollamaModel}` : selectedModel,
             messages: conversation.map((message) => ({
               role: message.role,
               content: message.content,
@@ -289,7 +295,7 @@ if (!accumulated) {
         }
       }
     },
-    [isLoaded, selectedModel],
+    [isLoaded, ollamaModel, selectedModel],
   )
 
 const sendMessage = useCallback(

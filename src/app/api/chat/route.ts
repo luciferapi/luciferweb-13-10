@@ -24,6 +24,13 @@ function normalizeModelId(model?: string) {
   const trimmed = model.trim()
   const normalized = trimmed.startsWith("~") ? trimmed.slice(1) : trimmed
 
+  if (normalized.startsWith("ollama/")) {
+    const ollamaModel = normalized.slice("ollama/".length).trim()
+    if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(ollamaModel)) {
+      return `ollama/${ollamaModel}`
+    }
+  }
+
   if (trimmed === "google/gemini-2.0-flash-001" || trimmed === "google/gemini-3.8-flash") {
     return "google/gemini-2.5-flash"
   }
@@ -73,12 +80,12 @@ function normalizeMessages(messages: unknown): ModelMessage[] {
 }
 
 function isOllamaModel(modelId: string) {
-  return modelId === "ollama/llama3.2"
+  return modelId.startsWith("ollama/")
 }
 
-async function streamOllamaResponse(system: string, messages: ModelMessage[]) {
+async function streamOllamaResponse(system: string, messages: ModelMessage[], modelId: string) {
   const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").trim().replace(/\/$/, "")
-  const model = (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
+  const model = modelId.slice("ollama/".length) || (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
   if (!model) throw new Error("OLLAMA_MODEL is not configured.")
 
   const headers: HeadersInit = { "Content-Type": "application/json" }
@@ -201,7 +208,7 @@ export async function POST(request: Request) {
       `You are LUCIFER AI, a concise technical assistant for K Praveenkumar. Answer the user's latest question directly. Do not introduce yourself, repeat your capabilities, add meta commentary, or include notes about what you can or cannot execute unless the user asks. Help with Python, AI, APIs, Next.js, automation, debugging, and creative experiments. Be practical and honest. Never claim to have performed actions you cannot perform.${userContext}`
 
     if (isOllamaModel(modelId)) {
-      return await streamOllamaResponse(system, messages)
+      return await streamOllamaResponse(system, messages, modelId)
     }
 
     const result = streamText({

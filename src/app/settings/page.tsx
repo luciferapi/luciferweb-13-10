@@ -26,6 +26,7 @@ export default async function SettingsPage() {
               </p>
               {[
                 ["Profile", "#profile-settings"],
+                ["AI Preferences", "#ai-settings"],
                 ["Account", "#account-settings"],
               ].map(([label, href]) => (
                 <a
