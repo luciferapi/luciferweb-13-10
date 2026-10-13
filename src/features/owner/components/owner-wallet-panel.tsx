@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { CircleDollarSign, LoaderCircle, RefreshCw, Wallet } from "lucide-react"
-import { OwnerUsersPanel } from "@/features/owner/components/owner-users-panel"
+import { OwnerWalletAdjustmentsPanel } from "@/features/owner/components/owner-wallet-adjustments-panel"
 import type { OwnerWalletActivity, OwnerWalletDashboard } from "@/features/owner/server/owner-wallet"
 
 function isActivity(value: unknown): value is OwnerWalletActivity {
@@ -75,7 +75,7 @@ export function OwnerWalletPanel() {
     return () => controller.abort()
   }, [load])
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true)
     try {
       await load()
@@ -85,7 +85,7 @@ export function OwnerWalletPanel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [load])
 
   return (
     <section className="owner-wallet-panel" aria-label="Wallet management">
@@ -174,7 +174,7 @@ export function OwnerWalletPanel() {
             <p>Search users by UID, review balances, and make reasoned credit or debit adjustments.</p>
           </div>
         </div>
-        <OwnerUsersPanel />
+        <OwnerWalletAdjustmentsPanel onWalletChanged={refresh} />
       </section>
     </section>
   )

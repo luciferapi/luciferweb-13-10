@@ -30,9 +30,17 @@ export function slugifyProjectTitle(title: string): string {
     .replace(/-+$/g, "") || "project"
 }
 
-export function findAvailableProjectCode(title: string, existingCodes: Iterable<string>): string {
+export function findAvailableProjectCode(title: string, existingCodes: Iterable<string>, uniqueId?: string): string {
   const codes = new Set(existingCodes)
   const base = slugifyProjectTitle(title)
+  if (uniqueId) {
+    const token = uniqueId.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 32)
+    const uniqueBase = `${base.slice(0, 80).replace(/-+$/g, "")}-${token}`
+    if (!codes.has(uniqueBase)) return uniqueBase
+    let suffix = 2
+    while (codes.has(`${uniqueBase}-${suffix}`)) suffix += 1
+    return `${uniqueBase}-${suffix}`
+  }
   if (!codes.has(base)) return base
 
   let suffix = 2

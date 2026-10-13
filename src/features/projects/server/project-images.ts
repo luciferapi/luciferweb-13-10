@@ -10,7 +10,7 @@ const imageTypes: Record<string, string> = {
 }
 
 export async function getProjectImage(projectCode: string) {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(projectCode)) return null
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(projectCode)) return null
 
   for (const directoryName of ["storage/project-catalog/images", "projects"]) {
     try {

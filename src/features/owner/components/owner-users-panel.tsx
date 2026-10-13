@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState, type FormEvent } from "react"
-import { ChevronLeft, ChevronRight, CircleDollarSign, LoaderCircle, Pencil, RefreshCw, Search, Shield, ShieldBan, Trash2, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, LoaderCircle, Pencil, RefreshCw, Search, Shield, ShieldBan, Trash2, X } from "lucide-react"
 import type { OwnerUser } from "@/features/owner/server/owner-users"
 
 type UserStatusFilter = "all" | "active" | "blocked"
@@ -29,7 +29,6 @@ function isOwnerUser(value: unknown): value is OwnerUser {
     "createdAt" in value && typeof value.createdAt === "string" &&
     "providers" in value && Array.isArray(value.providers) && value.providers.every((provider) => typeof provider === "string") &&
     "isOwnerAdmin" in value && typeof value.isOwnerAdmin === "boolean" &&
-    "walletBalancePaise" in value && typeof value.walletBalancePaise === "number" && Number.isSafeInteger(value.walletBalancePaise) &&
     "referrals" in value && Array.isArray(value.referrals) && value.referrals.every((referral) =>
       typeof referral === "object" && referral !== null &&
       "uid" in referral && typeof referral.uid === "string" &&
@@ -78,9 +77,7 @@ export function OwnerUsersPanel() {
   const [searchInput, setSearchInput] = useState("")
   const [search, setSearch] = useState("")
   const [editingUser, setEditingUser] = useState<OwnerUser | null>(null)
-  const [walletUser, setWalletUser] = useState<OwnerUser | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
-  const [savingWallet, setSavingWallet] = useState(false)
 
   const loadUsers = useCallback(async (signal?: AbortSignal) => {
     setError("")
@@ -162,46 +159,6 @@ export function OwnerUsersPanel() {
     }
   }
 
-  async function adjustWallet(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!walletUser) return
-    const formData = new FormData(event.currentTarget)
-    const amount = Number(formData.get("amount"))
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) {
-      setError("Enter a wallet adjustment amount between ₹0.01 and ₹10,000,000.")
-      return
-    }
-    const amountPaise = Math.round(amount * 100)
-    if (!Number.isSafeInteger(amountPaise) || amountPaise < 1) {
-      setError("Enter a valid wallet amount.")
-      return
-    }
-
-    setSavingWallet(true)
-    setError("")
-    try {
-      const response = await fetch("/api/owner/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: walletUser.id,
-          direction: String(formData.get("direction")),
-          amountPaise,
-          reason: String(formData.get("reason") ?? ""),
-        }),
-      })
-      const result: unknown = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(getErrorMessage(result, "Could not adjust the user wallet."))
-      setWalletUser(null)
-      await loadUsers()
-    } catch (caught) {
-      console.error("Could not adjust user wallet.", caught)
-      setError(caught instanceof Error ? caught.message : "Could not adjust the user wallet.")
-    } finally {
-      setSavingWallet(false)
-    }
-  }
-
   async function deleteUser(user: OwnerUser) {
     const confirmed = window.confirm(
       `Permanently delete ${user.name} (${user.publicUid})?\n\nThis removes their profile, sign-in access, wallet and payment history, purchases, referrals, and other linked records. This cannot be undone.`,
@@ -278,7 +235,6 @@ export function OwnerUsersPanel() {
             <tr>
               <th>User</th>
               <th>UID</th>
-              <th>Wallet balance</th>
               <th>Referrals</th>
               <th>Profile details</th>
               <th>Sign-in</th>
@@ -289,7 +245,7 @@ export function OwnerUsersPanel() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="owner-users-empty"><LoaderCircle size={18} className="owner-users-spinner" /> Loading user records…</td></tr>
+              <tr><td colSpan={8} className="owner-users-empty"><LoaderCircle size={18} className="owner-users-spinner" /> Loading user records…</td></tr>
             ) : data?.users.length ? data.users.map((user) => (
               <tr key={user.id}>
                 <td>
@@ -299,12 +255,6 @@ export function OwnerUsersPanel() {
                   {user.isOwnerAdmin ? <span className="owner-users-admin"><Shield size={12} aria-hidden="true" /> Owner admin</span> : null}
                 </td>
                 <td><code className="owner-users-uid" title={user.id}>{user.id}</code></td>
-                <td>
-                  <strong className="owner-users-wallet">{formatInr(user.walletBalancePaise)}</strong>
-                  <button type="button" className="owner-users-wallet-edit" onClick={() => setWalletUser(user)} disabled={busyId === user.id} aria-label={`Adjust wallet for ${user.name}`}>
-                    <CircleDollarSign size={13} aria-hidden="true" /> Adjust
-                  </button>
-                </td>
                 <td>
                   <strong className="owner-users-referral-count">{user.referrals.length}</strong>
                   {user.referrals.length ? (
@@ -365,7 +315,7 @@ export function OwnerUsersPanel() {
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan={9} className="owner-users-empty">No users match this search.</td></tr>
+              <tr><td colSpan={8} className="owner-users-empty">No users match this search.</td></tr>
             )}
           </tbody>
         </table>
@@ -397,8 +347,8 @@ export function OwnerUsersPanel() {
               <label>Name<input name="name" required maxLength={100} defaultValue={editingUser.name} /></label>
               <label>Email<input name="email" type="email" maxLength={320} defaultValue={editingUser.email ?? ""} /></label>
               <label>Date of birth<input name="dateOfBirth" type="date" defaultValue={editingUser.dateOfBirth ?? ""} /></label>
-              <label>Telegram username<input name="telegramUsername" maxLength={100} defaultValue={editingUser.telegramUsername ?? ""} placeholder="@username" /></label>
-              <label>X username<input name="xUsername" maxLength={100} defaultValue={editingUser.xUsername ?? ""} placeholder="@username" /></label>
+              <label>Telegram username<input name="telegramUsername" maxLength={64} defaultValue={editingUser.telegramUsername ?? ""} placeholder="@username" /></label>
+              <label>X username<input name="xUsername" maxLength={64} defaultValue={editingUser.xUsername ?? ""} placeholder="@username" /></label>
               <p className="owner-users-edit-note">Profile name and date-of-birth edit limits do not restrict owner corrections.</p>
               <div className="owner-users-modal-actions">
                 <button type="button" onClick={() => setEditingUser(null)} disabled={savingEdit}>Cancel</button>
@@ -412,48 +362,6 @@ export function OwnerUsersPanel() {
         </div>
       ) : null}
 
-      {walletUser ? (
-        <div className="owner-users-modal-backdrop" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget && !savingWallet) setWalletUser(null)
-        }}>
-          <section className="owner-users-modal" role="dialog" aria-modal="true" aria-labelledby="owner-adjust-wallet-title">
-            <div className="owner-users-modal-heading">
-              <div>
-                <p>WALLET / {walletUser.publicUid}</p>
-                <h2 id="owner-adjust-wallet-title">Adjust wallet balance</h2>
-                <span className="owner-users-wallet-current">Current available balance: {formatInr(walletUser.walletBalancePaise)}</span>
-              </div>
-              <button type="button" onClick={() => setWalletUser(null)} disabled={savingWallet} aria-label="Close wallet adjustment dialog"><X size={18} /></button>
-            </div>
-            <form onSubmit={(event) => void adjustWallet(event)}>
-              <label>Adjustment type
-                <select name="direction" required defaultValue="credit">
-                  <option value="credit">Credit — add funds</option>
-                  <option value="debit">Debit — remove funds</option>
-                </select>
-              </label>
-              <label>Amount (INR)
-                <input name="amount" type="number" required min="0.01" max="10000000" step="0.01" inputMode="decimal" placeholder="0.00" />
-              </label>
-              <label className="owner-users-wallet-reason">Reason for adjustment
-                <textarea name="reason" required minLength={3} maxLength={500} rows={3} placeholder="Explain why this adjustment is required" />
-              </label>
-              <p className="owner-users-edit-note">Each adjustment is recorded with its reason and owner audit details. Debit cannot exceed the available balance.</p>
-              <div className="owner-users-modal-actions">
-                <button type="button" onClick={() => setWalletUser(null)} disabled={savingWallet}>Cancel</button>
-                <button type="submit" disabled={savingWallet}>
-                  {savingWallet ? <LoaderCircle size={15} className="owner-users-spinner" /> : null}
-                  Save wallet adjustment
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      ) : null}
     </section>
   )
-}
-
-function formatInr(amountPaise: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amountPaise / 100)
 }

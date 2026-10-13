@@ -51,6 +51,13 @@ export async function PATCH(request: Request) {
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Check the referral update and try again." }, { status: 400 })
+  if (
+    parsed.data.action === "update-status" &&
+    parsed.data.status === "rejected" &&
+    (!parsed.data.reason?.trim() || parsed.data.reason.trim() === "Awaiting manual review")
+  ) {
+    return NextResponse.json({ error: "Add a specific review reason before rejecting this referral." }, { status: 400 })
+  }
 
   try {
     if (parsed.data.action === "update-program") {

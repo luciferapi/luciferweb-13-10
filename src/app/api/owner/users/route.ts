@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { getSignedInUser } from "@/features/auth/server/auth-session"
-import { requireOwnerAccess } from "@/features/auth/server/owner-access"
+import { getOwnerWorkspaceAccess, requireOwnerAccess } from "@/features/auth/server/owner-access"
 import { adjustOwnerUserWallet, deleteOwnerUser, listOwnerUsers, setOwnerUserBlocked, updateOwnerUser } from "@/features/owner/server/owner-users"
 
 export const runtime = "nodejs"
@@ -19,8 +18,8 @@ const profileSchema = z.object({
     }),
     z.literal(""),
   ]).transform((value) => value || null),
-  telegramUsername: z.string().trim().max(100).transform((value) => value || null),
-  xUsername: z.string().trim().max(100).transform((value) => value || null),
+  telegramUsername: z.string().trim().max(64).transform((value) => value || null),
+  xUsername: z.string().trim().max(64).transform((value) => value || null),
 })
 const patchSchema = z.object({
   action: z.literal("set-blocked"),
@@ -65,12 +64,12 @@ export async function PUT(request: Request) {
 
   const parsed = profileSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Check the user details and try again." }, { status: 400 })
-  const actor = await getSignedInUser()
+  const actor = await getOwnerWorkspaceAccess()
   if (!actor) return NextResponse.json({ error: "Sign in to edit user details." }, { status: 401 })
 
   try {
     const { id, ...fields } = parsed.data
-    const result = await updateOwnerUser(actor.id, id, fields)
+    const result = await updateOwnerUser(actor.user.id, id, fields)
     if (result === "not_found") return NextResponse.json({ error: "User not found." }, { status: 404 })
     if (result === "primary_owner") return NextResponse.json({ error: "The primary owner email cannot be changed here." }, { status: 409 })
     if (result === "email_required") return NextResponse.json({ error: "Users with a linked email sign-in must keep an email address." }, { status: 400 })
@@ -93,11 +92,11 @@ export async function PATCH(request: Request) {
   const parsed = patchSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Invalid user status update." }, { status: 400 })
 
-  const actor = await getSignedInUser()
+  const actor = await getOwnerWorkspaceAccess()
   if (!actor) return NextResponse.json({ error: "Sign in to change user status." }, { status: 401 })
 
   try {
-    const result = await setOwnerUserBlocked(actor.id, parsed.data.id, parsed.data.isBlocked)
+    const result = await setOwnerUserBlocked(actor.user.id, parsed.data.id, parsed.data.isBlocked)
     if (result === "updated" || result === "unchanged") return NextResponse.json({ success: true })
     if (result === "user_not_found") return NextResponse.json({ error: "User not found." }, { status: 404 })
     if (result === "primary_admin") return NextResponse.json({ error: "The primary owner cannot be blocked." }, { status: 409 })
@@ -111,18 +110,18 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireOwnerAccess("users")
+  const unauthorized = await requireOwnerAccess("wallet")
   if (unauthorized) return unauthorized
 
   const parsed = walletAdjustmentSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Check the wallet adjustment details and try again." }, { status: 400 })
 
-  const actor = await getSignedInUser()
+  const actor = await getOwnerWorkspaceAccess()
   if (!actor) return NextResponse.json({ error: "Sign in to adjust user wallets." }, { status: 401 })
 
   try {
     const result = await adjustOwnerUserWallet({
-      actorUserId: actor.id,
+      actorUserId: actor.user.id,
       targetUserId: parsed.data.id,
       direction: parsed.data.direction,
       amountPaise: parsed.data.amountPaise,
@@ -149,11 +148,11 @@ export async function DELETE(request: Request) {
   const parsed = deleteSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Invalid user identifier." }, { status: 400 })
 
-  const actor = await getSignedInUser()
+  const actor = await getOwnerWorkspaceAccess()
   if (!actor) return NextResponse.json({ error: "Sign in to delete users." }, { status: 401 })
 
   try {
-    const result = await deleteOwnerUser(actor.id, parsed.data.id)
+    const result = await deleteOwnerUser(actor.user.id, parsed.data.id)
     if (result === "deleted") return NextResponse.json({ success: true })
     if (result === "not_found") return NextResponse.json({ error: "User not found." }, { status: 404 })
     if (result === "cannot_delete_self") return NextResponse.json({ error: "You cannot delete your own owner account." }, { status: 409 })

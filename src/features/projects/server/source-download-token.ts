@@ -49,7 +49,7 @@ export function verifySourceDownloadToken(token: string): SourceDownloadClaims |
     const claims = JSON.parse(Buffer.from(encodedClaims, "base64url").toString("utf8")) as Partial<SourceDownloadClaims>
     if (
       typeof claims.projectId !== "string" ||
-      !/^[a-zA-Z0-9_-]{1,100}$/.test(claims.projectId) ||
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(claims.projectId) ||
       typeof claims.paymentId !== "string" ||
       typeof claims.expiresAt !== "number" ||
       claims.expiresAt <= Math.floor(Date.now() / 1000) ||

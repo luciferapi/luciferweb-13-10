@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   }
   const projectCode = formResult.value.get("project_code") ?? formResult.value.get("project_id")
   const sourceFile = formResult.value.get("source")
-  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(projectCode) || !(sourceFile instanceof File)) {
+  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectCode) || !(sourceFile instanceof File)) {
     return NextResponse.json({ error: "Select a project and a ZIP source bundle." }, { status: 400 })
   }
   if (!sourceFile.name.toLowerCase().endsWith(".zip") || sourceFile.size === 0) {

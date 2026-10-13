@@ -62,7 +62,7 @@ export async function getProjectDemoVideo(filename: string) {
 }
 
 export async function findProjectDemoVideo(projectCode: string): Promise<string | null> {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(projectCode)) return null
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(projectCode)) return null
 
   for (const extension of supportedVideoExtensions) {
     const filename = `${projectCode}${extension}`

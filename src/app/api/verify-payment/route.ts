@@ -13,7 +13,7 @@ import { saveProjectPurchase } from "@/features/purchases/server/purchase-store"
 export const runtime = "nodejs"
 
 const requestSchema = z.object({
-  project_id: z.string().min(1).max(100),
+  project_id: z.string().min(1).max(128),
   razorpay_order_id: z.string().regex(/^order_[A-Za-z0-9]+$/),
   razorpay_payment_id: z.string().regex(/^pay_[A-Za-z0-9]+$/),
   razorpay_signature: z.string().regex(/^[a-f0-9]{64}$/i),

@@ -79,7 +79,7 @@ export async function createProject(project: Omit<Project, "projectNumber">): Pr
     "SELECT code FROM projects",
   )
   const existingCodes = existingRows.map((entry) => entry.code)
-  let code = findAvailableProjectCode(project.title, existingCodes)
+  let code = findAvailableProjectCode(project.title, existingCodes, project.id)
 
   for (;;) {
     try {
@@ -134,6 +134,7 @@ export async function createProject(project: Omit<Project, "projectNumber">): Pr
     code = findAvailableProjectCode(
       project.title,
       [...existingCodes, ...codes.map((entry) => entry.code)],
+      project.id,
     )
     existingCodes.push(code)
   }

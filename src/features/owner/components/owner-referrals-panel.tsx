@@ -53,6 +53,11 @@ export function OwnerReferralsPanel() {
       setError("Add a specific review reason before rejecting this referral.")
       return
     }
+    const reason = enteredReason && enteredReason !== "Awaiting manual review"
+      ? enteredReason
+      : status === "pending"
+        ? "Awaiting manual review"
+        : null
 
     setBusyId(id)
     setError("")
@@ -64,11 +69,7 @@ export function OwnerReferralsPanel() {
           action: "update-status",
           id,
           status,
-          reason: enteredReason && enteredReason !== "Awaiting manual review"
-            ? enteredReason
-            : status === "pending"
-              ? "Awaiting manual review"
-              : null,
+          reason,
         }),
       })
       const result: unknown = await response.json().catch(() => null)
@@ -78,7 +79,10 @@ export function OwnerReferralsPanel() {
           : "Could not update referral status."
         throw new Error(message)
       }
-      await loadReferrals()
+      setReferrals((current) => current.map((referral) => referral.id === id
+        ? { ...referral, status, statusReason: reason }
+        : referral))
+      setReasonDrafts((current) => ({ ...current, [id]: reason ?? "" }))
     } catch (caught) {
       console.error("Could not update referral status.", caught)
       setError(caught instanceof Error ? caught.message : "Could not update referral status.")
@@ -97,11 +101,16 @@ export function OwnerReferralsPanel() {
       const validUntilInput = String(formData.get("validUntil") ?? "")
       const validUntilDate = validUntilInput ? new Date(validUntilInput) : null
       if (validUntilDate && Number.isNaN(validUntilDate.getTime())) throw new Error("Enter a valid program expiry.")
+      const minPurchaseValue = String(formData.get("minPurchaseAmount") ?? "")
+      const minPurchaseAmount = minPurchaseValue ? Number(minPurchaseValue) : null
+      if (minPurchaseAmount !== null && (!Number.isFinite(minPurchaseAmount) || minPurchaseAmount < 0 || minPurchaseAmount > 1_000_000)) {
+        throw new Error("Enter a minimum purchase amount between ₹0 and ₹1,000,000.")
+      }
       const maxReferralsValue = String(formData.get("maxReferrals") ?? "")
       const updatedProgram: ReferralProgram = {
         ...program,
         conditions: {
-          minPurchaseAmount: null,
+          minPurchaseAmount,
           validUntil: validUntilDate?.toISOString() ?? null,
           maxReferrals: maxReferralsValue ? Number(maxReferralsValue) : null,
         },
@@ -174,6 +183,10 @@ export function OwnerReferralsPanel() {
               <label className="space-y-1 text-xs font-medium">
                 Program expiry
                 <input name="validUntil" type="datetime-local" defaultValue={program.conditions.validUntil ? formatDateTimeLocal(program.conditions.validUntil) : ""} className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm" />
+              </label>
+              <label className="space-y-1 text-xs font-medium">
+                Minimum purchase amount (INR)
+                <input name="minPurchaseAmount" type="number" min="0" max="1000000" step="0.01" defaultValue={program.conditions.minPurchaseAmount ?? ""} className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm" />
               </label>
               <label className="space-y-1 text-xs font-medium">
                 Maximum referrals per user

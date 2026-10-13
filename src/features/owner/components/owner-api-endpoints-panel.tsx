@@ -121,7 +121,7 @@ export function OwnerApiEndpointsPanel() {
       const formData = new FormData()
       formData.set("project_code", editingId)
       formData.set(mediaType, file)
-      const endpoint = mediaType === "image" ? "/api/owner/projects/upload" : "/api/owner/projects/video-upload"
+      const endpoint = mediaType === "image" ? "/api/owner/projects/upload?type=api" : "/api/owner/projects/video-upload?type=api"
       const response = await fetch(endpoint, { method: "POST", body: formData })
       const result: unknown = await response.json()
       if (!response.ok) {
@@ -303,7 +303,7 @@ export function OwnerApiEndpointsPanel() {
         <label className="space-y-2 text-sm font-medium sm:col-span-2">
           Unique API code
           <input readOnly value={fields.name ? codePreview : editingId ?? ""} placeholder="Generated from endpoint name as you type" className="h-11 w-full rounded-lg border border-border bg-muted px-3 font-mono text-xs text-muted-foreground" />
-          <span className="block text-xs font-normal text-muted-foreground">{editingId ? "Stable code used by this endpoint's image and video files." : "Generated from the endpoint name as you type; the server reserves it when saved."}</span>
+          <span className="block text-xs font-normal text-muted-foreground">{editingId ? "Permanent code used by this endpoint's purchase history and media." : "Title preview only; a unique permanent suffix is added and reserved when you save."}</span>
         </label>
         <label className="space-y-2 text-sm font-medium">
           Endpoint name

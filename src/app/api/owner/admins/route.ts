@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { getSignedInUser } from "@/features/auth/server/auth-session"
-import { requirePrimaryOwnerAccess } from "@/features/auth/server/owner-access"
+import { getOwnerWorkspaceAccess, requirePrimaryOwnerAccess } from "@/features/auth/server/owner-access"
 import { saveOwnerStaffAccess, removeOwnerStaffAccess, listOwnerStaff, staffRoles } from "@/features/owner/server/owner-staff"
 import { ownerModules } from "@/features/owner/owner-modules"
 
@@ -42,12 +41,12 @@ export async function POST(request: Request) {
 
   const parsed = saveSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Check the staff email, role, and selected modules." }, { status: 400 })
-  const actor = await getSignedInUser()
-  if (!actor) return NextResponse.json({ error: "Sign in as the primary owner to manage staff." }, { status: 401 })
+  const actor = await getOwnerWorkspaceAccess()
+  if (!actor?.isPrimaryOwner) return NextResponse.json({ error: "Sign in as the primary owner to manage staff." }, { status: 401 })
 
   try {
     const status = await saveOwnerStaffAccess({
-      actorUserId: actor.id,
+      actorUserId: actor.user.id,
       email: parsed.data.email,
       role: parsed.data.role,
       modules: parsed.data.modules,
@@ -73,11 +72,11 @@ export async function DELETE(request: Request) {
 
   const parsed = removeSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "Choose a valid staff account." }, { status: 400 })
-  const actor = await getSignedInUser()
-  if (!actor) return NextResponse.json({ error: "Sign in as the primary owner to manage staff." }, { status: 401 })
+  const actor = await getOwnerWorkspaceAccess()
+  if (!actor?.isPrimaryOwner) return NextResponse.json({ error: "Sign in as the primary owner to manage staff." }, { status: 401 })
 
   try {
-    const status = await removeOwnerStaffAccess(actor.id, parsed.data.userId)
+    const status = await removeOwnerStaffAccess(actor.user.id, parsed.data.userId)
     if (status === "removed") return NextResponse.json({ success: true })
     if (status === "not_staff") return NextResponse.json({ error: "That user does not have staff access." }, { status: 404 })
     if (status === "user_not_found") return NextResponse.json({ error: "The staff account was not found." }, { status: 404 })

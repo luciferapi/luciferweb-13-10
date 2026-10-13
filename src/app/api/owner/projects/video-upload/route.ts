@@ -19,7 +19,8 @@ const videoTypes = {
 } as const
 
 export async function POST(request: Request) {
-  const unauthorized = await requireOwnerAccess("projects")
+  const resourceType = new URL(request.url).searchParams.get("type") === "api" ? "api" : "project"
+  const unauthorized = await requireOwnerAccess(resourceType === "api" ? "apis" : "projects")
   if (unauthorized) return unauthorized
 
   const formResult = await readLimitedFormData(request, maxVideoSize + 64 * 1024)
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   }
   const projectCode = formResult.value.get("project_code")
   const video = formResult.value.get("video")
-  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(projectCode) || !(video instanceof File)) {
+  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectCode) || !(video instanceof File)) {
     return NextResponse.json({ error: "Select a saved project and a demo video to upload." }, { status: 400 })
   }
   if (video.size === 0) return NextResponse.json({ error: "Choose a non-empty video." }, { status: 400 })
@@ -41,10 +42,10 @@ export async function POST(request: Request) {
   if (!videoType) return NextResponse.json({ error: "Use an MP4, M4V, MOV, or WebM video." }, { status: 400 })
 
   try {
-    const [projects, endpoints] = await Promise.all([readProjects(), listApiEndpoints(true)])
-    if (!projects.some((project) => project.code === projectCode) && !endpoints.some((endpoint) => endpoint.id === projectCode)) {
-      return NextResponse.json({ error: "Project or API endpoint not found." }, { status: 404 })
-    }
+    const exists = resourceType === "api"
+      ? (await listApiEndpoints(true)).some((endpoint) => endpoint.id === projectCode)
+      : (await readProjects()).some((project) => project.code === projectCode)
+    if (!exists) return NextResponse.json({ error: `${resourceType === "api" ? "API endpoint" : "Project"} not found.` }, { status: 404 })
 
     const bytes = Buffer.from(await video.arrayBuffer())
     if (!videoType.matches(bytes)) {
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     }
 
     const filename = `${projectCode}.${videoType.extension}`
-    const objectKey = `projects/${filename}`
+    const objectKey = `${resourceType === "api" ? "api-endpoints" : "projects"}/${filename}`
     const remoteUpload = await uploadToCloudflareR2(objectKey, bytes, video.type, { required: true })
     if (remoteUpload?.url) {
       return NextResponse.json({ filename, url: remoteUpload.url, objectKey }, { status: 201 })

@@ -22,7 +22,6 @@ export type OwnerUser = {
   providers: string[]
   isOwnerAdmin: boolean
   referrals: { uid: string; publicUid: string }[]
-  walletBalancePaise: number
 }
 
 type UserRow = RowDataPacket & {
@@ -58,14 +57,6 @@ function toIsoDate(value: Date | string | null): string | null {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) throw new Error("A user record has an invalid date.")
   return date.toISOString()
-}
-
-function safeBalance(value: number | string, userId: string) {
-  const balance = Number(value)
-  if (!Number.isSafeInteger(balance)) {
-    throw new Error(`Wallet balance for user ${userId} is outside the supported integer range.`)
-  }
-  return Math.max(0, balance)
 }
 
 async function actorCanManage(connection: PoolConnection, actorUserId: string, module: string) {
@@ -128,7 +119,7 @@ export async function listOwnerUsers(page: number, search: string, status: "all"
   ])
   const userIds = rows.map((row) => row.id)
   const idsIn = userIds.length ? `(${userIds.map(() => "?").join(", ")})` : ""
-  const [identityRows, adminRows, referralRows, walletRows] = userIds.length
+  const [identityRows, adminRows, referralRows] = userIds.length
     ? await Promise.all([
         selectMysqlRows<RowDataPacket & { user_id: string; provider: string }>(
           `SELECT user_id, provider FROM auth_identities WHERE user_id IN ${idsIn}`,
@@ -142,26 +133,8 @@ export async function listOwnerUsers(page: number, search: string, status: "all"
           `SELECT referrer_id, referee_id FROM referrals WHERE referrer_id IN ${idsIn}`,
           userIds,
         ),
-        selectMysqlRows<RowDataPacket & { user_id: string; balance_paise: number | string }>(
-          `SELECT u.id AS user_id,
-             COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0) AS balance_paise
-           FROM auth_users u
-           LEFT JOIN (
-             SELECT user_id, SUM(amount_paise) AS total FROM wallet_deposits
-             WHERE status = 'paid' GROUP BY user_id
-           ) d ON d.user_id = u.id
-           LEFT JOIN (
-             SELECT user_id, SUM(amount_paise) AS total FROM wallet_withdrawal_requests
-             WHERE status IN ('pending', 'paid') GROUP BY user_id
-           ) w ON w.user_id = u.id
-           LEFT JOIN (
-             SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
-           ) a ON a.user_id = u.id
-           WHERE u.id IN ${idsIn}`,
-          userIds,
-        ),
       ])
-    : [[], [], [], []]
+    : [[], [], []]
 
   const providersByUser = new Map<string, Set<string>>()
   for (const identity of identityRows) {
@@ -187,10 +160,6 @@ export async function listOwnerUsers(page: number, search: string, status: "all"
     referrals.push({ uid: referral.referee_id, publicUid })
     referralsByUser.set(referral.referrer_id, referrals)
   }
-  const walletBalanceByUser = new Map(walletRows.map((wallet) => [
-    wallet.user_id,
-    safeBalance(wallet.balance_paise, wallet.user_id),
-  ]))
   const users: OwnerUser[] = rows.map((row) => ({
     id: row.id,
     publicUid: row.public_uid,
@@ -207,7 +176,6 @@ export async function listOwnerUsers(page: number, search: string, status: "all"
     providers: [...(providersByUser.get(row.id) ?? [])].sort(),
     isOwnerAdmin: adminIds.has(row.id),
     referrals: referralsByUser.get(row.id) ?? [],
-    walletBalancePaise: walletBalanceByUser.get(row.id) ?? 0,
   }))
 
   const total = Number(totalRows[0]?.total ?? 0)
@@ -347,7 +315,7 @@ export async function adjustOwnerUserWallet(input: {
     return { status: "invalid_adjustment" }
   }
   return withMysqlTransaction(async (connection) => {
-    if (!await actorCanManage(connection, input.actorUserId, "users")) return { status: "unauthorized" }
+    if (!await actorCanManage(connection, input.actorUserId, "wallet")) return { status: "unauthorized" }
     const [users] = await connection.execute<RowDataPacket[]>(
       "SELECT id FROM auth_users WHERE id = ? LIMIT 1 FOR UPDATE",
       [input.targetUserId],

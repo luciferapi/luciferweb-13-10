@@ -19,7 +19,8 @@ const imageTypes = {
 } as const
 
 export async function POST(request: Request) {
-  const unauthorized = await requireOwnerAccess("projects")
+  const resourceType = new URL(request.url).searchParams.get("type") === "api" ? "api" : "project"
+  const unauthorized = await requireOwnerAccess(resourceType === "api" ? "apis" : "projects")
   if (unauthorized) return unauthorized
 
   const formResult = await readLimitedFormData(request, maxImageSize + 64 * 1024)
@@ -31,14 +32,14 @@ export async function POST(request: Request) {
   }
   const image = formResult.value.get("image")
   const projectCode = formResult.value.get("project_code")
-  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(projectCode)) {
+  if (typeof projectCode !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectCode)) {
     return NextResponse.json({ error: "Select a saved project before uploading its image." }, { status: 400 })
   }
   try {
-    const [projects, endpoints] = await Promise.all([readProjects(), listApiEndpoints(true)])
-    if (!projects.some((project) => project.code === projectCode) && !endpoints.some((endpoint) => endpoint.id === projectCode)) {
-      return NextResponse.json({ error: "Project or API endpoint not found." }, { status: 404 })
-    }
+    const exists = resourceType === "api"
+      ? (await listApiEndpoints(true)).some((endpoint) => endpoint.id === projectCode)
+      : (await readProjects()).some((project) => project.code === projectCode)
+    if (!exists) return NextResponse.json({ error: `${resourceType === "api" ? "API endpoint" : "Project"} not found.` }, { status: 404 })
   } catch (error) {
     console.error("Could not verify the project for image upload.", error)
     return NextResponse.json({ error: "Could not verify the project." }, { status: 500 })
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   const filename = `${projectCode}.${imageType.extension}`
-  const objectKey = `projects/${filename}`
+  const objectKey = `${resourceType === "api" ? "api-endpoints" : "projects"}/${filename}`
   try {
     const remoteUpload = await uploadToCloudflareR2(objectKey, buffer, image.type, { required: true })
     if (remoteUpload?.url) {

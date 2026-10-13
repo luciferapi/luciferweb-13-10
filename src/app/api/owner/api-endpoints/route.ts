@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { randomUUID } from "node:crypto"
 import {
   createApiEndpoint,
   deleteApiEndpoint,
@@ -46,7 +47,7 @@ const endpointFields = {
 }
 
 const endpointInput = z.object(endpointFields)
-const idInput = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/) })
+const idInput = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,127}$/) })
 
 export async function GET() {
   const unauthorized = await requireOwnerAccess("apis")
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     for (;;) {
       const existing = await listApiEndpoints(true)
       const endpoint = {
-        id: findAvailableApiEndpointCode(parsed.data.name, existing.map((entry) => entry.id)),
+        id: findAvailableApiEndpointCode(parsed.data.name, existing.map((entry) => entry.id), randomUUID()),
         ...parsed.data,
       }
       try {

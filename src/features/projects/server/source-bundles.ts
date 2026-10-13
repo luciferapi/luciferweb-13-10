@@ -6,7 +6,7 @@ export const MAX_SOURCE_BUNDLE_SIZE = 100 * 1024 * 1024
 const sourceBundleKey = (projectId: string) => `source-bundles/${projectId}.zip`
 
 export async function getProjectSourceBundlePath(projectId: string): Promise<string | null> {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(projectId)) return null
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(projectId)) return null
 
   for (const directoryName of [
     path.join("storage", "project-catalog", "source-bundles"),
@@ -30,14 +30,14 @@ export async function getProjectSourceBundlePath(projectId: string): Promise<str
 }
 
 export async function hasProjectSourceBundle(projectId: string): Promise<boolean> {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(projectId)) return false
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(projectId)) return false
   const size = await getCloudflareR2ObjectSize(sourceBundleKey(projectId))
   if (size !== null) return size > 0 && size <= MAX_SOURCE_BUNDLE_SIZE
   return Boolean(await getProjectSourceBundlePath(projectId))
 }
 
 export async function readProjectSourceBundle(projectId: string) {
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(projectId)) return null
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(projectId)) return null
 
   const size = await getCloudflareR2ObjectSize(sourceBundleKey(projectId))
   if (size !== null) {

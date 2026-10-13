@@ -13,7 +13,7 @@ import { enforceRateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 
-const requestSchema = z.object({ project_id: z.string().min(1).max(100) })
+const requestSchema = z.object({ project_id: z.string().min(1).max(128) })
 
 export async function POST(request: Request) {
   const token = (await cookies()).get("lucifer_session")?.value

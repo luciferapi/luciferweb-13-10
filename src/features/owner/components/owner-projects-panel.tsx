@@ -76,7 +76,7 @@ function ProjectFields({
         Project code
         <input aria-label="Unique project code" readOnly value={project?.code ?? projectCodePreview} className="h-11 w-full rounded-lg border border-border bg-muted px-3 font-mono text-xs text-muted-foreground" />
         <span className="block text-xs font-normal text-muted-foreground">
-          {project ? "Stable code used by this project's URL and linked assets." : "Generated from the project name as you type. The final code is reserved when you save."}
+          {project ? "Permanent code used by this project's URL, purchase history, and linked assets." : "Title preview only; a unique permanent suffix is added and reserved when you save."}
         </span>
       </label>
       <label className="space-y-2 text-sm font-medium">

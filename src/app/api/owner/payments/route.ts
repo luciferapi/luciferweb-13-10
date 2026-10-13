@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { getSignedInUser } from "@/features/auth/server/auth-session"
-import { requireOwnerAccess } from "@/features/auth/server/owner-access"
+import { getOwnerWorkspaceAccess, requireOwnerAccess } from "@/features/auth/server/owner-access"
 import { listOwnerPayoutRequests, setOwnerPayoutStatus } from "@/features/owner/server/owner-payments"
 
 export const runtime = "nodejs"
@@ -47,12 +46,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "A payment reference can only be recorded for a paid withdrawal." }, { status: 400 })
   }
 
-  const actor = await getSignedInUser()
+  const actor = await getOwnerWorkspaceAccess()
   if (!actor) return NextResponse.json({ error: "Sign in to manage payout requests." }, { status: 401 })
 
   try {
     const result = await setOwnerPayoutStatus({
-      actorUserId: actor.id,
+      actorUserId: actor.user.id,
       requestId: parsed.data.requestId,
       status: parsed.data.status,
       externalPaymentConfirmed: parsed.data.externalPaymentConfirmed,

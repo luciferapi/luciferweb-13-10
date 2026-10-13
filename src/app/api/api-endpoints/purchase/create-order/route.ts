@@ -16,7 +16,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const requestSchema = z.object({
-  endpointId: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+  endpointId: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,127}$/),
 })
 
 export async function POST(request: Request) {

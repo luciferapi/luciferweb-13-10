@@ -43,7 +43,7 @@ function mapBanner(row: BannerRow, imageUrl: string | null): OwnerLiveBanner {
     message: imageUrl && row.message === imageOnlyBannerMessage ? "" : row.message,
     linkUrl: row.link_url,
     imageUrl,
-    isEnabled: row.is_enabled,
+    isEnabled: Boolean(row.is_enabled),
     sortOrder: row.sort_order,
   }
 }

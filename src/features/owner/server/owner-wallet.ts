@@ -183,3 +183,74 @@ export async function getOwnerWalletDashboard(): Promise<OwnerWalletDashboard> {
     activity: activity.slice(0, DISPLAY_ACTIVITY_LIMIT),
   }
 }
+
+export type OwnerWalletUser = {
+  id: string
+  publicUid: string
+  name: string
+  email: string | null
+  walletBalancePaise: number
+}
+
+const WALLET_USER_PAGE_SIZE = 25
+
+function normalizeWalletSearch(value: string) {
+  return value.replace(/[^\p{L}\p{N}@._+\- ]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80)
+}
+
+function escapeWalletSearch(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&")
+}
+
+export async function listOwnerWalletUsers(page: number, search: string) {
+  const offset = (page - 1) * WALLET_USER_PAGE_SIZE
+  const term = normalizeWalletSearch(search)
+  const where = term ? "AND (u.name LIKE ? OR u.email LIKE ? OR u.public_uid LIKE ?)" : ""
+  const pattern = term ? `%${escapeWalletSearch(term)}%` : null
+  const values = pattern ? [pattern, pattern, pattern] : []
+  const [rows, countRows] = await Promise.all([
+    selectMysqlRows<RowDataPacket & {
+      id: string
+      public_uid: string
+      name: string
+      email: string | null
+      balance_paise: number | string
+    }>(
+      `SELECT u.id, u.public_uid, u.name, u.email,
+              GREATEST(COALESCE(d.total, 0) - COALESCE(w.total, 0) + COALESCE(a.total, 0), 0) AS balance_paise
+       FROM auth_users u
+       LEFT JOIN (
+         SELECT user_id, SUM(amount_paise) AS total FROM wallet_deposits
+         WHERE status = 'paid' GROUP BY user_id
+       ) d ON d.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, SUM(amount_paise) AS total FROM wallet_withdrawal_requests
+         WHERE status IN ('pending', 'paid') GROUP BY user_id
+       ) w ON w.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
+       ) a ON a.user_id = u.id
+       WHERE 1 = 1 ${where}
+       ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?`,
+      [...values, WALLET_USER_PAGE_SIZE, offset],
+    ),
+    selectMysqlRows<RowDataPacket & { total: number | string }>(
+      `SELECT COUNT(*) AS total FROM auth_users u WHERE 1 = 1 ${where}`,
+      values,
+    ),
+  ])
+  const total = Number(countRows[0]?.total ?? 0)
+  if (!Number.isSafeInteger(total)) throw new Error("The wallet user count is outside the supported integer range.")
+  return {
+    users: rows.map((row): OwnerWalletUser => ({
+      id: row.id,
+      publicUid: row.public_uid,
+      name: row.name,
+      email: row.email,
+      walletBalancePaise: toSafeInteger(row.balance_paise, "Wallet balance"),
+    })),
+    total,
+    page,
+    pageSize: WALLET_USER_PAGE_SIZE,
+  }
+}

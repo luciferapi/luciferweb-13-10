@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 export async function GET(_request: Request, { params }: { params: Promise<{ filename: string }> }) {
   const { filename } = await params
-  const match = /^([a-zA-Z0-9_-]{1,100})\.(jpg|jpeg|png|webp|gif)$/i.exec(filename)
+  const match = /^([a-zA-Z0-9_-]{1,128})\.(jpg|jpeg|png|webp|gif)$/i.exec(filename)
   if (!match) return NextResponse.json({ error: "Project image not found." }, { status: 404 })
 
   const image = await getProjectImage(match[1])
