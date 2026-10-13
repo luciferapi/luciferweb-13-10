@@ -7,10 +7,11 @@ let cachedAuthClient: SupabaseClient | null = null
 export function getSupabaseAuthServerClient(): SupabaseClient {
   if (cachedAuthClient) return cachedAuthClient
 
-  const { url, key, enabled } = getSupabaseEnv()
-  if (!enabled || !url || !key) throw new Error("Supabase Auth is not configured.")
+  const { url, key } = getSupabaseEnv()
+  const serverKey = key || process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || null
+  if (!url || !serverKey) throw new Error("Supabase Auth is not configured.")
 
-  cachedAuthClient = createClient(url, key, {
+  cachedAuthClient = createClient(url, serverKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

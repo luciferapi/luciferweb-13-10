@@ -42,19 +42,16 @@ export async function enforceRateLimit(
   scope: string,
   options: RateLimitOptions,
 ): Promise<NextResponse | null> {
-  const ipAddress = getClientIpAddress(request)
-  if (!ipAddress) {
-    console.error(`Could not enforce ${scope} rate limit because the client IP is unavailable.`)
-    return NextResponse.json({ error: "This service is temporarily unavailable. Please try again later." }, { status: 503 })
-  }
-
   try {
     const secret = getRateLimitSecret()
+    const ipAddress = getClientIpAddress(request)
+    const identifiers = options.identifiers ?? []
     const bucketKeys = [
-      hashBucket(secret, scope, `ip:${ipAddress}`),
-      ...(options.identifiers ?? []).map((identifier) =>
+      ...(ipAddress ? [hashBucket(secret, scope, `ip:${ipAddress}`)] : []),
+      ...identifiers.map((identifier) =>
         hashBucket(secret, scope, `identifier:${identifier}`),
       ),
+      ...(ipAddress || identifiers.length ? [] : [hashBucket(secret, scope, "anonymous")]),
     ]
     const admin = getSupabaseAdminClient()
     if (!admin) throw new Error("Supabase server credentials are not configured.")
@@ -78,7 +75,11 @@ export async function enforceRateLimit(
       { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
     )
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown rate-limit error."
     console.error(`Could not enforce ${scope} rate limit.`, error)
+    if (message === "A server-only secret is required for API rate-limit keys." || message === "Supabase server credentials are not configured.") {
+      return null
+    }
     return NextResponse.json({ error: "This service is temporarily unavailable. Please try again later." }, { status: 503 })
   }
 }
