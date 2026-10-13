@@ -1,11 +1,19 @@
 import "server-only"
 
 function getPaymentEnvironmentValue(name: string, suffix: string): string | undefined {
-  return process.env[`${name}${suffix}`]?.trim()
+  const value = process.env[`${name}${suffix}`]?.trim()
+  if (!value) return undefined
+  // Hosting dashboards sometimes preserve quotes copied from .env files.
+  // Strip one matching pair so Basic auth receives the actual key and secret.
+  if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+    return value.slice(1, -1).trim()
+  }
+  return value
 }
-
 export function getRazorpayCredentials() {
-  const suffixes = ["_2", "", "_3", "_4"]
+  // Use the documented production variables first. Suffixed variables are kept
+  // only as a backwards-compatible fallback for older hosting configurations.
+  const suffixes = ["", "_2", "_3", "_4"]
   for (const suffix of suffixes) {
     const keyId = getPaymentEnvironmentValue("RAZORPAY_KEY_ID", suffix)
     const keySecret = getPaymentEnvironmentValue("RAZORPAY_KEY_SECRET", suffix)
