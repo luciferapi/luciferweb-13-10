@@ -82,7 +82,7 @@ export function SignInPage() {
 
     const timeout = window.setTimeout(() => {
       controller.abort()
-      setSessionWarning("We could not check for an existing session. You can still sign in below.")
+      setSessionWarning("We couldn't confirm your existing session, but you can safely continue below.")
       setCheckingSession(false)
     }, 8000)
 
@@ -99,7 +99,7 @@ export function SignInPage() {
       .catch((caught: unknown) => {
         if (caught instanceof Error && caught.name === "AbortError") return
         console.error("Could not check for an existing sign-in session.", caught)
-        setSessionWarning("We could not check for an existing session. You can still sign in below.")
+        setSessionWarning("We couldn't confirm your existing session, but you can safely continue below.")
         setCheckingSession(false)
       })
     return () => controller.abort()
@@ -396,11 +396,15 @@ export function SignInPage() {
           </div>
         </div>
 
-        {sessionWarning ? (
-          <p role="status" className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-3 text-sm leading-5 text-amber-800 dark:text-amber-100">
-            {sessionWarning}
-          </p>
-        ) : null}
+{sessionWarning ? (
+  <div role="status" className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-900 dark:text-amber-50">
+  <span aria-hidden="true" className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold">!</span>
+  <div className="min-w-0 leading-5">
+  <p className="font-semibold">Session check unavailable</p>
+  <p className="text-amber-800/90 dark:text-amber-100/90">{sessionWarning}</p>
+  </div>
+  </div>
+  ) : null}
 
         {!pendingEmail && !privilegedOtpRequested && !forgotPassword && !resetToken && !resetComplete ? (
           <div className="mb-5 grid grid-cols-2 rounded-xl border border-border bg-muted/40 p-1" role="tablist" aria-label="Authentication mode">
