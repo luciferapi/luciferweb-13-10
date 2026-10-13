@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
 import { LoaderCircle, ShieldCheck, X } from "lucide-react"
 import type { RazorpaySuccess } from "@/features/payments/server/razorpay-types"
-import { RazorpayTestCredentials } from "@/features/payments/components/razorpay-test-credentials"
 import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
@@ -261,7 +260,7 @@ export function ProjectRequestForm() {
   }
 
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-7">
+    <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-6">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-200">Request a project</p>
       <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">Tell me what you want to build</h2>
       {requestNumber !== null ? (
@@ -271,37 +270,37 @@ export function ProjectRequestForm() {
           {message.includes("notification email could not be sent") ? <p className="mt-2 text-amber-700 dark:text-amber-100">{message}</p> : null}
         </div>
       ) : (
-        <form onSubmit={(event) => void beginRequestPayment(event)} className="mt-7 space-y-5">
+        <form onSubmit={(event) => void beginRequestPayment(event)} className="mt-5 space-y-4">
           <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85">
             Project name
-            <input required minLength={2} maxLength={120} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="What should we call your project?" className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+            <input required minLength={2} maxLength={120} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="What should we call your project?" className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
           </label>
           <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85">
             Project details
-            <textarea required minLength={10} maxLength={5000} rows={5} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the features, users, design, or problem to solve." className="w-full resize-y rounded-xl border border-border bg-muted/40 px-4 py-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+            <textarea required minLength={10} maxLength={5000} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the features, users, design, or problem to solve." className="w-full resize-y rounded-xl border border-border bg-muted/40 px-4 py-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85">
               Gmail / contact email
-              <input type="email" maxLength={254} value={contactEmail} onChange={(event) => { setContactEmail(event.target.value); setContactError("") }} placeholder="you@gmail.com" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+              <input type="email" maxLength={254} value={contactEmail} onChange={(event) => { setContactEmail(event.target.value); setContactError("") }} placeholder="you@gmail.com" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
             </label>
             <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85">
               WhatsApp number
-              <input type="tel" maxLength={25} pattern="\+?[0-9()\s.-]{7,25}" title="Use 7 to 25 digits, spaces, parentheses, periods, or hyphens; an initial + is optional." value={whatsappNumber} onChange={(event) => { setWhatsappNumber(event.target.value); setContactError("") }} placeholder="+91 98765 43210" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+              <input type="tel" maxLength={25} pattern="\+?[0-9()\s.-]{7,25}" title="Use 7 to 25 digits, spaces, parentheses, periods, or hyphens; an initial + is optional." value={whatsappNumber} onChange={(event) => { setWhatsappNumber(event.target.value); setContactError("") }} placeholder="+91 98765 43210" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
             </label>
             <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85">
               Telegram ID
-              <input maxLength={64} pattern="(?:@?[A-Za-z0-9_]{3,32}|[0-9]{5,20})" title="Enter a Telegram username with 3 to 32 letters, numbers, or underscores, or a 5 to 20 digit ID." value={telegramId} onChange={(event) => { setTelegramId(event.target.value); setContactError("") }} placeholder="@username or numeric ID" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+              <input maxLength={64} pattern="(?:@?[A-Za-z0-9_]{3,32}|[0-9]{5,20})" title="Enter a Telegram username with 3 to 32 letters, numbers, or underscores, or a 5 to 20 digit ID." value={telegramId} onChange={(event) => { setTelegramId(event.target.value); setContactError("") }} placeholder="@username or numeric ID" aria-invalid={Boolean(contactError)} aria-describedby={contactError ? "project-request-contact-help project-request-contact-error" : "project-request-contact-help"} className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
             </label>
-            <p id="project-request-contact-help" className="text-xs leading-5 text-muted-foreground/80 sm:col-span-2">Provide at least one contact method. WhatsApp accepts digits and common separators; Telegram accepts a username or numeric ID.</p>
+            <p id="project-request-contact-help" className="text-xs leading-4 text-muted-foreground/80 sm:col-span-2">Provide at least one contact method.</p>
             {contactError ? <p id="project-request-contact-error" role="alert" className="text-sm text-rose-600 dark:text-rose-200 sm:col-span-2">{contactError}</p> : null}
             <label className="block space-y-2 text-sm font-medium text-foreground/85">
               Preferred language <span className="text-cyan-700 dark:text-cyan-200">(required)</span>
-              <input required maxLength={80} value={preferredLanguage} onChange={(event) => setPreferredLanguage(event.target.value)} placeholder="e.g. English, Tamil" className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+              <input required maxLength={80} value={preferredLanguage} onChange={(event) => setPreferredLanguage(event.target.value)} placeholder="e.g. English, Tamil" className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
             </label>
             <label data-contact-field className="block space-y-2 text-sm font-medium text-foreground/85 sm:col-span-2">
               When do you need it? <span className="text-cyan-700 dark:text-cyan-200">(required)</span>
-              <input required maxLength={160} value={desiredDuration} onChange={(event) => setDesiredDuration(event.target.value)} placeholder="e.g. within 2 weeks, flexible" className="h-12 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
+              <input required maxLength={160} value={desiredDuration} onChange={(event) => setDesiredDuration(event.target.value)} placeholder="e.g. within 2 weeks, flexible" className="h-10 w-full rounded-xl border border-border bg-muted/40 px-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-cyan-500 dark:focus:border-cyan-200/80 focus:ring-2 focus:ring-cyan-500/20 dark:focus:ring-cyan-200/20 dark:bg-white/[0.035]" />
             </label>
           </div>
           {!sessionLoading && !signedIn ? (
@@ -311,8 +310,7 @@ export function ProjectRequestForm() {
           ) : null}
           {message ? <p className="text-sm text-rose-600 dark:text-rose-200" role="alert">{message}</p> : null}
           {needsSignIn ? <Link href="/login?next=%2Fcontact" className="inline-flex font-semibold text-cyan-700 dark:text-cyan-200 underline underline-offset-4">Sign in to continue</Link> : null}
-          <RazorpayTestCredentials />
-          <label data-contact-field className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground dark:bg-white/[0.035]">
+          <label data-contact-field className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-3 text-sm leading-5 text-muted-foreground dark:bg-white/[0.035]">
             <input type="checkbox" required checked={feeAccepted} onChange={(event) => setFeeAccepted(event.target.checked)} aria-describedby="project-request-fee-help" className="mt-1 size-4 shrink-0 accent-cyan-500 dark:accent-cyan-300" />
             <span id="project-request-fee-help">The ₹1 fee helps discourage spam and prioritize genuine project requests. It is non-refundable, even if your request is declined or cannot be completed.</span>
           </label>
