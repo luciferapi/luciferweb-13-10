@@ -28,8 +28,21 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
     const controller = new AbortController()
     fetch("/api/api-endpoints", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
-        const result: unknown = await response.json()
-        if (!response.ok) throw new Error("Could not load available APIs.")
+        const body = await response.text()
+        let result: unknown = null
+        if (body.trim()) {
+          try {
+            result = JSON.parse(body) as unknown
+          } catch {
+            throw new Error("The API catalog returned an invalid response.")
+          }
+        }
+        if (!response.ok) {
+          const message = typeof result === "object" && result !== null && "error" in result && typeof result.error === "string"
+            ? result.error
+            : "Could not load available APIs."
+          throw new Error(message)
+        }
         if (
           typeof result !== "object" ||
           result === null ||
@@ -87,9 +100,17 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch(`/api/results?source=${selected.id}`)
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error ?? "Request failed")
+      const response = await fetch(`/api/results?source=${encodeURIComponent(selected.id)}`)
+      const body = await response.text()
+      let result: { data?: unknown; error?: string } = {}
+      if (body.trim()) {
+        try {
+          result = JSON.parse(body) as { data?: unknown; error?: string }
+        } catch {
+          throw new Error("The endpoint returned an invalid response.")
+        }
+      }
+      if (!response.ok) throw new Error(result.error ?? `Request failed (${response.status})`)
       setPayload(result.data)
       setHasPayload(true)
     } catch (requestError) {
@@ -219,7 +240,7 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
         {selected ? <div className="mt-8 min-w-0 rounded-2xl border border-border bg-card p-5 sm:p-6 md:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs font-medium text-cyan-700 dark:text-cyan-300">GET /{selected.path}</p>
+                <p className="font-mono text-xs font-medium text-cyan-700 dark:text-cyan-300">GET {selected.path.startsWith("/") ? selected.path : `/${selected.path}`}</p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight">{selected.name}</h3>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{selected.note}</p>
                 <p className="mt-2 font-mono text-xs text-muted-foreground">API code: {selected.id}</p>
