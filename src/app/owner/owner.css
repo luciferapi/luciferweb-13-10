@@ -4252,3 +4252,61 @@ body:has(.owner-dashboard) {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+.owner-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.owner-instagram-link {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.72rem;
+  border: 1px solid rgb(188 162 255 / 20%);
+  border-radius: 0.7rem;
+  background: linear-gradient(115deg, rgb(188 162 255 / 8%), rgb(113 216 244 / 4%));
+  color: #d8c8ff;
+  font-size: 0.7rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.owner-instagram-link:hover {
+  transform: translateY(-1px);
+  border-color: rgb(188 162 255 / 42%);
+  background: rgb(188 162 255 / 12%);
+  color: #f0e8ff;
+}
+
+.owner-instagram-link:focus-visible {
+  outline: 2px solid rgb(188 162 255 / 85%);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .owner-topbar-actions {
+    gap: 0.35rem;
+  }
+
+  .owner-instagram-link {
+    width: 2.1rem;
+    min-height: 2.1rem;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+
+  .owner-instagram-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+}

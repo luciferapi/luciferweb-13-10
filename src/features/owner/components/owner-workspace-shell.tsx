@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Home, LayoutDashboard } from "lucide-react"
+import { Home, Instagram, LayoutDashboard } from "lucide-react"
 import { ownerModules } from "@/features/owner/owner-modules"
 
 const ownerNavGroups = [
@@ -96,10 +96,22 @@ export function OwnerWorkspaceShell({
             <b aria-hidden="true">/</b>
             <strong>{activeModule?.title ?? "Overview"}</strong>
           </div>
-          <Link href="/" className="owner-view-site">
-            <Home aria-hidden="true" size={15} />
-            View live site
-          </Link>
+          <div className="owner-topbar-actions">
+            <a
+              href="https://www.instagram.com/luciferapiweb/"
+              className="owner-instagram-link"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Instagram: @luciferapiweb"
+            >
+              <Instagram aria-hidden="true" size={15} />
+              <span>@luciferapiweb</span>
+            </a>
+            <Link href="/" className="owner-view-site">
+              <Home aria-hidden="true" size={15} />
+              View live site
+            </Link>
+          </div>
         </header>
         {children}
       </div>
