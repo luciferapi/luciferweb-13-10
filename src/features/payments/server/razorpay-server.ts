@@ -1,10 +1,17 @@
+function firstPaymentEnvironmentValue(name: string): string | undefined {
+  return [name, `${name}_2`, `${name}_3`, `${name}_4`]
+    .map((key) => process.env[key]?.trim())
+    .find(Boolean)
+}
+
 export function getRazorpayCredentials() {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
+  const keyId = firstPaymentEnvironmentValue("RAZORPAY_KEY_ID")
+  const keySecret = firstPaymentEnvironmentValue("RAZORPAY_KEY_SECRET")
   if (!keyId || !keySecret) return null
 
   return {
     keyId,
+    keySecret,
     authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
   }
 }
