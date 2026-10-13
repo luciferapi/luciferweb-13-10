@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { ChatShell } from "@/features/chat/components/chat-shell"
-import { requireSignedInUser } from "@/features/auth/server/auth-session"
 
 export const metadata: Metadata = {
   title: "AI Chat | LUCIFER AI",
@@ -9,6 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default async function ChatPage() {
-  await requireSignedInUser("/chat")
   return <ChatShell />
 }

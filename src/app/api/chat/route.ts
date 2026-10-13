@@ -74,9 +74,6 @@ function normalizeMessages(messages: unknown): ModelMessage[] {
 export async function POST(request: Request) {
   try {
     const user = await getSignedInUser()
-    if (!user) {
-      return NextResponse.json({ error: "Sign in required to access the AI chat API." }, { status: 401 })
-    }
 
     const bodyResult = await readLimitedJson(request, 64 * 1024)
     if (!bodyResult.ok) {
@@ -115,11 +112,11 @@ export async function POST(request: Request) {
     const rateLimitResponse = await enforceRateLimit(request, "ai-chat", {
       capacity: 15,
       refillSeconds: 15 * 60,
-      identifiers: [user.id],
+      identifiers: user ? [user.id] : [],
     })
     if (rateLimitResponse) return rateLimitResponse
 
-    const userName = user.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100)
+    const userName = user?.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100) ?? ""
     const userContext = userName
       ? ` The signed-in user's name is ${JSON.stringify(userName)}. Address them by name naturally when appropriate, but do not force their name into every reply.`
       : ""
