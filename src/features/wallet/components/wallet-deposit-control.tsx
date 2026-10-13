@@ -150,7 +150,7 @@ export function WalletDepositControl() {
           setError("")
           setOpen(true)
         }}
-        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-transparent text-center text-sm font-semibold text-slate-700 transition hover:border-slate-200 hover:bg-slate-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800/70 dark:focus-visible:ring-offset-slate-900"
+        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-blue-100 bg-blue-50/30 text-center text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:focus-visible:ring-offset-slate-900"
       >
         <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-100 dark:bg-blue-950/70 dark:text-blue-300 dark:group-hover:bg-blue-900/70">
           <ArrowDownToLine aria-hidden="true" size={21} />
