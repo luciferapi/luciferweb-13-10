@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Download, LoaderCircle, ShieldCheck } from "lucide-react"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
 import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
+import { WalletContributionDialog } from "@/features/wallet/components/wallet-contribution-dialog"
 import { trackConversion } from "@/lib/analytics"
 
 export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }: {
@@ -14,6 +15,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
   purchaseLabel?: string
 }) {
   const [busy, setBusy] = useState(false)
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false)
   const [downloadBusy, setDownloadBusy] = useState(false)
   const [downloadToken, setDownloadToken] = useState("")
   const [message, setMessage] = useState("")
@@ -68,21 +70,34 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
     }
   }
 
-  async function beginCheckout() {
+  async function beginCheckout(walletAmountPaise: number) {
     const analyticsAttempt = {}
+    let pendingOrderId: string | null = null
+    let razorpayKeyId = ""
+    let RazorpayConstructor: Awaited<ReturnType<typeof loadRazorpayCheckout>> | null = null
     setBusy(true)
     setMessage("")
     setNeedsSignIn(false)
     try {
-      const keyId = await getRazorpayKeyId()
-      const Razorpay = await loadRazorpayCheckout()
+      if (walletAmountPaise < amountPaise) {
+        razorpayKeyId = await getRazorpayKeyId()
+        RazorpayConstructor = await loadRazorpayCheckout()
+      }
       const orderResponse = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId }),
+        body: JSON.stringify({ project_id: projectId, wallet_amount_paise: walletAmountPaise }),
       })
       const orderBody = await orderResponse.text()
-      let order: { amount?: number; currency?: string; order_id?: string; error?: string } = {}
+      let order: {
+        amount?: number
+        currency?: string
+        order_id?: string
+        error?: string
+        wallet_only?: boolean
+        wallet_applied_paise?: number
+        download_token?: string
+      } = {}
       if (orderBody.trim()) {
         try {
           order = JSON.parse(orderBody) as typeof order
@@ -92,12 +107,25 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
       }
       if (orderResponse.status === 401) setNeedsSignIn(true)
       if (!orderResponse.ok) throw new Error(order.error ?? `Could not start checkout (${orderResponse.status}).`)
+      if (order.wallet_only === true) {
+        if (order.wallet_applied_paise !== amountPaise || typeof order.download_token !== "string" || !order.download_token) {
+          throw new Error("Your wallet payment completed, but a source download link was not returned. Contact support.")
+        }
+        sessionStorage.setItem(`source-download:${projectId}`, order.download_token)
+        setDownloadToken(order.download_token)
+        setMessage("Purchase paid from your wallet. Your source code is available for download.")
+        void trackConversion("Project Source Purchased", analyticsAttempt)
+        setBusy(false)
+        return
+      }
       if (!order.order_id || typeof order.amount !== "number" || !order.currency) throw new Error("The payment order was incomplete. Please try again.")
       const orderId = order.order_id
+      pendingOrderId = orderId
+      if (!RazorpayConstructor || !razorpayKeyId) throw new Error("Razorpay checkout could not be initialized.")
 
       let paymentHandled = false
-      const checkout = new Razorpay({
-        key: keyId,
+      const checkout = new RazorpayConstructor({
+        key: razorpayKeyId,
         amount: order.amount,
         currency: order.currency,
         name: "LUCIFER AI",
@@ -117,7 +145,12 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
             if (typeof verification.download_token !== "string") throw new Error("Payment verified, but a download token was not returned.")
             sessionStorage.setItem(`source-download:${projectId}`, verification.download_token)
             setDownloadToken(verification.download_token)
-            setMessage("Payment verified. Your source code is available for download.")
+            const walletAppliedPaise = typeof verification.wallet_applied_paise === "number" && Number.isSafeInteger(verification.wallet_applied_paise)
+              ? verification.wallet_applied_paise
+              : 0
+            setMessage(walletAppliedPaise > 0
+              ? `${formatPriceInr(walletAppliedPaise)} paid from your wallet; the remainder was verified through Razorpay. Your source code is ready to download.`
+              : "Payment verified. Your source code is available for download.")
             void trackConversion("Project Source Purchased", analyticsAttempt)
           } catch (verificationError) {
             setMessage(verificationError instanceof Error ? verificationError.message : "Payment verification failed.")
@@ -150,9 +183,17 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
         })
       })
       checkout.open()
+      pendingOrderId = null
     } catch (checkoutError) {
       setBusy(false)
-      setMessage(checkoutError instanceof Error ? checkoutError.message : "Could not start checkout.")
+      const errorMessage = checkoutError instanceof Error ? checkoutError.message : "Could not start checkout."
+      setMessage(errorMessage)
+      if (pendingOrderId) {
+        void updatePendingStatus(pendingOrderId, "cancelled").catch((cancelError: unknown) => {
+          console.error("Could not release the wallet reservation after checkout initialization failed.", cancelError)
+          setMessage(`${errorMessage} Cancel the pending order from your wallet transaction history to release the reserved balance.`)
+        })
+      }
     }
   }
 
@@ -161,7 +202,10 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => void beginCheckout()}
+          onClick={() => {
+            setMessage("")
+            setWalletDialogOpen(true)
+          }}
           disabled={busy}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-4 text-center text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
         >
@@ -180,6 +224,16 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
           </button>
         ) : null}
       </div>
+      <WalletContributionDialog
+        open={walletDialogOpen}
+        totalPaise={amountPaise}
+        busy={busy}
+        onOpenChange={setWalletDialogOpen}
+        onConfirm={(walletAmountPaise) => {
+          setWalletDialogOpen(false)
+          void beginCheckout(walletAmountPaise)
+        }}
+      />
       {message ? (
         <div className="mt-3 text-sm text-muted-foreground" role="status">
           <p>{message}</p>

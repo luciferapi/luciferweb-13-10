@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { findUserBySession } from "@/features/auth/server/auth-store"
 import { fetchRazorpayOrder, getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
+import { listUserApiEndpointPurchases } from "@/features/api-endpoints/server/api-purchases"
 import {
   listPendingProjectPurchases,
   listUserProjectPurchases,
@@ -49,8 +50,11 @@ export async function GET() {
       }))
     }
 
-    const transactions = await listUserProjectPurchases(user.id)
-    return NextResponse.json({ transactions }, { headers: { "Cache-Control": "private, no-store" } })
+    const [transactions, apiTransactions] = await Promise.all([
+      listUserProjectPurchases(user.id),
+      listUserApiEndpointPurchases(user.id),
+    ])
+    return NextResponse.json({ transactions, apiTransactions }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) {
     console.error("Could not load transaction history.", error)
     return NextResponse.json({ error: "Could not load transaction history right now." }, { status: 500 })

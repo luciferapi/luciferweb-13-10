@@ -20,7 +20,7 @@ export async function GET() {
     console.error("Could not load the profile wallet balance.", error)
     if (isMysqlSchemaUnavailable(error)) {
       return NextResponse.json({
-        error: "Wallet data is unavailable because the MySQL schema is outdated. Apply database/migrations/001_initial_schema.sql and database/migrations/003_wallet_schema_compatibility.sql.",
+        error: "Wallet data is unavailable because the MySQL schema is outdated. Apply database/migrations/001_initial_schema.sql, database/migrations/003_wallet_schema_compatibility.sql, database/migrations/004_wallet_purchase_debits.sql, and database/migrations/005_wallet_purchase_reservations.sql.",
       }, { status: 503 })
     }
     return NextResponse.json({ error: "Could not load your wallet balance right now." }, { status: 500 })

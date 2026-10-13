@@ -9,6 +9,7 @@ import { parsePriceToPaise } from "@/features/projects/server/project-pricing"
 import { hasProjectSourceBundle } from "@/features/projects/server/source-bundles"
 import { createSourceDownloadToken } from "@/features/projects/server/source-download-token"
 import { saveProjectPurchase } from "@/features/purchases/server/purchase-store"
+import { getWalletPurchaseDebit } from "@/features/wallet/server/wallet-purchase-store"
 
 export const runtime = "nodejs"
 
@@ -57,6 +58,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project not found or price is invalid." }, { status: 400 })
     }
 
+    const walletDebit = await getWalletPurchaseDebit(razorpay_order_id, user.id)
+    const walletAppliedPaise = walletDebit?.amountPaise ?? 0
+    if (walletAppliedPaise > expectedAmount) return NextResponse.json({ error: "The wallet amount does not match this project order." }, { status: 409 })
+    const razorpayAmountPaise = expectedAmount - walletAppliedPaise
+    if (razorpayAmountPaise < 100) {
+      return NextResponse.json({ error: "The payment amount does not match this project order." }, { status: 400 })
+    }
+
     const orderResponse = await fetchRazorpayOrder(razorpay_order_id, credentials.authorization)
     const order = await orderResponse.json().catch(() => null)
     if (orderResponse.status === 401) {
@@ -70,9 +79,14 @@ export async function POST(request: Request) {
       order?.id !== razorpay_order_id ||
       order?.notes?.project_id !== project.code ||
       order?.notes?.user_id !== user.id ||
-      order?.amount !== expectedAmount ||
+      order?.amount !== razorpayAmountPaise ||
       order?.currency !== "INR" ||
-      order?.status !== "paid"
+      order?.status !== "paid" ||
+      (walletAppliedPaise > 0 && (
+        order?.notes?.total_amount_paise !== String(expectedAmount) ||
+        order?.notes?.wallet_applied_paise !== String(walletAppliedPaise)
+      )) ||
+      (walletAppliedPaise === 0 && order?.notes?.wallet_applied_paise !== undefined && order?.notes?.wallet_applied_paise !== "0")
     ) {
       return NextResponse.json({ error: "The payment does not match this project order." }, { status: 400 })
     }
@@ -84,6 +98,7 @@ export async function POST(request: Request) {
       projectCode: project.code,
       projectTitle: project.title,
       amountPaise: expectedAmount,
+      walletAppliedPaise,
     })
     if (!recorded) {
       return NextResponse.json({ error: "Payment succeeded, but the purchase record conflicts with an existing transaction. Contact support." }, { status: 409 })
@@ -96,7 +111,13 @@ export async function POST(request: Request) {
     const downloadToken = createSourceDownloadToken(project.code, razorpay_payment_id)
     if (!downloadToken) return NextResponse.json({ error: "Payment was verified and added to your transaction history, but could not prepare the secure source download." }, { status: 503 })
 
-    return NextResponse.json({ success: true, project_id: project.code, payment_id: razorpay_payment_id, download_token: downloadToken })
+    return NextResponse.json({
+      success: true,
+      project_id: project.code,
+      payment_id: razorpay_payment_id,
+      download_token: downloadToken,
+      wallet_applied_paise: walletAppliedPaise,
+    })
   } catch (error) {
     console.error("Could not verify or record the project purchase.", error)
     return NextResponse.json({ error: "Could not verify the payment." }, { status: 500 })

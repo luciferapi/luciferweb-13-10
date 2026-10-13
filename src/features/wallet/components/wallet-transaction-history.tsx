@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowUpRight,
   Ban,
@@ -15,19 +15,36 @@ import {
 } from "lucide-react"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
 import type { ProjectPurchase } from "@/features/purchases/server/purchase-store"
+import type { ApiEndpointPurchase } from "@/features/api-endpoints/server/api-purchases"
 import type { WalletDeposit } from "@/features/wallet/server/wallet-deposit-store"
 
 function isProjectPurchaseList(value: unknown): value is ProjectPurchase[] {
   return Array.isArray(value) && value.every((item) =>
     typeof item === "object" &&
     item !== null &&
-    "depositId" in item && typeof item.depositId === "string" && /^DEP[A-Z0-9]{13}$/.test(item.depositId) &&
     "paymentId" in item && (item.paymentId === null || typeof item.paymentId === "string") &&
     "orderId" in item && typeof item.orderId === "string" &&
     "projectCode" in item && typeof item.projectCode === "string" &&
     "projectTitle" in item && typeof item.projectTitle === "string" &&
     "amountPaise" in item && typeof item.amountPaise === "number" && Number.isSafeInteger(item.amountPaise) &&
+    "walletAppliedPaise" in item && typeof item.walletAppliedPaise === "number" && Number.isSafeInteger(item.walletAppliedPaise) &&
     "currency" in item && item.currency === "INR" &&
+    "status" in item && ["pending", "paid", "cancelled", "expired", "failed"].includes(String(item.status)) &&
+    "purchasedAt" in item && typeof item.purchasedAt === "string" && Number.isFinite(Date.parse(item.purchasedAt)),
+  )
+}
+
+function isApiEndpointPurchaseList(value: unknown): value is ApiEndpointPurchase[] {
+  return Array.isArray(value) && value.every((item) =>
+    typeof item === "object" &&
+    item !== null &&
+    "paymentId" in item && (item.paymentId === null || typeof item.paymentId === "string") &&
+    "orderId" in item && typeof item.orderId === "string" &&
+    "userId" in item && typeof item.userId === "string" &&
+    "endpointId" in item && typeof item.endpointId === "string" &&
+    "endpointName" in item && typeof item.endpointName === "string" &&
+    "amountPaise" in item && typeof item.amountPaise === "number" && Number.isSafeInteger(item.amountPaise) &&
+    "walletAppliedPaise" in item && typeof item.walletAppliedPaise === "number" && Number.isSafeInteger(item.walletAppliedPaise) &&
     "status" in item && ["pending", "paid", "cancelled", "expired", "failed"].includes(String(item.status)) &&
     "purchasedAt" in item && typeof item.purchasedAt === "string" && Number.isFinite(Date.parse(item.purchasedAt)),
   )
@@ -103,12 +120,14 @@ const statusIconStyles: Record<ProjectPurchase["status"], string> = {
 }
 
 export function WalletTransactionHistory() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const requestedFilter = searchParams.get("history")
   const activeFilter = requestedFilter === "deposit" || requestedFilter === "withdraw"
     ? requestedFilter
     : "all"
   const [transactions, setTransactions] = useState<ProjectPurchase[]>([])
+  const [apiTransactions, setApiTransactions] = useState<ApiEndpointPurchase[]>([])
   const [deposits, setDeposits] = useState<WalletDeposit[]>([])
   const [loading, setLoading] = useState(true)
   const [depositLoading, setDepositLoading] = useState(false)
@@ -138,12 +157,15 @@ export function WalletTransactionHistory() {
       typeof result !== "object" ||
       result === null ||
       !("transactions" in result) ||
-      !isProjectPurchaseList(result.transactions)
+      !isProjectPurchaseList(result.transactions) ||
+      !("apiTransactions" in result) ||
+      !isApiEndpointPurchaseList(result.apiTransactions)
     ) {
       throw new Error("The transaction history response was invalid.")
     }
     setSignedIn(true)
     setTransactions(result.transactions)
+    setApiTransactions(result.apiTransactions)
   }
 
   useEffect(() => {
@@ -220,6 +242,7 @@ export function WalletTransactionHistory() {
         throw new Error(message)
       }
       await loadTransactions()
+      router.refresh()
     } catch (cancelError) {
       console.error("Could not cancel the pending project transaction.", cancelError)
       setError(cancelError instanceof Error ? cancelError.message : "Could not cancel this transaction.")
@@ -228,8 +251,39 @@ export function WalletTransactionHistory() {
     }
   }
 
+  async function cancelPendingApiTransaction(orderId: string) {
+    setCancellingOrder(orderId)
+    setError("")
+    try {
+      const response = await fetch("/api/api-endpoints/purchase/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, status: "cancelled" }),
+      })
+      const result: unknown = await response.json().catch(() => null)
+      if (!response.ok) {
+        const message = typeof result === "object" && result !== null && "error" in result && typeof result.error === "string"
+          ? result.error
+          : "Could not cancel this API purchase."
+        throw new Error(message)
+      }
+      await loadTransactions()
+      router.refresh()
+    } catch (cancelError) {
+      console.error("Could not cancel the pending API purchase.", cancelError)
+      setError(cancelError instanceof Error ? cancelError.message : "Could not cancel this API purchase.")
+    } finally {
+      setCancellingOrder("")
+    }
+  }
+
   const paidTransactions = transactions.filter((transaction) => transaction.status === "paid")
-  const paidTotalPaise = paidTransactions.reduce((total, transaction) => total + transaction.amountPaise, 0)
+  const paidApiTransactions = apiTransactions.filter((transaction) => transaction.status === "paid")
+  const paidTotalPaise = [
+    ...paidTransactions.map((transaction) => transaction.amountPaise),
+    ...paidApiTransactions.map((transaction) => transaction.amountPaise),
+  ].reduce((total, amount) => total + amount, 0)
+  const completedPurchaseCount = paidTransactions.length + paidApiTransactions.length
   const visibleTransactions = activeFilter === "all" ? transactions : []
   const filterLoading = activeFilter === "all"
     ? loading || depositLoading
@@ -242,7 +296,7 @@ export function WalletTransactionHistory() {
       ? depositError
       : ""
   const filteredItemCount = activeFilter === "all"
-    ? visibleTransactions.length + deposits.length
+    ? visibleTransactions.length + apiTransactions.length + deposits.length
     : activeFilter === "deposit"
       ? deposits.length
       : 1
@@ -260,7 +314,7 @@ export function WalletTransactionHistory() {
             Transaction history
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Review project purchases and wallet deposits. Cash withdrawals are coming soon.
+            Review project and API purchases alongside wallet deposits. Cash withdrawals are coming soon.
           </p>
         </div>
         <Link
@@ -288,15 +342,15 @@ export function WalletTransactionHistory() {
         ))}
       </nav>
 
-      {activeFilter === "all" && signedIn && !loading && !error ? (
+      {activeFilter === "all" && signedIn && !loading && !depositLoading && !error && !depositError ? (
         <section aria-label="Payment summary" className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-5">
           <div>
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Paid for projects</p>
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Spent on purchases</p>
             <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{formatPriceInr(paidTotalPaise)}</p>
           </div>
           <div className="border-l border-slate-200 pl-4 dark:border-slate-700 sm:pl-6">
             <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Completed purchases</p>
-            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{paidTransactions.length}</p>
+            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{completedPurchaseCount}</p>
           </div>
         </section>
       ) : null}
@@ -318,7 +372,7 @@ export function WalletTransactionHistory() {
           <Receipt aria-hidden="true" className="size-6 text-blue-700 dark:text-blue-300" />
           <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">Sign in to view your purchases</h3>
           <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Your project payments are linked to your account and visible only to you.
+            Your purchases and wallet activity are linked to your account and visible only to you.
           </p>
           <Link
             href="/login"
@@ -342,7 +396,7 @@ export function WalletTransactionHistory() {
               ? "Your wallet deposit payments will appear here after checkout."
               : activeFilter === "withdraw"
                 ? "Withdrawal requests you submit will appear here with their review status."
-                : "Your wallet deposits and project purchases will appear here with their status and payment references."}
+                : "Your wallet deposits, project purchases, and API access payments will appear here with their status and payment references."}
           </p>
           {activeFilter === "all" ? (
             <Link
@@ -523,8 +577,12 @@ export function WalletTransactionHistory() {
                       </summary>
                       <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800 sm:grid-cols-2 sm:p-4">
                         <div className="min-w-0">
+                          <dt className="font-medium text-slate-600 dark:text-slate-300">Wallet contribution</dt>
+                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
+                        </div>
+                        <div className="min-w-0">
                           <dt className="font-medium text-slate-600 dark:text-slate-300">Payment ID</dt>
-                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.paymentId ?? "Not paid yet"}</dd>
+                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
                         </div>
                         <div className="min-w-0">
                           <dt className="font-medium text-slate-600 dark:text-slate-300">Order ID</dt>
@@ -557,6 +615,82 @@ export function WalletTransactionHistory() {
             })}
           </ul>
           </section>
+          {apiTransactions.length > 0 ? (
+            <section aria-label="API access purchases" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+              <h3 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-white sm:px-5">API access purchases</h3>
+              <ul>
+                {apiTransactions.map((transaction, index) => {
+                  const statusLabel = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)
+                  const StatusIcon = transaction.status === "paid" ? Check : transaction.status === "pending" ? Clock3 : CircleAlert
+                  return (
+                    <li key={`api-${transaction.orderId}`} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                      <article className="p-4 sm:p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${statusIconStyles[transaction.status]}`}>
+                              <StatusIcon aria-hidden="true" size={18} />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="max-w-full truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{transaction.endpointName}</h4>
+                                <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[transaction.status]}`}>
+                                  {statusLabel}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(transaction.purchasedAt)}</p>
+                              <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">API {transaction.endpointId}</p>
+                            </div>
+                          </div>
+                          <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                            {formatPriceInr(transaction.amountPaise)}
+                          </p>
+                        </div>
+                        <details className="group mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+                          <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-blue-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:text-blue-300 dark:focus-visible:ring-offset-slate-900 [&::-webkit-details-marker]:hidden">
+                            Payment details
+                            <ChevronDown aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180" />
+                          </summary>
+                          <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800 sm:grid-cols-2 sm:p-4">
+                            <div className="min-w-0">
+                              <dt className="font-medium text-slate-600 dark:text-slate-300">Wallet contribution</dt>
+                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="font-medium text-slate-600 dark:text-slate-300">Payment ID</dt>
+                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="font-medium text-slate-600 dark:text-slate-300">Order ID</dt>
+                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.orderId}</dd>
+                            </div>
+                          </dl>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Link
+                              href="/api-explorer"
+                              className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 transition hover:border-blue-300 hover:text-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:text-blue-300 dark:focus-visible:ring-offset-slate-900"
+                            >
+                              Browse APIs <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                            </Link>
+                            {transaction.status === "pending" ? (
+                              <button
+                                type="button"
+                                onClick={() => void cancelPendingApiTransaction(transaction.orderId)}
+                                disabled={Boolean(cancellingOrder)}
+                                className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:focus-visible:ring-offset-slate-900"
+                              >
+                                {cancellingOrder === transaction.orderId ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : <Ban aria-hidden="true" className="size-3.5" />}
+                                {cancellingOrder === transaction.orderId ? "Cancelling..." : "Cancel transaction"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </details>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          ) : null}
         </div>
       )}
     </section>

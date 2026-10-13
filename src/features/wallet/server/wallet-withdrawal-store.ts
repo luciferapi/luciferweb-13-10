@@ -68,8 +68,7 @@ export async function getAvailableWalletBalancePaise(userId: string): Promise<nu
                    WHERE user_id = ? AND status IN ('pending', 'paid')), 0)
        + COALESCE((SELECT SUM(amount_paise) FROM owner_wallet_adjustments
                    WHERE user_id = ?), 0)
-       - COALESCE((SELECT SUM(amount_paise) FROM wallet_purchase_debits
-                   WHERE user_id = ?), 0) AS balance_paise`,
+       - COALESCE((SELECT SUM(amount_paise) FROM wallet_purchase_debits WHERE user_id = ? AND status IN ('reserved', 'paid')), 0) AS balance_paise`,
     [userId, userId, userId, userId],
   )
   const available = Number(rows[0]?.balance_paise ?? 0)
@@ -126,7 +125,7 @@ export async function createWalletWithdrawalRequest(input: {
          + COALESCE((SELECT SUM(amount_paise) FROM owner_wallet_adjustments
                      WHERE user_id = ?), 0)
          - COALESCE((SELECT SUM(amount_paise) FROM wallet_purchase_debits
-                     WHERE user_id = ?), 0) AS balance_paise`,
+                     WHERE user_id = ? AND status IN ('reserved', 'paid')), 0) AS balance_paise`,
       [input.userId, input.userId, input.userId, input.userId],
     )
     const balance = Number(balanceRows[0]?.balance_paise ?? 0)

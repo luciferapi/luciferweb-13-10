@@ -45,6 +45,11 @@ export async function POST(request: Request) {
 
     const purchase = await getApiEndpointPurchase(orderId, user.id)
     if (!purchase) return NextResponse.json({ error: "API purchase order not found for this account." }, { status: 404 })
+    const walletAppliedPaise = purchase.walletAppliedPaise
+    const razorpayAmountPaise = purchase.amountPaise - walletAppliedPaise
+    if (walletAppliedPaise < 0 || razorpayAmountPaise < 100) {
+      return NextResponse.json({ error: "The wallet amount does not match this API purchase." }, { status: 400 })
+    }
 
     const orderResponse = await fetchRazorpayOrder(orderId, credentials.authorization)
     const order: unknown = await orderResponse.json().catch(() => null)
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
       typeof order !== "object" ||
       order === null ||
       !("id" in order) || order.id !== orderId ||
-      !("amount" in order) || order.amount !== purchase.amountPaise ||
+      !("amount" in order) || order.amount !== razorpayAmountPaise ||
       !("currency" in order) || order.currency !== "INR" ||
       !("status" in order) || order.status !== "paid" ||
       !("notes" in order) ||
@@ -65,7 +70,12 @@ export async function POST(request: Request) {
       order.notes === null ||
       !("product_type" in order.notes) || order.notes.product_type !== "api_endpoint" ||
       !("api_endpoint_id" in order.notes) || order.notes.api_endpoint_id !== purchase.endpointId ||
-      !("user_id" in order.notes) || order.notes.user_id !== user.id
+      !("user_id" in order.notes) || order.notes.user_id !== user.id ||
+      (walletAppliedPaise > 0 && (
+        !("total_amount_paise" in order.notes) || order.notes.total_amount_paise !== String(purchase.amountPaise) ||
+        !("wallet_applied_paise" in order.notes) || order.notes.wallet_applied_paise !== String(walletAppliedPaise)
+      )) ||
+      (walletAppliedPaise === 0 && "wallet_applied_paise" in order.notes && order.notes.wallet_applied_paise !== "0")
     ) {
       return NextResponse.json({ error: "The payment does not match this API access order." }, { status: 400 })
     }
@@ -83,7 +93,7 @@ export async function POST(request: Request) {
       payment === null ||
       !("id" in payment) || payment.id !== paymentId ||
       !("order_id" in payment) || payment.order_id !== orderId ||
-      !("amount" in payment) || payment.amount !== purchase.amountPaise ||
+      !("amount" in payment) || payment.amount !== razorpayAmountPaise ||
       !("currency" in payment) || payment.currency !== "INR" ||
       !("status" in payment) || payment.status !== "captured"
     ) {
@@ -96,6 +106,7 @@ export async function POST(request: Request) {
       userId: user.id,
       endpointId: purchase.endpointId,
       amountPaise: purchase.amountPaise,
+      walletAppliedPaise,
     })
     if (!recorded) {
       return NextResponse.json({ error: "Payment succeeded, but API access could not be recorded. Contact support." }, { status: 409 })
@@ -105,6 +116,7 @@ export async function POST(request: Request) {
       success: true,
       endpointId: purchase.endpointId,
       access: "explorer",
+      wallet_applied_paise: walletAppliedPaise,
     }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) {
     console.error("Could not verify the API access payment.", error)

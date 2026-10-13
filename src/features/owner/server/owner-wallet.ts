@@ -84,7 +84,8 @@ export async function getOwnerWalletDashboard(): Promise<OwnerWalletDashboard> {
              SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
            ) a ON a.user_id = u.id
            LEFT JOIN (
-             SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits GROUP BY user_id
+             SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits
+             WHERE status IN ('reserved', 'paid') GROUP BY user_id
            ) p ON p.user_id = u.id
          ), 0) AS wallet_balance_paise`,
     ),
@@ -234,7 +235,8 @@ export async function listOwnerWalletUsers(page: number, search: string) {
          SELECT user_id, SUM(amount_paise) AS total FROM owner_wallet_adjustments GROUP BY user_id
        ) a ON a.user_id = u.id
        LEFT JOIN (
-         SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits GROUP BY user_id
+         SELECT user_id, SUM(amount_paise) AS total FROM wallet_purchase_debits
+         WHERE status IN ('reserved', 'paid') GROUP BY user_id
        ) p ON p.user_id = u.id
        WHERE 1 = 1 ${where}
        ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?`,
