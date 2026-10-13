@@ -1,10 +1,8 @@
-import { createUIMessageStream, createUIMessageStreamResponse } from "ai"
+import { gateway, streamText, type ModelMessage } from "ai"
 import { NextResponse } from "next/server"
 import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
-
-import { getOpenRouterConfig } from "@/lib/mysql"
 
 const DEFAULT_MODEL = "openai/gpt-4o"
 const ALLOWED_MODELS = new Set([
@@ -40,7 +38,7 @@ function normalizeModelId(model?: string) {
   return DEFAULT_MODEL
 }
 
-function normalizeMessages(messages: unknown) {
+function normalizeMessages(messages: unknown): ModelMessage[] {
   if (!Array.isArray(messages)) return []
 
   return messages.flatMap((message) => {
@@ -121,77 +119,34 @@ export async function POST(request: Request) {
     })
     if (rateLimitResponse) return rateLimitResponse
 
-    const { apiKey, url } = getOpenRouterConfig()
-
-    if (!apiKey || !url) {
-      return NextResponse.json({ error: "OpenRouter configuration is incomplete." }, { status: 500 })
-    }
-
     const userName = user.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100)
-
     const userContext = userName
       ? ` The signed-in user's name is ${JSON.stringify(userName)}. Address them by name naturally when appropriate, but do not force their name into every reply.`
       : ""
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://luciferapi.com",
-        "X-OpenRouter-Title": "LUCIFER AI",
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          {
-            role: "system",
-            content:
-              `You are LUCIFER AI, a concise technical assistant for K Praveenkumar. Answer the user's latest question directly. Do not introduce yourself, repeat your capabilities, add meta commentary, or include notes about what you can or cannot execute unless the user asks. Help with Python, AI, APIs, Next.js, automation, debugging, and creative experiments. Be practical and honest. Never claim to have performed actions you cannot perform.${userContext}`,
-          },
-          ...messages,
-        ],
-        max_tokens: 1200,
-      }),
-      signal: AbortSignal.timeout(45_000),
+    const system =
+      `You are LUCIFER AI, a concise technical assistant for K Praveenkumar. Answer the user's latest question directly. Do not introduce yourself, repeat your capabilities, add meta commentary, or include notes about what you can or cannot execute unless the user asks. Help with Python, AI, APIs, Next.js, automation, debugging, and creative experiments. Be practical and honest. Never claim to have performed actions you cannot perform.${userContext}`
+
+    const result = streamText({
+      model: gateway(modelId),
+      system,
+      messages,
+      maxOutputTokens: 1200,
+      abortSignal: AbortSignal.timeout(45_000),
     })
-
-    if (!response.ok) {
-      return NextResponse.json({ error: "The OpenRouter request failed." }, { status: 502 })
-    }
-
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }> }
-    const content = data.choices?.[0]?.message?.content
-    const text = typeof content === "string"
-      ? content
-      : Array.isArray(content)
-        ? content.filter((part) => part.type === "text").map((part) => part.text ?? "").join("")
-        : ""
 
     const usesUiMessageStream = Array.isArray(body.messages) && body.messages.some((message) => Array.isArray(message.parts))
 
     if (request.headers.get("accept")?.includes("text/plain") || new URL(request.url).searchParams.get("format") === "text" || !usesUiMessageStream) {
-      return new NextResponse(text, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      })
+      return result.toTextStreamResponse()
     }
 
-    const stream = createUIMessageStream({
-      execute: ({ writer }) => {
-        const textId = "openrouter-text"
-
-        try {
-          writer.write({ type: "text-start", id: textId })
-          writer.write({ type: "text-delta", id: textId, delta: text })
-          writer.write({ type: "text-end", id: textId })
-        } catch (error) {
-          console.error("Failed to write the chat response stream.", error)
-        }
-      },
-    })
-
-    return createUIMessageStreamResponse({ stream })
-  } catch {
-    return NextResponse.json({ error: "The OpenRouter request failed." }, { status: 500 })
+    return result.toUIMessageStreamResponse()
+  } catch (error) {
+    console.error("[chat] AI Gateway request failed", error)
+    return NextResponse.json(
+      { error: "LUCIFER AI could not complete that response. Please try again." },
+      { status: 502 },
+    )
   }
 }
