@@ -74,6 +74,10 @@ html {
   --pineapple: oklch(0.58 0.16 220);
   --coconut: oklch(0.3 0.035 275);
   --catalog-glow: oklch(0.82 0.19 140);
+  --page-surface: oklch(0.985 0.006 275);
+  --page-surface-strong: oklch(1 0 0);
+  --page-glow: oklch(0.76 0.16 145);
+  --page-grid: color-mix(in oklch, var(--foreground) 6%, transparent);
 }
 
 .dark {
@@ -113,6 +117,11 @@ html {
   --charcoal: oklch(0.18 0.035 275);
   --pineapple: oklch(0.76 0.13 215);
   --coconut: oklch(0.9 0.02 275);
+  --catalog-glow: oklch(0.86 0.19 140);
+  --page-surface: oklch(0.195 0.022 275);
+  --page-surface-strong: oklch(0.22 0.026 275);
+  --page-glow: oklch(0.78 0.18 145);
+  --page-grid: color-mix(in oklch, var(--foreground) 7%, transparent);
 }
 
 .dark-blue {
@@ -152,6 +161,11 @@ html {
   --charcoal: oklch(0.16 0.035 255);
   --pineapple: oklch(0.77 0.12 190);
   --coconut: oklch(0.91 0.02 245);
+  --catalog-glow: oklch(0.82 0.16 190);
+  --page-surface: oklch(0.21 0.04 255);
+  --page-surface-strong: oklch(0.25 0.045 255);
+  --page-glow: oklch(0.8 0.16 190);
+  --page-grid: color-mix(in oklch, var(--foreground) 7%, transparent);
 }
 
 @theme inline {
@@ -221,11 +235,40 @@ html {
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
+    position: relative;
     font-family: var(--font-sans), sans-serif;
     font-weight: 400;
     letter-spacing: -0.02em;
     text-rendering: optimizeLegibility;
     line-height: 1.6;
+    background-image: radial-gradient(circle at 18% 0%, color-mix(in oklch, var(--page-glow) 10%, transparent), transparent 34rem), radial-gradient(circle at 92% 18%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 30rem);
+  }
+
+  main {
+    position: relative;
+    isolation: isolate;
+  }
+
+  main::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    opacity: 0.28;
+    background-image: linear-gradient(to right, var(--page-grid) 1px, transparent 1px), linear-gradient(to bottom, var(--page-grid) 1px, transparent 1px);
+    background-size: 5rem 5rem;
+    mask-image: linear-gradient(to bottom, black, transparent 72%);
+  }
+
+  ::selection {
+    color: var(--primary-foreground);
+    background: var(--primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
   }
 
   h1,
