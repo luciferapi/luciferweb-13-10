@@ -6,7 +6,6 @@ import { ProjectCheckout } from "@/features/projects/components/project-checkout
 import { requireSignedInUser } from "@/features/auth/server/auth-session"
 import { readProjects } from "@/features/projects/server/project-store"
 import { formatPriceInr, parsePriceToPaise } from "@/features/projects/server/project-pricing"
-import { hasProjectSourceBundle } from "@/features/projects/server/source-bundles"
 import { getProjectDemoVideo } from "@/features/projects/server/project-demo-videos"
 
 export const dynamic = "force-dynamic"
@@ -18,7 +17,6 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   const project = (await readProjects()).find((entry) => entry.code === id && entry.isPublished)
   if (!project) notFound()
   const amountPaise = parsePriceToPaise(project.price)
-  const sourceBundleAvailable = await hasProjectSourceBundle(project.code)
   const demoVideoAvailable = project.demoVideo
     ? /^https?:\/\//i.test(project.demoVideo) || Boolean(await getProjectDemoVideo(project.demoVideo))
     : false
@@ -68,16 +66,13 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
               <p className="text-sm font-semibold">{amountPaise ? formatPriceInr(amountPaise) : project.price || "Not listed"}</p>
             </div>
 
-            {amountPaise && sourceBundleAvailable ? (
+            {amountPaise ? (
               <ProjectCheckout
                 projectId={project.code}
                 title={project.title}
                 amountPaise={amountPaise}
-                purchaseLabel={`Source Code · ${formatPriceInr(amountPaise)}`}
+                purchaseLabel={`Buy project · ${formatPriceInr(amountPaise)}`}
               />
-            ) : null}
-            {amountPaise && !sourceBundleAvailable ? (
-              <p className="mt-5 text-sm text-muted-foreground" role="status">Source code is being prepared and cannot be purchased yet.</p>
             ) : null}
 
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
