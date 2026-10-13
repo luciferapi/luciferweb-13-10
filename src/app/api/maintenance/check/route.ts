@@ -36,6 +36,11 @@ export async function GET(request: Request) {
     } : null })
   } catch (error) {
     logMaintenanceCheckFailure(error)
-    return NextResponse.json({ error: "Could not check maintenance status." }, { status: 500 })
+    // Maintenance must fail open: an unavailable optional R2 settings object
+    // should never block the application or create a client-side runtime error.
+    return NextResponse.json(
+      { maintenance: null },
+      { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } },
+    )
   }
 }

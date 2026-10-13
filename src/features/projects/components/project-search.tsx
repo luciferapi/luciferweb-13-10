@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, Search } from "lucide-react"
 import { PROJECT_CATEGORIES, type Project } from "@/features/projects/server/projects"
+import { parsePriceToPaise } from "@/features/projects/server/project-pricing"
+import { ProjectCheckout } from "@/features/projects/components/project-checkout"
 
 export function ProjectSearch({
   projects,
@@ -49,8 +51,12 @@ export function ProjectSearch({
       </div>
       {filteredProjects.length > 0 ? (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
-          {filteredProjects.map(({ code, title, description, imageUrl, category: projectCategory, technologies }) => (
-            <Link key={code} href={`/projects/${code}`} className="group overflow-hidden rounded-2xl border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:border-cyan-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+          {filteredProjects.map((project) => {
+            const { code, title, description, imageUrl, category: projectCategory, technologies } = project
+            const amountPaise = parsePriceToPaise(project.price)
+            return (
+            <article key={code} className="group overflow-hidden rounded-2xl border border-border bg-card transition duration-200 hover:-translate-y-0.5 hover:border-cyan-500/50">
+              <Link href={`/projects/${code}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset">
               <div className="aspect-[16/10] overflow-hidden bg-muted">
                 <img
                   src={imageUrl || "/images/luciferai-brand-logo.jpg"}
@@ -76,8 +82,15 @@ export function ProjectSearch({
                   View project <ArrowUpRight aria-hidden="true" className="size-3.5" />
                 </span>
               </div>
-            </Link>
-          ))}
+              </Link>
+              {amountPaise ? (
+                <div className="border-t border-border px-4 pb-4 sm:px-5">
+                  <ProjectCheckout projectId={code} title={title} amountPaise={amountPaise} purchaseLabel={`Buy project · ${project.price}`} />
+                </div>
+              ) : null}
+            </article>
+            )
+          })}
         </div>
       ) : (
         <p className="mt-5 rounded-2xl border border-border bg-card/40 px-5 py-6 text-sm text-muted-foreground" role="status">

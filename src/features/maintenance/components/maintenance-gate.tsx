@@ -25,8 +25,14 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
         if (!response.ok) {
           throw new Error(`Maintenance status request failed with status ${response.status}.`)
         }
-        const result: { maintenance?: MaintenanceScreenEntry | null } = await response.json()
-        return result.maintenance ?? null
+        const body = await response.text()
+        if (!body.trim()) return null
+        try {
+          const result = JSON.parse(body) as { maintenance?: MaintenanceScreenEntry | null }
+          return result.maintenance ?? null
+        } catch {
+          throw new Error("The maintenance status response was not valid JSON.")
+        }
       })
       .then((nextEntry) => {
         if (active) setEntry(nextEntry)

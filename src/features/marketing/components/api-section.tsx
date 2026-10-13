@@ -176,13 +176,16 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
         {catalogError ? <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">{catalogError}</p> : null}
         {!catalogLoading && !catalogError ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="API catalog">
           {visibleApis.map((api) => (
-            <button
-              key={api.id}
-              type="button"
-              aria-pressed={selected?.id === api.id}
-              onClick={() => { setActive(api.id); setPayload(null); setHasPayload(false); setError("") }}
-              className={`group overflow-hidden rounded-2xl border text-left transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${selected?.id === api.id ? "border-cyan-500/60 bg-cyan-500/5" : "border-border bg-card hover:border-cyan-500/40"}`}
-            >
+              <article
+                key={api.id}
+                className={`group overflow-hidden rounded-2xl border text-left transition duration-200 hover:-translate-y-0.5 ${selected?.id === api.id ? "border-cyan-500/60 bg-cyan-500/5" : "border-border bg-card hover:border-cyan-500/40"}`}
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected?.id === api.id}
+                  onClick={() => { setActive(api.id); setPayload(null); setHasPayload(false); setError("") }}
+                  className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset"
+                >
               <div className="aspect-[16/10] overflow-hidden bg-muted">
                 <img src={api.imageUrl || "/images/luciferai-brand-logo.jpg"} alt={`${api.name} API preview`} loading="lazy" className="size-full object-cover transition duration-300 group-hover:scale-[1.03]" />
               </div>
@@ -193,7 +196,18 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
                   {api.pricePaise === 0 ? "Free to test" : formatPriceInr(api.pricePaise)}
                 </span>
               </span>
-            </button>
+                </button>
+                {api.pricePaise > 0 ? (
+                  <div className="border-t border-border px-4 pb-4 sm:px-5">
+                    <ApiEndpointPurchaseButton
+                      endpoint={api}
+                      onUnlocked={(endpointId) => {
+                        setOwnedEndpointIds((current) => current.includes(endpointId) ? current : [...current, endpointId])
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </article>
           ))}
         </div> : null}
         {!catalogLoading && !catalogError && visibleApis.length === 0 ? (
