@@ -726,7 +726,7 @@ export default function MagneticNav() {
               aria-expanded={menuOpen}
               aria-controls="mobile-navigation"
               onClick={() => setMenuOpen((open) => !open)}
-              className="grid size-10 shrink-0 place-items-center rounded-xl border border-lime/25 bg-lime/10 text-lime shadow-[0_0_0_1px_rgba(131,255,81,0.08)] transition hover:border-lime/50 hover:bg-lime/15 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
+              className="grid size-10 shrink-0 place-items-center rounded-xl bg-lime/10 text-lime transition hover:bg-lime/15 hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
             >
               {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
             </button>
