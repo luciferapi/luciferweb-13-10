@@ -43,7 +43,8 @@ function getMysqlConfig(): MysqlConfig {
     host: requiredEnvironmentValue("DB_HOST"),
     port: positiveIntegerEnvironmentValue("DB_PORT", 3306, 65535),
     user: requiredEnvironmentValue("DB_USER"),
-    password: requiredEnvironmentValue("DB_PASSWORD"),
+    // MySQL permits passwordless local users; the connection itself should determine whether credentials are accepted.
+    password: process.env.DB_PASSWORD?.trim() ?? "",
     database: requiredEnvironmentValue("DB_NAME"),
     connectionLimit: positiveIntegerEnvironmentValue("DB_CONNECTION_LIMIT", 10, 100),
     ssl: sslValue === "true",
@@ -54,7 +55,7 @@ export function isMysqlConfigured(): boolean {
   return Boolean(
     process.env.DB_HOST?.trim() &&
     process.env.DB_USER?.trim() &&
-    process.env.DB_PASSWORD &&
+    process.env.DB_PASSWORD !== undefined &&
     process.env.DB_NAME?.trim(),
   )
 }
