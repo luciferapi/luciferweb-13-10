@@ -69,7 +69,17 @@ export function LiveBannerTicker({
     async function loadBanners() {
       try {
         const response = await fetch("/api/live-banners", { cache: "no-store", signal: controller.signal })
-        const result: unknown = await response.json()
+        const rawResponse = await response.text()
+        let result: unknown = null
+
+        if (rawResponse.trim()) {
+          try {
+            result = JSON.parse(rawResponse) as unknown
+          } catch {
+            throw new Error("The homepage banner response was not valid JSON.")
+          }
+        }
+
         if (!response.ok) {
           const message = typeof result === "object" && result !== null && "error" in result && typeof result.error === "string"
             ? result.error

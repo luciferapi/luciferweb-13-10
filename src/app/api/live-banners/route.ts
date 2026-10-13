@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic"
 export async function GET() {
   // Live banners are optional during preview and before the backing services are configured.
   // Return an empty collection so the homepage remains usable without a noisy client error.
-  const storageConfig = getCloudflareR2Config()
-  if (!isMysqlConfigured() || !storageConfig?.privateBucket) {
-    return NextResponse.json(
-      { banners: [] },
-      { headers: { "Cache-Control": "no-store, max-age=0" } },
-    )
-  }
-
   try {
+    const storageConfig = getCloudflareR2Config()
+    if (!isMysqlConfigured() || !storageConfig?.privateBucket) {
+      return NextResponse.json(
+        { banners: [] },
+        { headers: { "Cache-Control": "no-store, max-age=0" } },
+      )
+    }
+
     return NextResponse.json(
       { banners: await listOwnerLiveBanners(true) },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
@@ -31,6 +31,9 @@ export async function GET() {
     }
 
     console.error("Could not load homepage live banners.", error)
-    return NextResponse.json({ error: "Could not load homepage banners." }, { status: 500 })
+    return NextResponse.json(
+      { banners: [], error: "Could not load homepage banners." },
+      { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } },
+    )
   }
 }
