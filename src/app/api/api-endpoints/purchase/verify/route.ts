@@ -34,11 +34,10 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Required Razorpay verification fields are invalid." }, { status: 400 })
 
     const credentials = getRazorpayCredentials()
-    const secret = process.env.RAZORPAY_KEY_SECRET
-    if (!credentials || !secret) return NextResponse.json({ error: "Razorpay is not configured on the server." }, { status: 503 })
+    if (!credentials) return NextResponse.json({ error: "Razorpay is not configured on the server." }, { status: 503 })
 
     const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = parsed.data
-    const expectedSignature = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest()
+    const expectedSignature = createHmac("sha256", credentials.keySecret).update(`${orderId}|${paymentId}`).digest()
     const receivedSignature = Buffer.from(signature, "hex")
     if (expectedSignature.length !== receivedSignature.length || !timingSafeEqual(expectedSignature, receivedSignature)) {
       return NextResponse.json({ error: "Payment signature verification failed." }, { status: 400 })

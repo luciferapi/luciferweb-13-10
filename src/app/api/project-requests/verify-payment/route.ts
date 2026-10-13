@@ -40,10 +40,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Required payment verification fields are missing or invalid." }, { status: 400 })
 
   const { request_ref, razorpay_order_id, razorpay_payment_id, razorpay_signature } = parsed.data
-  const secret = process.env.RAZORPAY_KEY_SECRET
-  if (!secret) return NextResponse.json({ error: "Razorpay is not configured on the server." }, { status: 503 })
 
-  const expectedSignature = createHmac("sha256", secret)
+  const expectedSignature = createHmac("sha256", credentials.keySecret)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest()
   const receivedSignature = Buffer.from(razorpay_signature, "hex")
