@@ -17,6 +17,7 @@ import {
 import { AudioWaveform } from "./audio-waveform"
 
 export type AIModel =
+  | "ollama/llama3.2"
   | "google/gemini-2.5-flash"
   | "openai/gpt-4o"
   | "openai/gpt-4.1"
@@ -59,6 +60,7 @@ declare global {
 }
 
 export const AI_MODELS: { id: AIModel; name: string }[] = [
+  { id: "ollama/llama3.2", name: "Ollama (local)" },
   { id: "google/gemini-2.5-flash", name: "Gemini 2.5" },
   { id: "openai/gpt-4o", name: "GPT-4o" },
   { id: "openai/gpt-4.1", name: "GPT-4.1" },

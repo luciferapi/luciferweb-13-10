@@ -6,6 +6,7 @@ import { readLimitedJson } from "@/lib/server/read-limited-json"
 
 const DEFAULT_MODEL = "openai/gpt-4o"
 const ALLOWED_MODELS = new Set([
+  "ollama/llama3.2",
   "google/gemini-2.5-flash",
   "openai/gpt-4o",
   "openai/gpt-4.1",
@@ -71,6 +72,81 @@ function normalizeMessages(messages: unknown): ModelMessage[] {
   })
 }
 
+function isOllamaModel(modelId: string) {
+  return modelId === "ollama/llama3.2"
+}
+
+async function streamOllamaResponse(system: string, messages: ModelMessage[]) {
+  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").trim().replace(/\/$/, "")
+  const model = (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
+  if (!model) throw new Error("OLLAMA_MODEL is not configured.")
+
+  const headers: HeadersInit = { "Content-Type": "application/json" }
+  const apiKey = process.env.OLLAMA_API_KEY?.trim()
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+
+  const response = await fetch(`${baseUrl}/api/chat`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model,
+      stream: true,
+      messages: [{ role: "system", content: system }, ...messages],
+      options: { num_predict: 1200 },
+    }),
+    signal: AbortSignal.timeout(45_000),
+  })
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => "")
+    throw new Error(`Ollama request failed (${response.status}): ${detail.slice(0, 300)}`)
+  }
+
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  let pending = ""
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = response.body!.getReader()
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          pending += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+          const lines = pending.split("\n")
+          pending = done ? "" : (lines.pop() ?? "")
+          for (const line of lines) {
+            if (!line.trim()) continue
+            const payload = JSON.parse(line) as { message?: { content?: string }; error?: string }
+            if (payload.error) throw new Error(payload.error)
+            const text = payload.message?.content
+            if (typeof text === "string" && text) controller.enqueue(encoder.encode(text))
+          }
+          if (done) break
+        }
+        if (pending.trim()) {
+          const payload = JSON.parse(pending) as { message?: { content?: string }; error?: string }
+          if (payload.error) throw new Error(payload.error)
+          const text = payload.message?.content
+          if (typeof text === "string" && text) controller.enqueue(encoder.encode(text))
+        }
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      } finally {
+        reader.releaseLock()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  })
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getSignedInUser()
@@ -123,6 +199,10 @@ export async function POST(request: Request) {
 
     const system =
       `You are LUCIFER AI, a concise technical assistant for K Praveenkumar. Answer the user's latest question directly. Do not introduce yourself, repeat your capabilities, add meta commentary, or include notes about what you can or cannot execute unless the user asks. Help with Python, AI, APIs, Next.js, automation, debugging, and creative experiments. Be practical and honest. Never claim to have performed actions you cannot perform.${userContext}`
+
+    if (isOllamaModel(modelId)) {
+      return await streamOllamaResponse(system, messages)
+    }
 
     const result = streamText({
       model: gateway(modelId),
