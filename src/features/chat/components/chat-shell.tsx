@@ -6,6 +6,7 @@ import { MessageSquareDashed, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Composer, AI_MODELS, type AIModel } from "./composer"
+import { BUILT_IN_CHAT_MODULES, CHAT_MODULES_STORAGE_KEY, type CustomChatModule } from "../modules"
 import { MessageList } from "./message-list"
 
 export interface Message {
@@ -19,6 +20,7 @@ export interface Message {
 const STORAGE_KEY = "chat-messages"
 const MODEL_STORAGE_KEY = "chat-selected-model"
 const OLLAMA_MODEL_STORAGE_KEY = "ollama-custom-model"
+const MODULE_STORAGE_KEY = "chat-selected-module"
 
 function extractStreamText(value: string) {
   if (!value.includes("data:") && !value.includes("text-delta")) return value
@@ -98,6 +100,8 @@ const [selectedModel, setSelectedModel] = useState<AIModel>(
     "openai/gpt-4o",
   )
   const [ollamaModel, setOllamaModel] = useState("llama3.2")
+  const [selectedModule, setSelectedModule] = useState("auto")
+  const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
 
 const requestRef = useRef<AbortController | null>(null)
 
@@ -106,6 +110,8 @@ useEffect(() => {
       const stored = localStorage.getItem(STORAGE_KEY)
       const savedModel = localStorage.getItem(MODEL_STORAGE_KEY)
       const savedOllamaModel = localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
+      const savedModule = localStorage.getItem(MODULE_STORAGE_KEY)
+      const savedCustomModules = localStorage.getItem(CHAT_MODULES_STORAGE_KEY)
 
 if (stored) {
         setMessages(restoreMessages(stored))
@@ -118,6 +124,11 @@ const model = AI_MODELS.find((item) => item.id === savedModel)
       }
       if (savedOllamaModel?.trim()) {
         setOllamaModel(savedOllamaModel.trim())
+      }
+      if (savedModule?.trim()) setSelectedModule(savedModule.trim())
+      if (savedCustomModules) {
+        const parsed = JSON.parse(savedCustomModules) as CustomChatModule[]
+        if (Array.isArray(parsed)) setCustomModules(parsed)
       }
     } catch {
       // Storage can be unavailable or contain invalid data.
@@ -211,6 +222,9 @@ try {
           },
           body: JSON.stringify({
             model: selectedModel === "ollama/llama3.2" ? `ollama/${ollamaModel}` : selectedModel,
+            module: selectedModule === "auto"
+              ? { id: "auto" }
+              : [...BUILT_IN_CHAT_MODULES, ...customModules].find((module) => module.id === selectedModule) ?? { id: "auto" },
             messages: conversation.map((message) => ({
               role: message.role,
               content: message.content,
@@ -295,7 +309,7 @@ if (!accumulated) {
         }
       }
     },
-    [isLoaded, ollamaModel, selectedModel],
+    [customModules, isLoaded, ollamaModel, selectedModel, selectedModule],
   )
 
 const sendMessage = useCallback(
@@ -346,6 +360,8 @@ try {
   }, [])
 
   const activeModel = AI_MODELS.find((model) => model.id === selectedModel)?.name ?? "AI model"
+  const availableModules = [...BUILT_IN_CHAT_MODULES, ...customModules]
+  const activeModule = availableModules.find((module) => module.id === selectedModule) ?? BUILT_IN_CHAT_MODULES[0]
 
   return (
       <main aria-label="AI chat workspace" className="ai-chat-section relative isolate h-dvh overflow-hidden">
@@ -366,6 +382,18 @@ try {
                 <Sparkles aria-hidden="true" className="size-3.5 text-cyan-300" />
                 <span className="hidden md:inline">Model</span> {activeModel}
               </span>
+              <select
+                value={activeModule.id}
+                onChange={(event) => {
+                  const moduleId = event.target.value
+                  setSelectedModule(moduleId)
+                  localStorage.setItem(MODULE_STORAGE_KEY, moduleId)
+                }}
+                className="hidden max-w-36 rounded-xl border border-white/[0.08] bg-slate-900/80 px-2.5 py-2 text-xs font-medium text-slate-300 outline-none focus:border-cyan-200/40 sm:block"
+                aria-label="Choose AI module"
+              >
+                {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}
+              </select>
               <span className="hidden text-[11px] text-slate-500 lg:inline">Saved on this device</span>
               {messages.length > 0 || error ? (
                 <Button

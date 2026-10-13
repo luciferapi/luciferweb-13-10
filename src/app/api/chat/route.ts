@@ -1,6 +1,7 @@
 import { gateway, streamText, type ModelMessage } from "ai"
 import { NextResponse } from "next/server"
 import { getSignedInUser } from "@/features/auth/server/auth-session"
+import { chooseAutomaticModule, findBuiltInModule } from "@/features/chat/modules"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
@@ -77,6 +78,29 @@ function normalizeMessages(messages: unknown): ModelMessage[] {
 
     return []
   })
+}
+
+function getModulePrompt(body: Record<string, unknown>, messages: ModelMessage[]) {
+  const classifierMessages = messages.map((message) => ({
+    role: message.role,
+    content: typeof message.content === "string" ? message.content : "",
+  }))
+  const requestedModule = body.module
+  if (!requestedModule || typeof requestedModule !== "object") {
+    return findBuiltInModule(chooseAutomaticModule(classifierMessages))
+  }
+
+  const moduleRecord = requestedModule as Record<string, unknown>
+  const moduleId = typeof moduleRecord.id === "string" ? moduleRecord.id.trim() : "auto"
+  if (moduleId === "auto") return findBuiltInModule(chooseAutomaticModule(classifierMessages))
+
+  const builtIn = findBuiltInModule(moduleId)
+  if (builtIn && builtIn.id !== "auto") return builtIn
+
+  const instructions = typeof moduleRecord.instructions === "string" ? moduleRecord.instructions.trim().slice(0, 4000) : ""
+  const name = typeof moduleRecord.name === "string" ? moduleRecord.name.trim().slice(0, 80) : "Custom module"
+  if (!instructions) return findBuiltInModule(chooseAutomaticModule(classifierMessages))
+  return { id: moduleId, name: name || "Custom module", description: "User-configured module", instructions }
 }
 
 function isOllamaModel(modelId: string) {
@@ -206,14 +230,19 @@ export async function POST(request: Request) {
 
     const system =
       `You are LUCIFER AI, a concise technical assistant for K Praveenkumar. Answer the user's latest question directly. Do not introduce yourself, repeat your capabilities, add meta commentary, or include notes about what you can or cannot execute unless the user asks. Help with Python, AI, APIs, Next.js, automation, debugging, and creative experiments. Be practical and honest. Never claim to have performed actions you cannot perform.${userContext}`
+    const activeModule = getModulePrompt(body as Record<string, unknown>, messages)
+    const moduleContext = activeModule?.instructions
+      ? ` Active module: ${activeModule.name}. Module guidance: ${activeModule.instructions}`
+      : ""
+    const systemWithModule = `${system}${moduleContext}`
 
     if (isOllamaModel(modelId)) {
-      return await streamOllamaResponse(system, messages, modelId)
+      return await streamOllamaResponse(systemWithModule, messages, modelId)
     }
 
     const result = streamText({
       model: gateway(modelId),
-      system,
+      system: systemWithModule,
       messages,
       maxOutputTokens: 1200,
       abortSignal: AbortSignal.timeout(45_000),

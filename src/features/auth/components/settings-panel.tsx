@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { getLatestEligibleBirthDate } from "@/features/auth/server/age"
+import { CHAT_MODULES_STORAGE_KEY, type CustomChatModule } from "@/features/chat/modules"
 import { Bot, Check, Copy, KeyRound, LogOut, Monitor, Moon, MoonStar, Sun } from "lucide-react"
 import {
   Dialog,
@@ -85,6 +86,12 @@ export function SettingsPanel() {
   const [ollamaModelDraft, setOllamaModelDraft] = useState("llama3.2")
   const [ollamaModelNotice, setOllamaModelNotice] = useState("")
   const [ollamaModelError, setOllamaModelError] = useState("")
+  const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
+  const [moduleNameDraft, setModuleNameDraft] = useState("")
+  const [moduleDescriptionDraft, setModuleDescriptionDraft] = useState("")
+  const [moduleInstructionsDraft, setModuleInstructionsDraft] = useState("")
+  const [moduleNotice, setModuleNotice] = useState("")
+  const [moduleError, setModuleError] = useState("")
 
   useEffect(() => {
     setMounted(true)
@@ -93,6 +100,15 @@ export function SettingsPanel() {
   useEffect(() => {
     const savedModel = window.localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
     if (savedModel?.trim()) setOllamaModelDraft(savedModel.trim())
+    const savedModules = window.localStorage.getItem(CHAT_MODULES_STORAGE_KEY)
+    if (savedModules) {
+      try {
+        const parsed = JSON.parse(savedModules) as CustomChatModule[]
+        if (Array.isArray(parsed)) setCustomModules(parsed)
+      } catch {
+        // Ignore malformed device preferences.
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -336,6 +352,45 @@ export function SettingsPanel() {
     setOllamaModelDraft(model)
     setOllamaModelError("")
     setOllamaModelNotice("Ollama model saved on this device.")
+  }
+
+  function handleCustomModuleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const name = moduleNameDraft.trim()
+    const description = moduleDescriptionDraft.trim()
+    const instructions = moduleInstructionsDraft.trim()
+    if (!name || name.length > 60) {
+      setModuleError("Enter a module name using 1 to 60 characters.")
+      return
+    }
+    if (!instructions || instructions.length > 4000) {
+      setModuleError("Add module instructions using 1 to 4,000 characters.")
+      return
+    }
+
+    const nextModules = [
+      ...customModules,
+      {
+        id: `custom-${Date.now().toString(36)}`,
+        name,
+        description: description || "User-configured module",
+        instructions,
+      },
+    ]
+    window.localStorage.setItem(CHAT_MODULES_STORAGE_KEY, JSON.stringify(nextModules))
+    setCustomModules(nextModules)
+    setModuleNameDraft("")
+    setModuleDescriptionDraft("")
+    setModuleInstructionsDraft("")
+    setModuleError("")
+    setModuleNotice("Custom module saved on this device.")
+  }
+
+  function deleteCustomModule(id: string) {
+    const nextModules = customModules.filter((module) => module.id !== id)
+    window.localStorage.setItem(CHAT_MODULES_STORAGE_KEY, JSON.stringify(nextModules))
+    setCustomModules(nextModules)
+    setModuleNotice("Custom module removed.")
   }
 
   return (
@@ -703,6 +758,75 @@ export function SettingsPanel() {
         <p className="mt-4 text-xs leading-5 text-muted-foreground">
           This preference is stored only in this browser. Make sure the same model is available on your Ollama server.
         </p>
+        <div className="mt-6 border-t border-border pt-6">
+          <div className="border-b border-border pb-4">
+            <h3 className="text-base font-semibold text-foreground">Custom modules</h3>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Add a reusable instruction set for a workflow that matters to you. Auto chooses a suitable built-in module when no custom module is selected.
+            </p>
+          </div>
+          <form onSubmit={handleCustomModuleSave} className="mt-4 grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label htmlFor="settings-module-name" className="grid gap-2 text-sm font-medium text-foreground">
+                Module name
+                <input
+                  id="settings-module-name"
+                  value={moduleNameDraft}
+                  onChange={(event) => { setModuleNameDraft(event.target.value); setModuleError(""); setModuleNotice("") }}
+                  maxLength={60}
+                  placeholder="Launch Planner"
+                  className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-lime focus:ring-2 focus:ring-lime/30"
+                />
+              </label>
+              <label htmlFor="settings-module-description" className="grid gap-2 text-sm font-medium text-foreground">
+                Short description
+                <input
+                  id="settings-module-description"
+                  value={moduleDescriptionDraft}
+                  onChange={(event) => { setModuleDescriptionDraft(event.target.value); setModuleError(""); setModuleNotice("") }}
+                  maxLength={120}
+                  placeholder="Plan and prioritize a product launch"
+                  className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-lime focus:ring-2 focus:ring-lime/30"
+                />
+              </label>
+            </div>
+            <label htmlFor="settings-module-instructions" className="grid gap-2 text-sm font-medium text-foreground">
+              Module instructions
+              <textarea
+                id="settings-module-instructions"
+                value={moduleInstructionsDraft}
+                onChange={(event) => { setModuleInstructionsDraft(event.target.value); setModuleError(""); setModuleNotice("") }}
+                maxLength={4000}
+                rows={4}
+                placeholder="Act as a practical launch planner. Ask for goals, audience, budget, and deadline before suggesting a prioritized plan."
+                className="w-full resize-y rounded-xl border border-border bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-lime focus:ring-2 focus:ring-lime/30"
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-lime px-4 py-2.5 text-sm font-semibold text-charcoal transition hover:bg-lime/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 active:scale-[0.98]">
+                Add custom module
+              </button>
+              {moduleError ? <p role="alert" className="text-sm text-destructive">{moduleError}</p> : null}
+              {moduleNotice ? <p role="status" className="text-sm text-foreground">{moduleNotice}</p> : null}
+            </div>
+          </form>
+          {customModules.length > 0 ? (
+            <ul className="mt-5 grid gap-3" aria-label="Saved custom modules">
+              {customModules.map((module) => (
+                <li key={module.id} className="flex flex-col gap-3 rounded-xl border border-border bg-background/70 p-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{module.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{module.description}</p>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{module.instructions}</p>
+                  </div>
+                  <button type="button" onClick={() => deleteCustomModule(module.id)} className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime">
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </section>
 
       <section
