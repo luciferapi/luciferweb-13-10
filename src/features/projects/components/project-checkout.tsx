@@ -166,7 +166,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-3 text-center text-sm font-semibold transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
           >
             {downloadBusy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Download aria-hidden="true" className="size-4" />}
-            Download source
+            Download ZIP
           </button>
         ) : null}
       </div>

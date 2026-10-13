@@ -77,67 +77,6 @@ export function Footer() {
     <footer ref={footerRef} id="contact" className="relative overflow-hidden bg-background py-20 pb-6 text-foreground">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: [0.25, 0.4, 0.25, 1] }}
-          className="mb-12 text-center"
-        >
-          <h2 className="overflow-hidden text-[clamp(2.5rem,5vw,5rem)] font-black leading-[0.9] tracking-[-0.08em] text-foreground">
-            <motion.span
-              className="block"
-              initial={{ y: 100 }}
-              whileInView={{ y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1] }}
-            >
-              READY TO
-            </motion.span>
-            <motion.span
-              className="block text-[#AFFF00]"
-              initial={{ y: 100 }}
-              whileInView={{ y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1], delay: 0.1 }}
-            >
-              BUILD NEXT?
-            </motion.span>
-          </h2>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mx-auto mb-12 max-w-xl"
-        >
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/contact#project-request"
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#AFFF00] px-6 py-3 text-center text-sm font-bold tracking-wide text-[#121212] transition hover:-translate-y-px hover:bg-[#D9FF70] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#AFFF00] focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
-            >
-              Start a project · ₹1 fee
-            </Link>
-            <Link
-              href="/contact/process"
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border px-6 py-3 text-center text-sm font-semibold text-foreground transition hover:-translate-y-px hover:border-lime/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] sm:w-auto"
-            >
-              See how it works
-            </Link>
-          </div>
-          <motion.p
-            className="mt-3 text-center font-mono text-xs leading-5 text-muted-foreground"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-          >
-            Project requests require a verified account and a non-refundable ₹1 fee.
-          </motion.p>
-        </motion.div>
-
-        <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
