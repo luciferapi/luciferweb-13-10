@@ -17,12 +17,12 @@ declare global {
   var __luciferMysqlPool: Pool | undefined
 }
 
-function environmentValue(name: string, fallbackName?: string): string | undefined {
-  return process.env[name]?.trim() || (fallbackName ? process.env[fallbackName]?.trim() : undefined)
+function environmentValue(name: string): string | undefined {
+  return process.env[name]?.trim()
 }
 
-function requiredEnvironmentValue(name: string, fallbackName?: string): string {
-  const value = environmentValue(name, fallbackName)
+function requiredEnvironmentValue(name: string): string {
+  const value = environmentValue(name)
   if (!value) throw new Error(`${name} is required to connect to the MySQL database.`)
   return value
 }
@@ -44,12 +44,11 @@ function getMysqlConfig(): MysqlConfig {
   }
 
   return {
-    host: requiredEnvironmentValue("DB_HOST", "DB_HOST_2"),
+    host: requiredEnvironmentValue("DB_HOST"),
     port: positiveIntegerEnvironmentValue("DB_PORT", 3306, 65535),
-    user: requiredEnvironmentValue("DB_USER", "DB_USER_2"),
-    // MySQL permits passwordless local users; the connection itself should determine whether credentials are accepted.
-    password: environmentValue("DB_PASSWORD", "DB_PASSWORD_2") ?? "",
-    database: requiredEnvironmentValue("DB_NAME", "DB_NAME_2"),
+    user: requiredEnvironmentValue("DB_USER"),
+    password: requiredEnvironmentValue("DB_PASSWORD"),
+    database: requiredEnvironmentValue("DB_NAME"),
     connectionLimit: positiveIntegerEnvironmentValue("DB_CONNECTION_LIMIT", 10, 100),
     ssl: sslValue === "true",
   }
@@ -57,10 +56,10 @@ function getMysqlConfig(): MysqlConfig {
 
 export function isMysqlConfigured(): boolean {
   return Boolean(
-    environmentValue("DB_HOST", "DB_HOST_2") &&
-    environmentValue("DB_USER", "DB_USER_2") &&
-    (process.env.DB_PASSWORD !== undefined || process.env.DB_PASSWORD_2 !== undefined) &&
-    environmentValue("DB_NAME", "DB_NAME_2"),
+    environmentValue("DB_HOST") &&
+    environmentValue("DB_USER") &&
+    process.env.DB_PASSWORD !== undefined &&
+    environmentValue("DB_NAME"),
   )
 }
 
@@ -122,7 +121,7 @@ export async function selectMysqlRows<T extends RowDataPacket>(
 
 export function getOpenRouterConfig() {
   return {
-    apiKey: process.env.OPENROUTER_API_KEY_2?.trim() || process.env.OPENROUTER_API_KEY?.trim() || null,
-    url: process.env.OPENROUTER_URL_3?.trim() || process.env.OPENROUTER_URL?.trim() || "https://openrouter.ai/api/v1/chat/completions",
+    apiKey: process.env.OPENROUTER_API_KEY?.trim() || null,
+    url: process.env.OPENROUTER_URL?.trim() || null,
   }
 }

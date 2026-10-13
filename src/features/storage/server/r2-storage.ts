@@ -55,15 +55,17 @@ function normalizePublicStorageUrl(publicUrl: string | null, bucket: string | nu
 }
 
 export function getCloudflareR2Config() {
-  const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT ?? process.env.R2_ENDPOINT ?? null
-  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID ?? process.env.R2_ACCOUNT_ID ?? null
-  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ?? process.env.R2_ACCESS_KEY_ID ?? null
-  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ?? process.env.R2_SECRET_ACCESS_KEY ?? null
-  const bucket = process.env.CLOUDFLARE_R2_BUCKET ?? process.env.R2_BUCKET_NAME ?? process.env.R2_BUCKET ?? null
-  const publicUrlRaw = process.env.CLOUDFLARE_R2_PUBLIC_URL ?? process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ?? process.env.R2_PUBLIC_URL ?? null
-  const privateBucket = process.env.CLOUDFLARE_R2_PRIVATE_BUCKET ?? (publicUrlRaw ? null : bucket)
+  const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT?.trim() || null
+  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID?.trim() || null
+  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID?.trim() || null
+  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || null
+  const bucket = process.env.CLOUDFLARE_R2_BUCKET?.trim() || null
+  const publicUrlRaw = process.env.CLOUDFLARE_R2_PUBLIC_URL?.trim() || null
+  const privateBucket = process.env.CLOUDFLARE_R2_PRIVATE_BUCKET?.trim() || null
 
-  if (![endpoint, accountId, accessKeyId, secretAccessKey, bucket, publicUrlRaw, privateBucket].some(Boolean)) return null
+  if (![endpoint, accountId, accessKeyId, secretAccessKey, bucket, publicUrlRaw, privateBucket].every(Boolean)) {
+    throw new Error("Cloudflare R2 requires all CLOUDFLARE_R2_* storage variables, including a private bucket.")
+  }
   if (!accessKeyId || !secretAccessKey || !bucket || (!endpoint && !accountId)) {
     throw new Error("Cloudflare R2 is partially configured. Set the account ID or endpoint, access key, secret key, and bucket.")
   }

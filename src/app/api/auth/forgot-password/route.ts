@@ -39,7 +39,10 @@ export async function POST(request: Request) {
 
   if (!token) return NextResponse.json(GENERIC_RESPONSE)
 
-  const baseUrl = process.env.APP_URL ?? (process.env.NODE_ENV === "development" ? new URL(request.url).origin : "https://luciferapi.com")
+    const baseUrl = process.env.APP_URL?.trim()
+    if (!baseUrl) {
+      return NextResponse.json({ error: "APP_URL is not configured." }, { status: 500 })
+    }
   const resetUrl = new URL("/login", baseUrl)
   resetUrl.searchParams.set("reset", token)
 
