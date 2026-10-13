@@ -11,6 +11,14 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     )
   } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    if (message === "Supabase admin access is not configured.") {
+      return NextResponse.json(
+        { banners: [] },
+        { headers: { "Cache-Control": "no-store, max-age=0" } },
+      )
+    }
+
     console.error("Could not load homepage live banners.", error)
     return NextResponse.json({ error: "Could not load homepage banners." }, { status: 500 })
   }
