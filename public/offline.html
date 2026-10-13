@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#09090b" />
+    <title>No internet | LUCIFER AI</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #09090b;
+        color: #fafafa;
+      }
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 2rem 1.25rem;
+      }
+      main {
+        width: min(100%, 42rem);
+        padding: 3rem 0;
+      }
+      p { color: #a1a1aa; line-height: 1.7; }
+      .label { color: #bef264; font-size: .875rem; font-weight: 600; }
+      h1 { margin: 1.25rem 0; font-size: clamp(2.75rem, 9vw, 4.5rem); letter-spacing: -.06em; line-height: 1; }
+      button {
+        min-height: 3rem;
+        margin-top: 1rem;
+        border: 0;
+        border-radius: 999px;
+        padding: 0 1.5rem;
+        background: #bef264;
+        color: #18181b;
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid #bef264; outline-offset: 4px; }
+      @media (prefers-color-scheme: light) {
+        :root { background: #fafafa; color: #18181b; }
+        p { color: #52525b; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="label">Connection lost</p>
+      <h1>You're offline.</h1>
+      <p>We can't reach the site right now. Check your Wi-Fi or mobile data, then try again.</p>
+      <button id="retry" type="button">Try again</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script>
+      const retryButton = document.getElementById("retry")
+      const statusMessage = document.getElementById("status")
+      retryButton.addEventListener("click", () => {
+        statusMessage.textContent = "Checking your connection…"
+        window.location.reload()
+      })
+      window.addEventListener("online", () => window.location.reload())
+    </script>
+  </body>
+</html>

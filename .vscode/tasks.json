@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Next.js Dev Server",
+			"type": "shell",
+			"command": "npm run dev",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Create owner project requests routes",
+			"type": "shell",
+			"command": "mkdir -p \"src/app/owner/project-requests\" \"src/app/owner/project-requests/history\"",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
