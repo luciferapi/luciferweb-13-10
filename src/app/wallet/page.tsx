@@ -41,7 +41,7 @@ export default async function WalletPage() {
 
   return (
     <WalletAnimated>
-      <main className="min-h-[100dvh] bg-[#f4f5fb] text-[#172033] dark:bg-[#101216] dark:text-slate-100">
+      <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#dbeafe_42%,transparent),transparent_42%),#f4f5fb] text-[#172033] dark:bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#172554_28%,transparent),transparent_40%),#101216] dark:text-slate-100">
         <section className="mx-auto min-h-[70vh] max-w-5xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
           <header data-wallet-intro className="max-w-2xl">
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
@@ -55,7 +55,7 @@ export default async function WalletPage() {
           <section
             aria-label="Wallet balance"
             data-wallet-intro
-            className="mt-7 flex flex-wrap items-end justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-7"
+            className="mt-7 flex flex-wrap items-end justify-between gap-5 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none sm:p-7"
           >
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Available balance</p>
@@ -68,10 +68,10 @@ export default async function WalletPage() {
 
           <section
             aria-label="Wallet actions"
-            className="mt-7 grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:p-4"
+            className="mt-7 grid grid-cols-2 gap-3 rounded-2xl border border-blue-100 bg-white/90 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none sm:p-4"
           >
-              {quickActions.map(({ label }) => <WalletDepositControl key={label} />)}
-              <div
+            {quickActions.map(({ label }) => <WalletDepositControl key={label} />)}
+            <div
                 aria-disabled="true"
                 className="flex min-h-24 cursor-not-allowed flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400"
               >
