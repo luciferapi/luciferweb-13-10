@@ -16,7 +16,6 @@ import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
 import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 import { isSupabaseSchemaUnavailable } from "@/lib/supabase-errors"
-import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
 export async function requestLoginOtp(request: Request) {
@@ -84,13 +83,6 @@ export async function verifyLoginOtp(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter the owner or staff email and six-digit sign-in code." }, { status: 400 })
   }
-
-  const rateLimitResponse = await enforceRateLimit(request, "privileged-login-code-verify", {
-    capacity: 10,
-    refillSeconds: 15 * 60,
-    identifiers: [parsed.data.email],
-  })
-  if (rateLimitResponse) return rateLimitResponse
 
   if (!getSupabaseAdminClient()) {
     return NextResponse.json({
