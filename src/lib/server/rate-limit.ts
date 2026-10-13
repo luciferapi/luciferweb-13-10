@@ -2,12 +2,8 @@ import "server-only"
 import { createHmac } from "node:crypto"
 import { NextResponse } from "next/server"
 import { getClientIpAddress } from "@/features/auth/server/signup-ip"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
-
-type RateLimitResult = {
-  allowed: boolean
-  retry_after_seconds: number
-}
+import { withMysqlTransaction } from "@/lib/mysql"
+import type { RowDataPacket } from "mysql2"
 
 type RateLimitOptions = {
   capacity: number
@@ -15,19 +11,9 @@ type RateLimitOptions = {
   identifiers?: string[]
 }
 
-function isRateLimitResult(value: unknown): value is RateLimitResult {
-  if (typeof value !== "object" || value === null) return false
-  if (!("allowed" in value) || typeof value.allowed !== "boolean") return false
-  return "retry_after_seconds" in value &&
-    typeof value.retry_after_seconds === "number" &&
-    Number.isFinite(value.retry_after_seconds)
-}
-
 function getRateLimitSecret(): string {
-  const secret = process.env.RATE_LIMIT_HMAC_SECRET?.trim() ||
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-  if (!secret) throw new Error("A server-only secret is required for API rate-limit keys.")
+  const secret = process.env.RATE_LIMIT_HMAC_SECRET?.trim()
+  if (!secret) throw new Error("RATE_LIMIT_HMAC_SECRET is required for API rate-limit keys.")
   return secret
 }
 
@@ -56,20 +42,60 @@ export async function enforceRateLimit(
         hashBucket(secret, scope, `identifier:${identifier}`),
       ),
     ]
-    const admin = getSupabaseAdminClient()
-    if (!admin) throw new Error("Supabase server credentials are not configured.")
+    const result = await withMysqlTransaction(async (connection) => {
+      const sortedBucketKeys = [...new Set(bucketKeys)].sort()
+      const now = Date.now()
+      const buckets: { bucketKey: string; tokens: number; updatedAt: number }[] = []
 
-    const { data, error } = await admin.rpc("check_api_rate_limit", {
-      p_bucket_keys: bucketKeys,
-      p_capacity: options.capacity,
-      p_refill_seconds: options.refillSeconds,
-    } as never)
-    if (error) throw error
+      for (const bucketKey of sortedBucketKeys) {
+        await connection.execute(
+          `INSERT IGNORE INTO api_rate_limit_buckets (bucket_key, tokens, updated_at, expires_at)
+           VALUES (?, ?, CURRENT_TIMESTAMP(3), DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL 1 DAY))`,
+          [bucketKey, options.capacity],
+        )
+        const [rows] = await connection.execute<(RowDataPacket & {
+          tokens: string | number
+          updated_at: Date | string
+        })[]>(
+          "SELECT tokens, updated_at FROM api_rate_limit_buckets WHERE bucket_key = ? FOR UPDATE",
+          [bucketKey],
+        )
+        const row = rows[0]
+        if (!row) throw new Error("The rate-limit bucket was not available after insertion.")
+        const updatedAt = row.updated_at instanceof Date
+          ? row.updated_at.getTime()
+          : new Date(row.updated_at).getTime()
+        if (!Number.isFinite(updatedAt)) throw new Error("The rate-limit bucket has an invalid timestamp.")
+        const elapsedSeconds = Math.max(0, (now - updatedAt) / 1000)
+        const tokens = Math.min(
+          options.capacity,
+          Number(row.tokens) + elapsedSeconds / options.refillSeconds,
+        )
+        buckets.push({ bucketKey, tokens, updatedAt })
+      }
 
-    const result: unknown = data
-    if (!isRateLimitResult(result)) {
-      throw new Error("The Supabase rate-limit RPC returned an invalid result.")
-    }
+      const blocked = buckets
+        .filter((bucket) => bucket.tokens < 1)
+        .map((bucket) => (1 - bucket.tokens) * options.refillSeconds)
+      if (blocked.length > 0) {
+        return { allowed: false, retry_after_seconds: Math.max(...blocked) }
+      }
+
+      for (const bucket of buckets) {
+        await connection.execute(
+          `UPDATE api_rate_limit_buckets
+           SET tokens = ?, updated_at = CURRENT_TIMESTAMP(3),
+               expires_at = DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL 1 DAY)
+           WHERE bucket_key = ?`,
+          [bucket.tokens - 1, bucket.bucketKey],
+        )
+      }
+
+      await connection.execute(
+        "DELETE FROM api_rate_limit_buckets WHERE expires_at <= CURRENT_TIMESTAMP(3)",
+      )
+      return { allowed: true, retry_after_seconds: 0 }
+    })
     if (result.allowed) return null
 
     const retryAfterSeconds = Math.max(1, Math.ceil(result.retry_after_seconds))

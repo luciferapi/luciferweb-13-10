@@ -14,9 +14,15 @@ import {
 } from "@/features/notifications/server/email"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
-import { isSupabaseSchemaUnavailable } from "@/lib/supabase-errors"
+import { isMysqlConfigured } from "@/lib/mysql"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
+
+function mysqlSchemaError(error: unknown) {
+  if (typeof error !== "object" || error === null) return false
+  const code = "code" in error && typeof error.code === "string" ? error.code : ""
+  const errno = "errno" in error && typeof error.errno === "number" ? error.errno : 0
+  return code === "ER_BAD_FIELD_ERROR" || code === "ER_NO_SUCH_TABLE" || errno === 1054 || errno === 1146
+}
 
 export async function requestLoginOtp(request: Request) {
   const body = await readLimitedJson(request, 4 * 1024)
@@ -31,9 +37,14 @@ export async function requestLoginOtp(request: Request) {
     return NextResponse.json({ error: "Enter a valid owner or staff email address." }, { status: 400 })
   }
 
-  if (!getSupabaseAdminClient()) {
+  if (!isMysqlConfigured()) {
     return NextResponse.json({
-      error: "Email-code sign-in is unavailable because server-side Supabase credentials are not configured.",
+      error: "Email-code sign-in is unavailable because the MySQL connection is not configured.",
+    }, { status: 503 })
+  }
+  if (!process.env.AUTH_OTP_HMAC_SECRET?.trim()) {
+    return NextResponse.json({
+      error: "Email-code sign-in is unavailable because AUTH_OTP_HMAC_SECRET is not configured.",
     }, { status: 503 })
   }
 
@@ -60,13 +71,13 @@ export async function requestLoginOtp(request: Request) {
     })
   } catch (error) {
     console.error("Could not create an owner or staff sign-in code.", error)
-    if (isSupabaseSchemaUnavailable(error)) {
+    if (mysqlSchemaError(error)) {
       return NextResponse.json({
-        error: "Email-code sign-in is unavailable because the Supabase schema is missing. Apply the Supabase migrations and try again.",
+        error: "Email-code sign-in is unavailable because the MySQL auth schema is outdated. Apply database/migrations/001_initial_schema.sql and database/migrations/002_auth_user_access_columns.sql, then retry.",
       }, { status: 503 })
     }
     return NextResponse.json({
-      error: "Could not send the sign-in code. Check the Supabase server credentials and app SMTP configuration.",
+      error: "Could not send the sign-in code. Check the MySQL connection and app SMTP configuration.",
     }, { status: 503 })
   }
 }
@@ -84,9 +95,9 @@ export async function verifyLoginOtp(request: Request) {
     return NextResponse.json({ error: "Enter the owner or staff email and six-digit sign-in code." }, { status: 400 })
   }
 
-  if (!getSupabaseAdminClient()) {
+  if (!isMysqlConfigured()) {
     return NextResponse.json({
-      error: "Email-code sign-in is unavailable because server-side Supabase credentials are not configured.",
+      error: "Email-code sign-in is unavailable because the MySQL connection is not configured.",
     }, { status: 503 })
   }
 

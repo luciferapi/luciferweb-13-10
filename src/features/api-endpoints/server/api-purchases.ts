@@ -1,5 +1,6 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { getMysqlPool, selectMysqlRows } from "@/lib/mysql"
+import type { ResultSetHeader, RowDataPacket } from "mysql2"
 
 export type ApiEndpointPurchase = {
   orderId: string
@@ -11,7 +12,7 @@ export type ApiEndpointPurchase = {
   status: "pending" | "paid" | "cancelled" | "expired" | "failed"
 }
 
-type ApiEndpointPurchaseRow = {
+type ApiEndpointPurchaseRow = RowDataPacket & {
   order_id: string
   payment_id: string | null
   user_id: string
@@ -19,12 +20,6 @@ type ApiEndpointPurchaseRow = {
   endpoint_name: string
   amount_paise: number | string
   status: ApiEndpointPurchase["status"]
-}
-
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
 }
 
 function toPurchase(row: ApiEndpointPurchaseRow): ApiEndpointPurchase {
@@ -39,32 +34,22 @@ function toPurchase(row: ApiEndpointPurchaseRow): ApiEndpointPurchase {
   }
 }
 
-const purchaseColumns = "order_id, payment_id, user_id, endpoint_id, endpoint_name, amount_paise, status"
-
 export async function listPaidApiEndpointIds(userId: string): Promise<string[]> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoint_purchases")
-    .select("endpoint_id")
-    .eq("user_id", userId)
-    .eq("status", "paid")
-    .limit(500)
-
-  if (error) throw error
-  return [...new Set((data ?? []).map((row) => row.endpoint_id))]
+  const rows = await selectMysqlRows<RowDataPacket & { endpoint_id: string }>(
+    `SELECT endpoint_id FROM api_endpoint_purchases
+     WHERE user_id = ? AND status = 'paid' LIMIT 500`,
+    [userId],
+  )
+  return [...new Set(rows.map((row) => row.endpoint_id))]
 }
 
 export async function hasPaidApiEndpointAccess(userId: string, endpointId: string): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoint_purchases")
-    .select("order_id")
-    .eq("user_id", userId)
-    .eq("endpoint_id", endpointId)
-    .eq("status", "paid")
-    .limit(1)
-    .maybeSingle()
-
-  if (error) throw error
-  return Boolean(data)
+  const rows = await selectMysqlRows<RowDataPacket & { order_id: string }>(
+    `SELECT order_id FROM api_endpoint_purchases
+     WHERE user_id = ? AND endpoint_id = ? AND status = 'paid' LIMIT 1`,
+    [userId, endpointId],
+  )
+  return rows.length > 0
 }
 
 export async function savePendingApiEndpointPurchase(purchase: {
@@ -74,34 +59,22 @@ export async function savePendingApiEndpointPurchase(purchase: {
   endpointName: string
   amountPaise: number
 }): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoint_purchases")
-    .insert({
-      order_id: purchase.orderId,
-      user_id: purchase.userId,
-      endpoint_id: purchase.endpointId,
-      endpoint_name: purchase.endpointName,
-      amount_paise: purchase.amountPaise,
-      currency: "INR",
-      status: "pending",
-    })
-    .select("order_id")
-    .maybeSingle()
-
-  if (error) throw error
-  return Boolean(data)
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `INSERT INTO api_endpoint_purchases
+      (order_id, user_id, endpoint_id, endpoint_name, amount_paise, currency, status)
+     VALUES (?, ?, ?, ?, ?, 'INR', 'pending')`,
+    [purchase.orderId, purchase.userId, purchase.endpointId, purchase.endpointName, purchase.amountPaise],
+  )
+  return result.affectedRows === 1
 }
 
 export async function getApiEndpointPurchase(orderId: string, userId: string): Promise<ApiEndpointPurchase | null> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoint_purchases")
-    .select(purchaseColumns)
-    .eq("order_id", orderId)
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  if (error) throw error
-  return data ? toPurchase(data as ApiEndpointPurchaseRow) : null
+  const [row] = await selectMysqlRows<ApiEndpointPurchaseRow>(
+    `SELECT order_id, payment_id, user_id, endpoint_id, endpoint_name, amount_paise, status
+     FROM api_endpoint_purchases WHERE order_id = ? AND user_id = ? LIMIT 1`,
+    [orderId, userId],
+  )
+  return row ? toPurchase(row) : null
 }
 
 export async function savePaidApiEndpointPurchase(purchase: {
@@ -111,19 +84,14 @@ export async function savePaidApiEndpointPurchase(purchase: {
   endpointId: string
   amountPaise: number
 }): Promise<boolean> {
-  const client = getAdminClient()
-  const { data, error } = await client
-    .from("api_endpoint_purchases")
-    .update({ payment_id: purchase.paymentId, status: "paid", purchased_at: new Date().toISOString() })
-    .eq("order_id", purchase.orderId)
-    .eq("user_id", purchase.userId)
-    .eq("endpoint_id", purchase.endpointId)
-    .eq("amount_paise", purchase.amountPaise)
-    .in("status", ["pending", "cancelled", "expired", "failed"])
-    .select("order_id")
-
-  if (error) throw error
-  if ((data?.length ?? 0) > 0) return true
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `UPDATE api_endpoint_purchases
+     SET payment_id = ?, status = 'paid', purchased_at = CURRENT_TIMESTAMP(3)
+     WHERE order_id = ? AND user_id = ? AND endpoint_id = ? AND amount_paise = ?
+       AND status IN ('pending', 'cancelled', 'expired', 'failed')`,
+    [purchase.paymentId, purchase.orderId, purchase.userId, purchase.endpointId, purchase.amountPaise],
+  )
+  if (result.affectedRows > 0) return true
 
   const existing = await getApiEndpointPurchase(purchase.orderId, purchase.userId)
   return existing?.paymentId === purchase.paymentId &&
@@ -137,17 +105,12 @@ export async function markApiEndpointPurchaseStopped(
   userId: string,
   status: "cancelled" | "failed",
 ): Promise<boolean> {
-  const client = getAdminClient()
-  const { data, error } = await client
-    .from("api_endpoint_purchases")
-    .update({ status })
-    .eq("order_id", orderId)
-    .eq("user_id", userId)
-    .eq("status", "pending")
-    .select("order_id")
-
-  if (error) throw error
-  if ((data?.length ?? 0) > 0) return true
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `UPDATE api_endpoint_purchases SET status = ?
+     WHERE order_id = ? AND user_id = ? AND status = 'pending'`,
+    [status, orderId, userId],
+  )
+  if (result.affectedRows > 0) return true
 
   const existing = await getApiEndpointPurchase(orderId, userId)
   return existing?.status === status
