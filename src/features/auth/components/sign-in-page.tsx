@@ -80,8 +80,15 @@ export function SignInPage() {
       return () => controller.abort()
     }
 
+    const timeout = window.setTimeout(() => {
+      controller.abort()
+      setSessionWarning("We could not check for an existing session. You can still sign in below.")
+      setCheckingSession(false)
+    }, 8000)
+
     fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
       .then((response) => {
+        window.clearTimeout(timeout)
         if (response.ok) {
           window.location.replace("/")
           return

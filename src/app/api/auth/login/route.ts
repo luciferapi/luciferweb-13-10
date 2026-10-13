@@ -28,8 +28,15 @@ export async function POST(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    if (await getOtpLoginTypeByEmail(parsed.data.email)) {
-      return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 })
+    try {
+      if (await getOtpLoginTypeByEmail(parsed.data.email)) {
+        return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 })
+      }
+    } catch (error) {
+      if (!(error instanceof Error && error.message === "Supabase server credentials are not configured.")) {
+        throw error
+      }
+      console.error("Skipping privileged-account lookup because Supabase admin credentials are unavailable.")
     }
 
     const user = await authenticateUser(parsed.data.email, parsed.data.password)

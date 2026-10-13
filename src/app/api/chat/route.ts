@@ -4,7 +4,9 @@ import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
-const OPENROUTER_URL = process.env.OPENROUTER_URL ?? "https://openrouter.ai/api/v1/chat/completions"
+import { getOpenRouterConfig } from "@/lib/mysql"
+
+const { url: OPENROUTER_URL } = getOpenRouterConfig()
 const DEFAULT_MODEL = "openai/gpt-4o"
 const ALLOWED_MODELS = new Set([
   "google/gemini-2.5-flash",
@@ -120,7 +122,7 @@ export async function POST(request: Request) {
     })
     if (rateLimitResponse) return rateLimitResponse
 
-    const apiKey = process.env.OPENROUTER_API_KEY_2 ?? process.env.OPENROUTER_API_KEY
+    const { apiKey } = getOpenRouterConfig()
 
     if (!apiKey) {
       return NextResponse.json({ error: "OpenRouter API key is not configured." }, { status: 500 })
