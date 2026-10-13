@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, Search } from "lucide-react"
 import { PROJECT_CATEGORIES, type Project } from "@/features/projects/server/projects"
-import { parsePriceToPaise } from "@/features/projects/server/project-pricing"
+import { formatPriceInr, parsePriceToPaise } from "@/features/projects/server/project-pricing"
 import { ProjectCheckout } from "@/features/projects/components/project-checkout"
 
 export function ProjectSearch({
@@ -85,7 +85,7 @@ export function ProjectSearch({
               </Link>
               {amountPaise ? (
                 <div className="border-t border-border px-4 pb-4 sm:px-5">
-                  <ProjectCheckout projectId={code} title={title} amountPaise={amountPaise} purchaseLabel={`Buy project · ${project.price}`} />
+                  <ProjectCheckout projectId={code} title={title} amountPaise={amountPaise} purchaseLabel={`Buy · ${formatPriceInr(amountPaise)}`} />
                 </div>
               ) : null}
             </article>

@@ -71,7 +71,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
                 projectId={project.code}
                 title={project.title}
                 amountPaise={amountPaise}
-                purchaseLabel={`Buy project · ${formatPriceInr(amountPaise)}`}
+                purchaseLabel={`Buy · ${formatPriceInr(amountPaise)}`}
               />
             ) : null}
 
