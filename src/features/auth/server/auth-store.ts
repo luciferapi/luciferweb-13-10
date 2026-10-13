@@ -1,8 +1,17 @@
 import "server-only"
-import { createHash, createHmac, randomBytes, randomInt, randomUUID, scrypt as scryptCallback, timingSafeEqual } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from "node:crypto"
 import { promisify } from "node:util"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
-import { getSupabaseAuthServerClient } from "@/lib/supabase-auth-server"
+import type { ResultSetHeader, RowDataPacket } from "mysql2"
+import type { PoolConnection } from "mysql2/promise"
+import { getMysqlPool, selectMysqlRows, withMysqlTransaction } from "@/lib/mysql"
 import { generatePublicUserId } from "@/features/auth/server/public-user-id"
 import { SignupIpUnavailableError } from "@/features/auth/server/signup-ip"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
@@ -14,12 +23,11 @@ const EMAIL_OTP_RESEND_SECONDS = 60
 const EMAIL_REGISTRATION_DURATION_SECONDS = 30 * 60
 const EMAIL_OTP_MAX_ATTEMPTS = 5
 const OWNER_LOGIN_OTP_DURATION_SECONDS = 5 * 60
-  const OWNER_LOGIN_OTP_RESEND_SECONDS = 0
+const OWNER_LOGIN_OTP_RESEND_SECONDS = 0
 const OWNER_LOGIN_OTP_MAX_ATTEMPTS = 5
 const PASSWORD_RESET_DURATION_SECONDS = 60 * 60
-const PASSWORD_RESET_CLAIM_DURATION_SECONDS = 10 * 60
 
-type ProfileRow = {
+type ProfileRow = RowDataPacket & {
   id: string
   public_uid: string
   name: string
@@ -31,14 +39,25 @@ type ProfileRow = {
   date_of_birth_edit_used: boolean | number
 }
 
-type RpcResult = {
-  status: string
-  name?: string
-  retry_after_seconds?: number
-  auth_user_id?: string
-  discard_auth_user?: boolean
-  user?: ProfileRow
-  user_id?: string
+type PendingRegistrationRow = RowDataPacket & {
+  email: string
+  auth_user_id: string
+  password_hash: string
+  name: string
+  date_of_birth: string | Date | null
+  signup_ip_hash: string | null
+  referral_code: string | null
+  otp_hash: string
+  expires_at: string | Date
+  resend_after: string | Date
+  registration_expires_at: string | Date
+  attempts: number | string
+}
+
+type SessionRecord = {
+  token: string
+  tokenHash: string
+  expiresAt: Date
 }
 
 export class SignupIpAlreadyUsedError extends Error {
@@ -60,30 +79,6 @@ export type AuthUser = {
   dateOfBirthEditUsed: boolean
 }
 
-function requireAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase server credentials are not configured.")
-  return client
-}
-
-async function callRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await requireAdminClient().rpc(name, args as never)
-  if (error) throw error
-  return data as T
-}
-
-function throwIfSignupIpConflict(error: unknown): void {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof error.message === "string" &&
-    /signup_ip_hash|signup ip/i.test(error.message)
-  ) {
-    throw new SignupIpAlreadyUsedError()
-  }
-}
-
 function normalizeDateOfBirth(value: string | Date | null | undefined): string | null {
   if (value == null) return null
   return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10)
@@ -103,15 +98,25 @@ function toAuthUser(row: ProfileRow): AuthUser {
   }
 }
 
-function otpHash(otp: string): string {
-  const key = process.env.AUTH_OTP_HMAC_SECRET?.trim() ||
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-  if (!key) throw new Error("A server-only Supabase secret is required to protect OTP records.")
-  return createHmac("sha256", key).update(otp).digest("hex")
+function getOtpHashSecret(): string {
+  const secret = process.env.AUTH_OTP_HMAC_SECRET?.trim()
+  if (!secret) throw new Error("AUTH_OTP_HMAC_SECRET is required to protect one-time codes.")
+  return secret
 }
 
-function sessionToken() {
+function otpHash(otp: string): string {
+  return createHmac("sha256", getOtpHashSecret()).update(otp).digest("hex")
+}
+
+function equalHash(left: string, right: string): boolean {
+  const leftBytes = Buffer.from(left, "hex")
+  const rightBytes = Buffer.from(right, "hex")
+  return leftBytes.length === rightBytes.length &&
+    leftBytes.length > 0 &&
+    timingSafeEqual(leftBytes, rightBytes)
+}
+
+function sessionToken(): SessionRecord {
   const token = randomBytes(32).toString("base64url")
   return {
     token,
@@ -120,14 +125,83 @@ function sessionToken() {
   }
 }
 
-function rpcUser(result: RpcResult): AuthUser {
-  if (!result.user) throw new Error("The Supabase auth RPC did not return a profile.")
-  return toAuthUser(result.user)
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error &&
-    (error.code === "23505" || error.code === "user_already_exists")
+function dateValue(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
+async function findProfileById(
+  connection: PoolConnection,
+  userId: string,
+  forUpdate = false,
+): Promise<ProfileRow | null> {
+  const [rows] = await connection.execute<ProfileRow[]>(
+    `SELECT id, public_uid, name, email, date_of_birth, telegram_username, x_username,
+            name_edit_used, date_of_birth_edit_used
+     FROM auth_users WHERE id = ? LIMIT 1${forUpdate ? " FOR UPDATE" : ""}`,
+    [userId],
+  )
+  return rows[0] ?? null
+}
+
+async function createSessionRecord(
+  connection: PoolConnection,
+  userId: string,
+  authMethod: string,
+  session: SessionRecord,
+): Promise<void> {
+  await connection.execute(
+    `INSERT INTO auth_sessions (token_hash, user_id, expires_at, auth_method)
+     VALUES (?, ?, ?, ?)`,
+    [session.tokenHash, userId, session.expiresAt, authMethod],
+  )
+}
+
+async function attachReferral(
+  connection: PoolConnection,
+  referralCode: string | null,
+  refereeId: string,
+): Promise<void> {
+  if (!referralCode) return
+  const [owners] = await connection.execute<(RowDataPacket & { user_id: string })[]>(
+    "SELECT user_id FROM referral_profiles WHERE referral_code = ? LIMIT 1",
+    [referralCode.trim().toUpperCase()],
+  )
+  const ownerId = owners[0]?.user_id
+  if (!ownerId || ownerId === refereeId) return
+
+  const [settingsRows] = await connection.execute<(RowDataPacket & {
+    valid_until: Date | string | null
+    max_referrals: number | string | null
+  })[]>(
+    `SELECT valid_until, max_referrals FROM referral_program_settings
+     WHERE program_id = 1 LIMIT 1`,
+  )
+  const settings = settingsRows[0]
+  if (!settings) return
+  if (settings.valid_until && dateValue(settings.valid_until).getTime() <= Date.now()) return
+
+  if (settings.max_referrals !== null) {
+    const [counts] = await connection.execute<(RowDataPacket & { referral_count: number | string })[]>(
+      "SELECT COUNT(*) AS referral_count FROM referrals WHERE referrer_id = ?",
+      [ownerId],
+    )
+    if (Number(counts[0]?.referral_count ?? 0) >= Number(settings.max_referrals)) return
+  }
+
+  await connection.execute(
+    `INSERT INTO referrals (id, referrer_id, referee_id, status, status_reason)
+     VALUES (?, ?, ?, 'pending', 'Awaiting manual review')`,
+    [randomUUID(), ownerId, refereeId],
+  )
+}
+
+function isDuplicateEntry(error: unknown): boolean {
+  return typeof error === "object" && error !== null &&
+    "code" in error && error.code === "ER_DUP_ENTRY"
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -154,44 +228,34 @@ export async function createUser(input: {
   dateOfBirth?: string
   signupIpHash: string
 }): Promise<AuthUser> {
-  const admin = requireAdminClient()
-  const email = input.email.trim().toLowerCase()
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password: input.password,
-    email_confirm: true,
-    user_metadata: { name: input.name },
-  })
-  if (error) {
-    throwIfSignupIpConflict(error)
-    throw error
-  }
-  if (!data.user) throw new Error("Supabase Auth did not return the new user.")
-
-  const profileId = randomUUID()
-  const publicUid = generatePublicUserId()
+  const id = randomUUID()
+  const email = normalizeEmail(input.email)
+  const passwordHash = await hashPassword(input.password)
   try {
-    const result = await callRpc<RpcResult>("auth_create_user_profile", {
-      p_profile_id: profileId,
-      p_supabase_user_id: data.user.id,
-      p_public_uid: publicUid,
-      p_name: input.name,
-      p_email: email,
-      p_date_of_birth: input.dateOfBirth ?? null,
-      p_signup_ip_hash: input.signupIpHash,
+    return await withMysqlTransaction(async (connection) => {
+      const [duplicateIps] = await connection.execute<RowDataPacket[]>(
+        "SELECT id FROM auth_users WHERE signup_ip_hash = ? LIMIT 1",
+        [input.signupIpHash],
+      )
+      if (duplicateIps.length > 0) throw new SignupIpAlreadyUsedError()
+      await connection.execute(
+        `INSERT INTO auth_users (id, public_uid, name, email, password_hash, date_of_birth, signup_ip_hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, generatePublicUserId(), input.name, email, passwordHash, input.dateOfBirth ?? null, input.signupIpHash],
+      )
+      await connection.execute(
+        "INSERT INTO auth_identities (provider, provider_user_id, user_id) VALUES ('password', ?, ?)",
+        [id, id],
+      )
+      const profile = await findProfileById(connection, id)
+      if (!profile) throw new Error("The MySQL account record could not be read after creation.")
+      return toAuthUser(profile)
     })
-    if (result.status === "ip-already-registered") throw new SignupIpAlreadyUsedError()
-    if (result.status !== "created" || !result.user) {
-      throw new Error("The Supabase profile RPC did not create the account.")
+  } catch (error) {
+    if (isDuplicateEntry(error)) {
+      throw new Error("A user with this email address has already been registered.")
     }
-    return toAuthUser(result.user)
-  } catch (caught) {
-    await admin.auth.admin.deleteUser(data.user.id)
-    if (caught instanceof SignupIpAlreadyUsedError) {
-      throw caught
-    }
-    throwIfSignupIpConflict(caught)
-    throw caught
+    throw error
   }
 }
 
@@ -203,45 +267,50 @@ export async function beginEmailVerification(input: {
   signupIpHash: string
   referralCode?: string
 }): Promise<{ otp: string }> {
-  const admin = requireAdminClient()
-  const email = input.email.trim().toLowerCase()
+  const email = normalizeEmail(input.email)
   const otp = randomInt(0, 1_000_000).toString().padStart(6, "0")
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password: input.password,
-    email_confirm: true,
-    user_metadata: { name: input.name },
-  })
-  if (error) {
-    throwIfSignupIpConflict(error)
-    throw error
-  }
-  if (!data.user) throw new Error("Supabase Auth did not return the pending user.")
-
   const now = Date.now()
+  const passwordHash = await hashPassword(input.password)
   try {
-    const result = await callRpc<RpcResult>("auth_begin_email_verification", {
-      p_auth_user_id: data.user.id,
-      p_email: email,
-      p_name: input.name,
-      p_date_of_birth: input.dateOfBirth ?? null,
-      p_signup_ip_hash: input.signupIpHash,
-      p_referral_code: input.referralCode ?? null,
-      p_otp_hash: otpHash(otp),
-      p_otp_expires_at: new Date(now + EMAIL_OTP_DURATION_SECONDS * 1000).toISOString(),
-      p_resend_after: new Date(now + EMAIL_OTP_RESEND_SECONDS * 1000).toISOString(),
-      p_registration_expires_at: new Date(now + EMAIL_REGISTRATION_DURATION_SECONDS * 1000).toISOString(),
+    await withMysqlTransaction(async (connection) => {
+      const [existingUsers] = await connection.execute<RowDataPacket[]>(
+        "SELECT id FROM auth_users WHERE email = ? LIMIT 1",
+        [email],
+      )
+      if (existingUsers.length > 0) {
+        throw new Error("A user with this email address has already been registered.")
+      }
+      const [usedIps] = await connection.execute<RowDataPacket[]>(
+        "SELECT id FROM auth_users WHERE signup_ip_hash = ? LIMIT 1",
+        [input.signupIpHash],
+      )
+      if (usedIps.length > 0) throw new SignupIpAlreadyUsedError()
+      await connection.execute(
+        `INSERT INTO auth_pending_registrations
+          (email, auth_user_id, password_hash, name, date_of_birth, signup_ip_hash,
+           referral_code, otp_hash, expires_at, resend_after, registration_expires_at, attempts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        [
+          email,
+          randomUUID(),
+          passwordHash,
+          input.name,
+          input.dateOfBirth ?? null,
+          input.signupIpHash,
+          input.referralCode?.trim().toUpperCase() || null,
+          otpHash(otp),
+          new Date(now + EMAIL_OTP_DURATION_SECONDS * 1000),
+          new Date(now + EMAIL_OTP_RESEND_SECONDS * 1000),
+          new Date(now + EMAIL_REGISTRATION_DURATION_SECONDS * 1000),
+        ],
+      )
     })
-    if (result.status === "ip-already-registered") throw new SignupIpAlreadyUsedError()
-    if (result.status !== "sent") throw new Error("The Supabase registration RPC did not save the OTP.")
     return { otp }
-  } catch (caught) {
-    await admin.auth.admin.deleteUser(data.user.id)
-    if (caught instanceof SignupIpAlreadyUsedError) {
-      throw caught
+  } catch (error) {
+    if (isDuplicateEntry(error)) {
+      throw new Error("A user with this email address has already been registered.")
     }
-    throwIfSignupIpConflict(caught)
-    throw caught
+    throw error
   }
 }
 
@@ -252,55 +321,51 @@ export async function resendPendingRegistrationOtp(
   | { status: "cooldown"; retryAfterSeconds: number }
   | { status: "missing" | "expired" }
 > {
+  const normalizedEmail = normalizeEmail(email)
   const otp = randomInt(0, 1_000_000).toString().padStart(6, "0")
-  const result = await callRpc<RpcResult>("auth_resend_pending_registration_otp", {
-    p_email: email.trim().toLowerCase(),
-    p_otp_hash: otpHash(otp),
-    p_otp_duration_seconds: EMAIL_OTP_DURATION_SECONDS,
-    p_resend_seconds: EMAIL_OTP_RESEND_SECONDS,
-    p_max_attempts: EMAIL_OTP_MAX_ATTEMPTS,
-  })
+  return withMysqlTransaction(async (connection) => {
+    const [rows] = await connection.execute<PendingRegistrationRow[]>(
+      "SELECT * FROM auth_pending_registrations WHERE email = ? FOR UPDATE",
+      [normalizedEmail],
+    )
+    const pending = rows[0]
+    if (!pending) return { status: "missing" as const }
 
-  if (result.status === "sent") {
-    if (!result.name) throw new Error("The Supabase resend RPC did not return the pending user's name.")
-    return { status: "sent", otp, name: result.name }
-  }
-  if (result.status === "cooldown") {
-    return { status: "cooldown", retryAfterSeconds: Number(result.retry_after_seconds ?? 0) }
-  }
-  if (result.status === "expired") {
-    if (result.auth_user_id) await requireAdminClient().auth.admin.deleteUser(result.auth_user_id)
-    return { status: "expired" }
-  }
-  return { status: "missing" }
+    const now = Date.now()
+    const registrationExpiry = dateValue(pending.registration_expires_at).getTime()
+    if (registrationExpiry <= now || Number(pending.attempts) >= EMAIL_OTP_MAX_ATTEMPTS) {
+      await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+      return { status: "expired" as const }
+    }
+
+    const resendAfter = dateValue(pending.resend_after).getTime()
+    if (resendAfter > now) {
+      return {
+        status: "cooldown" as const,
+        retryAfterSeconds: Math.max(1, Math.ceil((resendAfter - now) / 1000)),
+      }
+    }
+
+    await connection.execute(
+      `UPDATE auth_pending_registrations
+       SET otp_hash = ?, expires_at = ?, resend_after = ?, attempts = 0
+       WHERE email = ?`,
+      [
+        otpHash(otp),
+        new Date(now + EMAIL_OTP_DURATION_SECONDS * 1000),
+        new Date(now + EMAIL_OTP_RESEND_SECONDS * 1000),
+        normalizedEmail,
+      ],
+    )
+    return { status: "sent" as const, otp, name: pending.name }
+  })
 }
 
 export async function discardPendingRegistration(email: string): Promise<void> {
-  const admin = requireAdminClient()
-  const normalizedEmail = email.trim().toLowerCase()
-  const { data, error } = await admin
-    .from("auth_pending_registrations")
-    .select("auth_user_id")
-    .eq("email", normalizedEmail)
-    .maybeSingle()
-  if (error) throw error
-
-  const { error: deleteError } = await admin
-    .from("auth_pending_registrations")
-    .delete()
-    .eq("email", normalizedEmail)
-  if (deleteError) throw deleteError
-
-  const authUserId = data?.auth_user_id as string | undefined
-  if (authUserId) {
-    const { data: profile, error: profileError } = await admin
-      .from("auth_users")
-      .select("id")
-      .eq("id", authUserId)
-      .maybeSingle()
-    if (profileError) throw profileError
-    if (!profile) await admin.auth.admin.deleteUser(authUserId)
-  }
+  await getMysqlPool().execute(
+    "DELETE FROM auth_pending_registrations WHERE email = ?",
+    [normalizeEmail(email)],
+  )
 }
 
 export async function verifyEmailRegistration(
@@ -310,133 +375,155 @@ export async function verifyEmailRegistration(
   | { status: "verified"; user: AuthUser; token: string; expiresAt: Date }
   | { status: "invalid" | "missing" | "expired" | "attempts-exceeded" | "already-registered" | "ip-already-registered" }
 > {
+  const normalizedEmail = normalizeEmail(email)
   const session = sessionToken()
-  const profileId = randomUUID()
-  const result = await callRpc<RpcResult>("auth_verify_email_registration", {
-    p_email: email.trim().toLowerCase(),
-    p_otp_hash: otpHash(otp),
-    p_profile_id: profileId,
-    p_session_token_hash: session.tokenHash,
-    p_session_expires_at: session.expiresAt.toISOString(),
-    p_public_uid: generatePublicUserId(),
-    p_max_attempts: EMAIL_OTP_MAX_ATTEMPTS,
-  })
-  if (result.discard_auth_user && result.auth_user_id) {
-    await requireAdminClient().auth.admin.deleteUser(result.auth_user_id)
-  }
-  if (result.status !== "verified") {
-    if (
-      result.status === "invalid" ||
-      result.status === "missing" ||
-      result.status === "expired" ||
-      result.status === "attempts-exceeded" ||
-      result.status === "already-registered" ||
-      result.status === "ip-already-registered"
-    ) {
-      return { status: result.status }
+  const result = await withMysqlTransaction(async (connection) => {
+    const [rows] = await connection.execute<PendingRegistrationRow[]>(
+      "SELECT * FROM auth_pending_registrations WHERE email = ? FOR UPDATE",
+      [normalizedEmail],
+    )
+    const pending = rows[0]
+    if (!pending) return { status: "missing" as const }
+
+    const now = Date.now()
+    if (dateValue(pending.registration_expires_at).getTime() <= now) {
+      await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+      return { status: "expired" as const }
     }
-    throw new Error("The Supabase email verification RPC returned an unknown status.")
-  }
-  return {
-    status: "verified",
-    user: rpcUser(result),
-    token: session.token,
-    expiresAt: session.expiresAt,
-  }
+    if (dateValue(pending.expires_at).getTime() <= now) {
+      return { status: "expired" as const }
+    }
+    if (Number(pending.attempts) >= EMAIL_OTP_MAX_ATTEMPTS) {
+      await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+      return { status: "attempts-exceeded" as const }
+    }
+    if (!equalHash(pending.otp_hash, otpHash(otp))) {
+      const attempts = Number(pending.attempts) + 1
+      if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+        await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+        return { status: "attempts-exceeded" as const }
+      }
+      await connection.execute(
+        "UPDATE auth_pending_registrations SET attempts = ? WHERE email = ?",
+        [attempts, normalizedEmail],
+      )
+      return { status: "invalid" as const }
+    }
+
+    const [duplicates] = await connection.execute<RowDataPacket[]>(
+      "SELECT id FROM auth_users WHERE email = ? LIMIT 1",
+      [normalizedEmail],
+    )
+    if (duplicates.length > 0) {
+      await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+      return { status: "already-registered" as const }
+    }
+    if (pending.signup_ip_hash) {
+      const [usedIps] = await connection.execute<RowDataPacket[]>(
+        "SELECT id FROM auth_users WHERE signup_ip_hash = ? LIMIT 1",
+        [pending.signup_ip_hash],
+      )
+      if (usedIps.length > 0) {
+        await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+        return { status: "ip-already-registered" as const }
+      }
+    }
+
+    const profileId = pending.auth_user_id
+    const publicUid = generatePublicUserId()
+    await connection.execute(
+      `INSERT INTO auth_users
+        (id, public_uid, name, email, password_hash, date_of_birth, signup_ip_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        profileId,
+        publicUid,
+        pending.name,
+        normalizedEmail,
+        pending.password_hash,
+        pending.date_of_birth,
+        pending.signup_ip_hash,
+      ],
+    )
+    await connection.execute(
+      "INSERT INTO auth_identities (provider, provider_user_id, user_id) VALUES ('password', ?, ?)",
+      [profileId, profileId],
+    )
+    await attachReferral(connection, pending.referral_code, profileId)
+    await createSessionRecord(connection, profileId, "password", session)
+    await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
+    const profile = await findProfileById(connection, profileId)
+    if (!profile) throw new Error("The registered account could not be read after creation.")
+    return { status: "verified" as const, user: toAuthUser(profile) }
+  })
+
+  if (result.status !== "verified") return result
+  return { ...result, token: session.token, expiresAt: session.expiresAt }
 }
 
 export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
-  const { data, error } = await getSupabaseAuthServerClient().auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password,
-  })
-  if (error) {
-    if (
-      "code" in error &&
-      ["invalid_credentials", "user_not_found", "email_not_confirmed"].includes(String(error.code))
-    ) {
-      return null
-    }
-    throw error
-  }
-  if (!data.user) return null
-
-  const { data: identity, error: identityError } = await requireAdminClient()
-    .from("auth_identities")
-    .select("user_id")
-    .in("provider", ["email", "supabase"])
-    .eq("provider_user_id", data.user.id)
-    .maybeSingle()
-  if (identityError) throw identityError
-  if (!identity?.user_id) return null
-
-  const { data: profile, error: profileError } = await requireAdminClient()
-    .from("auth_users")
-    .select("*")
-    .eq("id", identity.user_id)
-    .maybeSingle()
-  if (profileError) throw profileError
-  return profile ? toAuthUser(profile as ProfileRow) : null
-}
-
-export async function findUserBySupabaseAuthId(authUserId: string): Promise<AuthUser | null> {
-  const admin = getSupabaseAdminClient()
-  if (!admin) return null
-  const { data: identity, error: identityError } = await admin
-    .from("auth_identities")
-    .select("user_id")
-    .in("provider", ["email", "supabase"])
-    .eq("provider_user_id", authUserId)
-    .maybeSingle()
-  if (identityError) throw identityError
-  if (!identity) return null
-
-  const { data: profile, error: profileError } = await admin
-    .from("auth_users")
-    .select("*")
-    .eq("id", identity.user_id)
-    .maybeSingle()
-  if (profileError) throw profileError
-  return profile ? toAuthUser(profile as ProfileRow) : null
+  const normalizedEmail = normalizeEmail(email)
+  const [rows] = await getMysqlPool().execute<(ProfileRow & {
+    password_hash: string | null
+    is_blocked: boolean | number
+  })[]>(
+    `SELECT id, public_uid, name, email, date_of_birth, telegram_username, x_username,
+            name_edit_used, date_of_birth_edit_used, password_hash, is_blocked
+     FROM auth_users WHERE email = ? LIMIT 1`,
+    [normalizedEmail],
+  )
+  const user = rows[0]
+  if (!user || user.is_blocked || !user.password_hash) return null
+  return await verifyPassword(password, user.password_hash) ? toAuthUser(user) : null
 }
 
 export type OtpLoginType = "owner" | "staff"
 
 async function getOtpLoginType(
   user: { id: string; email: string | null },
+  connection?: PoolConnection,
 ): Promise<OtpLoginType | null> {
   if (isOwnerEmail(user.email)) return "owner"
-
-  const { data: assignment, error } = await requireAdminClient()
-    .from("owner_admins")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle()
-  if (error) throw error
-  return assignment ? "staff" : null
+  const rows = connection
+    ? (await connection.execute<(RowDataPacket & { user_id: string })[]>(
+        "SELECT user_id FROM owner_admins WHERE user_id = ? LIMIT 1",
+        [user.id],
+      ))[0]
+    : await selectMysqlRows<RowDataPacket & { user_id: string }>(
+        "SELECT user_id FROM owner_admins WHERE user_id = ? LIMIT 1",
+        [user.id],
+      )
+  return rows.length > 0 ? "staff" : null
 }
 
 export async function getOtpLoginTypeByEmail(email: string): Promise<OtpLoginType | null> {
-  const normalizedEmail = email.trim().toLowerCase()
+  const normalizedEmail = normalizeEmail(email)
   if (isOwnerEmail(normalizedEmail)) return "owner"
-
-  const { data: user, error } = await requireAdminClient()
-    .from("auth_users")
-    .select("id,email,is_blocked")
-    .eq("email", normalizedEmail)
-    .maybeSingle()
-  if (error) throw error
-  return user ? getOtpLoginType(user) : null
+  const rows = await selectMysqlRows<RowDataPacket & {
+    id: string
+    email: string | null
+    is_blocked: boolean | number
+  }>(
+    "SELECT id, email, is_blocked FROM auth_users WHERE email = ? LIMIT 1",
+    [normalizedEmail],
+  )
+  const user = rows[0]
+  if (!user || user.is_blocked) return null
+  return getOtpLoginType(user)
 }
 
 export async function getOtpLoginTypeByUserId(userId: string): Promise<OtpLoginType | null> {
-  const { data: user, error } = await requireAdminClient()
-    .from("auth_users")
-    .select("id,email,is_blocked")
-    .eq("id", userId)
-    .maybeSingle()
-  if (error) throw error
-  return user ? getOtpLoginType(user) : null
+  const rows = await selectMysqlRows<RowDataPacket & {
+    id: string
+    email: string | null
+    is_blocked: boolean | number
+  }>(
+    "SELECT id, email, is_blocked FROM auth_users WHERE id = ? LIMIT 1",
+    [userId],
+  )
+  const user = rows[0]
+  if (!user || user.is_blocked) return null
+  return getOtpLoginType(user)
 }
 
 export async function requestPrivilegedLoginOtp(
@@ -446,38 +533,56 @@ export async function requestPrivilegedLoginOtp(
   | { status: "missing" }
   | { status: "cooldown"; retryAfterSeconds: number }
 > {
-  const normalizedEmail = email.trim().toLowerCase()
-
-  const admin = requireAdminClient()
-  const { data: user, error } = await admin
-    .from("auth_users")
-    .select("id,name,email,is_blocked")
-    .eq("email", normalizedEmail)
-    .maybeSingle()
-  if (error) throw error
+  const normalizedEmail = normalizeEmail(email)
+  const rows = await selectMysqlRows<RowDataPacket & {
+    id: string
+    name: string
+    email: string | null
+    is_blocked: boolean | number
+  }>(
+    "SELECT id, name, email, is_blocked FROM auth_users WHERE email = ? LIMIT 1",
+    [normalizedEmail],
+  )
+  const user = rows[0]
   if (!user || user.is_blocked || !await getOtpLoginType(user)) return { status: "missing" }
 
   const otp = randomInt(0, 1_000_000).toString().padStart(6, "0")
-  const expiresAt = new Date(Date.now() + OWNER_LOGIN_OTP_DURATION_SECONDS * 1000)
-  const result = await callRpc<RpcResult>("auth_request_owner_login_otp", {
-    p_email: normalizedEmail,
-    p_user_id: user.id,
-    p_otp_hash: otpHash(otp),
-    p_expires_at: expiresAt.toISOString(),
-  })
-  if (result.status === "cooldown") {
-    return {
-      status: "cooldown",
-      retryAfterSeconds: Math.max(1, result.retry_after_seconds ?? OWNER_LOGIN_OTP_RESEND_SECONDS),
+  const now = Date.now()
+  return withMysqlTransaction(async (connection) => {
+    const [existingRows] = await connection.execute<(RowDataPacket & {
+      resend_after: Date | string
+    })[]>(
+      "SELECT resend_after FROM auth_owner_login_otps WHERE email = ? FOR UPDATE",
+      [normalizedEmail],
+    )
+    const resendAfter = existingRows[0] ? dateValue(existingRows[0].resend_after).getTime() : 0
+    if (resendAfter > now) {
+      return {
+        status: "cooldown" as const,
+        retryAfterSeconds: Math.max(1, Math.ceil((resendAfter - now) / 1000)),
+      }
     }
-  }
-  if (result.status !== "sent") return { status: "missing" }
-  return {
-    status: "sent",
-    otp,
-    name: user.name as string,
-    retryAfterSeconds: OWNER_LOGIN_OTP_RESEND_SECONDS,
-  }
+
+    await connection.execute(
+      `INSERT INTO auth_owner_login_otps (email, user_id, otp_hash, expires_at, resend_after, attempts)
+       VALUES (?, ?, ?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), otp_hash = VALUES(otp_hash),
+         expires_at = VALUES(expires_at), resend_after = VALUES(resend_after), attempts = 0`,
+      [
+        normalizedEmail,
+        user.id,
+        otpHash(otp),
+        new Date(now + OWNER_LOGIN_OTP_DURATION_SECONDS * 1000),
+        new Date(now + OWNER_LOGIN_OTP_RESEND_SECONDS * 1000),
+      ],
+    )
+    return {
+      status: "sent" as const,
+      otp,
+      name: user.name,
+      retryAfterSeconds: OWNER_LOGIN_OTP_RESEND_SECONDS,
+    }
+  })
 }
 
 export async function verifyPrivilegedLoginOtp(
@@ -487,33 +592,66 @@ export async function verifyPrivilegedLoginOtp(
   | { status: "verified"; user: AuthUser; token: string; expiresAt: Date }
   | { status: "invalid" | "missing" | "expired" | "attempts-exceeded" }
 > {
-  const normalizedEmail = email.trim().toLowerCase()
-
+  const normalizedEmail = normalizeEmail(email)
   const session = sessionToken()
-  const result = await callRpc<RpcResult>("auth_verify_owner_login_otp", {
-    p_email: normalizedEmail,
-    p_otp_hash: otpHash(otp),
-    p_session_token_hash: session.tokenHash,
-    p_session_expires_at: session.expiresAt.toISOString(),
-    p_max_attempts: OWNER_LOGIN_OTP_MAX_ATTEMPTS,
-  })
-  if (result.status !== "verified") {
-    if (
-      result.status === "invalid" ||
-      result.status === "missing" ||
-      result.status === "expired" ||
-      result.status === "attempts-exceeded"
-    ) {
-      return { status: result.status }
+  const result = await withMysqlTransaction(async (connection) => {
+    const [rows] = await connection.execute<(RowDataPacket & {
+      user_id: string
+      otp_hash: string
+      expires_at: Date | string
+      attempts: number | string
+    })[]>(
+      "SELECT user_id, otp_hash, expires_at, attempts FROM auth_owner_login_otps WHERE email = ? FOR UPDATE",
+      [normalizedEmail],
+    )
+    const otpRecord = rows[0]
+    if (!otpRecord) return { status: "missing" as const }
+    if (dateValue(otpRecord.expires_at).getTime() <= Date.now()) {
+      await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+      return { status: "expired" as const }
     }
-    throw new Error("The Supabase owner OTP RPC returned an unknown status.")
-  }
-  return {
-    status: "verified",
-    user: rpcUser(result),
-    token: session.token,
-    expiresAt: session.expiresAt,
-  }
+    if (Number(otpRecord.attempts) >= OWNER_LOGIN_OTP_MAX_ATTEMPTS) {
+      await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+      return { status: "attempts-exceeded" as const }
+    }
+    if (!equalHash(otpRecord.otp_hash, otpHash(otp))) {
+      const attempts = Number(otpRecord.attempts) + 1
+      if (attempts >= OWNER_LOGIN_OTP_MAX_ATTEMPTS) {
+        await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+        return { status: "attempts-exceeded" as const }
+      }
+      await connection.execute(
+        "UPDATE auth_owner_login_otps SET attempts = ? WHERE email = ?",
+        [attempts, normalizedEmail],
+      )
+      return { status: "invalid" as const }
+    }
+
+    const profile = await findProfileById(connection, otpRecord.user_id, true)
+    if (!profile) {
+      await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+      return { status: "missing" as const }
+    }
+    const [accountRows] = await connection.execute<(RowDataPacket & {
+      email: string | null
+      is_blocked: boolean | number
+    })[]>(
+      "SELECT email, is_blocked FROM auth_users WHERE id = ? LIMIT 1",
+      [profile.id],
+    )
+    const account = accountRows[0]
+    if (!account || account.is_blocked ||
+      !await getOtpLoginType({ id: profile.id, email: account.email }, connection)) {
+      await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+      return { status: "missing" as const }
+    }
+
+    await createSessionRecord(connection, profile.id, "email_otp", session)
+    await connection.execute("DELETE FROM auth_owner_login_otps WHERE email = ?", [normalizedEmail])
+    return { status: "verified" as const, user: toAuthUser(profile) }
+  })
+  if (result.status !== "verified") return result
+  return { ...result, token: session.token, expiresAt: session.expiresAt }
 }
 
 export type OAuthProvider = "google" | "twitter" | "telegram"
@@ -545,42 +683,64 @@ export async function getOrCreateOAuthUser(input: {
   if (input.allowCreate && !input.signupIpHash) throw new SignupIpUnavailableError()
 
   try {
-    const result = await callRpc<RpcResult>("auth_get_or_create_oauth_user", {
-      p_provider: input.provider,
-      p_provider_user_id: providerUserId,
-      p_name: name,
-      p_email: email,
-      p_email_verified: Boolean(input.emailVerified),
-      p_allow_create: Boolean(input.allowCreate),
-      p_date_of_birth: input.dateOfBirth ?? null,
-      p_referral_code: input.referralCode?.trim().toUpperCase() ?? null,
-      p_signup_ip_hash: input.signupIpHash ?? null,
-      p_public_uid: generatePublicUserId(),
+    return await withMysqlTransaction(async (connection) => {
+      const [identities] = await connection.execute<(RowDataPacket & { user_id: string })[]>(
+        `SELECT user_id FROM auth_identities
+         WHERE provider = ? AND provider_user_id = ? LIMIT 1`,
+        [input.provider, providerUserId],
+      )
+      if (identities[0]) {
+        const profile = await findProfileById(connection, identities[0].user_id)
+        if (!profile) throw new Error("The linked social identity has no account profile.")
+        return toAuthUser(profile)
+      }
+      if (!input.allowCreate) throw new OAuthSignupRequiredError()
+      if (input.signupIpHash) {
+        const [usedIps] = await connection.execute<RowDataPacket[]>(
+          "SELECT id FROM auth_users WHERE signup_ip_hash = ? LIMIT 1",
+          [input.signupIpHash],
+        )
+        if (usedIps.length > 0) throw new SignupIpAlreadyUsedError()
+      }
+      const userId = randomUUID()
+      await connection.execute(
+        `INSERT INTO auth_users
+          (id, public_uid, name, email, date_of_birth, signup_ip_hash)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          generatePublicUserId(),
+          name,
+          email,
+          input.dateOfBirth ?? null,
+          input.signupIpHash ?? null,
+        ],
+      )
+      await connection.execute(
+        `INSERT INTO auth_identities (provider, provider_user_id, user_id)
+         VALUES (?, ?, ?)`,
+        [input.provider, providerUserId, userId],
+      )
+      await attachReferral(connection, input.referralCode?.trim().toUpperCase() ?? null, userId)
+      const profile = await findProfileById(connection, userId)
+      if (!profile) throw new Error("The social account could not be read after creation.")
+      return toAuthUser(profile)
     })
-    if (result.status === "signup-required") throw new OAuthSignupRequiredError()
-    if (result.status === "ip-already-registered") throw new SignupIpAlreadyUsedError()
-    if (result.status !== "found" && result.status !== "created") {
-      throw new Error("The Supabase identity RPC returned an unknown status.")
-    }
-    return rpcUser(result)
   } catch (error) {
-    throwIfSignupIpConflict(error)
-    if (isUniqueViolation(error)) {
-      const { data, error: lookupError } = await requireAdminClient()
-        .from("auth_identities")
-        .select("user_id")
-        .eq("provider", input.provider)
-        .eq("provider_user_id", providerUserId)
-        .maybeSingle()
-      if (lookupError) throw lookupError
-      if (data?.user_id) {
-        const { data: profile, error: profileError } = await requireAdminClient()
-          .from("auth_users")
-          .select("*")
-          .eq("id", data.user_id)
-          .maybeSingle()
-        if (profileError) throw profileError
-        if (profile) return toAuthUser(profile as ProfileRow)
+    if (isDuplicateEntry(error)) {
+      const [identities] = await getMysqlPool().execute<(RowDataPacket & { user_id: string })[]>(
+        `SELECT user_id FROM auth_identities
+         WHERE provider = ? AND provider_user_id = ? LIMIT 1`,
+        [input.provider, providerUserId],
+      )
+      if (identities[0]) {
+        const [profiles] = await getMysqlPool().execute<ProfileRow[]>(
+          `SELECT id, public_uid, name, email, date_of_birth, telegram_username, x_username,
+                  name_edit_used, date_of_birth_edit_used
+           FROM auth_users WHERE id = ? LIMIT 1`,
+          [identities[0].user_id],
+        )
+        if (profiles[0]) return toAuthUser(profiles[0])
       }
     }
     throw error
@@ -592,97 +752,94 @@ export async function createSession(
   authMethod: "password" | "oauth" | "telegram",
 ): Promise<{ token: string; expiresAt: Date }> {
   const session = sessionToken()
-  const { error } = await requireAdminClient()
-    .from("auth_sessions")
-    .insert({
-      token_hash: session.tokenHash,
-      user_id: userId,
-      expires_at: session.expiresAt.toISOString(),
-      auth_method: authMethod,
-    })
-  if (error) throw error
+  await getMysqlPool().execute(
+    `INSERT INTO auth_sessions (token_hash, user_id, expires_at, auth_method)
+     VALUES (?, ?, ?, ?)`,
+    [session.tokenHash, userId, session.expiresAt, authMethod],
+  )
   return { token: session.token, expiresAt: session.expiresAt }
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | null> {
+  const normalizedEmail = normalizeEmail(email)
   const token = randomBytes(32).toString("base64url")
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const result = await callRpc<RpcResult>("auth_create_password_reset_token", {
-    p_email: email.trim().toLowerCase(),
-    p_token_hash: tokenHash,
-    p_expires_at: new Date(Date.now() + PASSWORD_RESET_DURATION_SECONDS * 1000).toISOString(),
+  const userRows = await selectMysqlRows<RowDataPacket & { id: string }>(
+    "SELECT id FROM auth_users WHERE email = ? LIMIT 1",
+    [normalizedEmail],
+  )
+  const user = userRows[0]
+  if (!user) return null
+  await withMysqlTransaction(async (connection) => {
+    await connection.execute("DELETE FROM auth_password_resets WHERE user_id = ?", [user.id])
+    await connection.execute(
+      `INSERT INTO auth_password_resets (token_hash, user_id, expires_at)
+       VALUES (?, ?, ?)`,
+      [tokenHash, user.id, new Date(Date.now() + PASSWORD_RESET_DURATION_SECONDS * 1000)],
+    )
   })
-  return result.status === "created" ? token : null
+  return token
 }
 
 export async function deletePasswordResetToken(token: string): Promise<void> {
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const { error } = await requireAdminClient()
-    .from("auth_password_resets")
-    .delete()
-    .eq("token_hash", tokenHash)
-  if (error) throw error
+  await getMysqlPool().execute(
+    "DELETE FROM auth_password_resets WHERE token_hash = ?",
+    [tokenHash],
+  )
 }
 
 export async function resetPassword(token: string, password: string): Promise<boolean> {
-  const admin = requireAdminClient()
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const claimToken = randomUUID()
-  const claimed = await callRpc<RpcResult>("auth_claim_password_reset_token", {
-    p_token_hash: tokenHash,
-    p_claim_token: claimToken,
-    p_claim_expires_at: new Date(Date.now() + PASSWORD_RESET_CLAIM_DURATION_SECONDS * 1000).toISOString(),
+  const passwordHash = await hashPassword(password)
+  return withMysqlTransaction(async (connection) => {
+    const [rows] = await connection.execute<(RowDataPacket & {
+      user_id: string
+      expires_at: Date | string
+    })[]>(
+      "SELECT user_id, expires_at FROM auth_password_resets WHERE token_hash = ? FOR UPDATE",
+      [tokenHash],
+    )
+    const reset = rows[0]
+    if (!reset || dateValue(reset.expires_at).getTime() <= Date.now()) {
+      if (reset) await connection.execute("DELETE FROM auth_password_resets WHERE token_hash = ?", [tokenHash])
+      return false
+    }
+    const [updateResult] = await connection.execute<ResultSetHeader>(
+      "UPDATE auth_users SET password_hash = ? WHERE id = ?",
+      [passwordHash, reset.user_id],
+    )
+    if (updateResult.affectedRows !== 1) return false
+    await connection.execute("DELETE FROM auth_sessions WHERE user_id = ?", [reset.user_id])
+    await connection.execute("DELETE FROM auth_password_resets WHERE token_hash = ?", [tokenHash])
+    return true
   })
-  if (claimed.status !== "claimed" || !claimed.auth_user_id) return false
-
-  const { error } = await admin.auth.admin.updateUserById(claimed.auth_user_id, { password })
-  if (error) {
-    await callRpc<RpcResult>("auth_complete_password_reset", {
-      p_token_hash: tokenHash,
-      p_claim_token: claimToken,
-      p_success: false,
-    })
-    throw error
-  }
-
-  const completed = await callRpc<RpcResult>("auth_complete_password_reset", {
-    p_token_hash: tokenHash,
-    p_claim_token: claimToken,
-    p_success: true,
-  })
-  return completed.status === "completed"
 }
 
 export async function findUserBySession(token: string): Promise<AuthUser | null> {
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const { data: session, error } = await requireAdminClient()
-    .from("auth_sessions")
-    .select("user_id,expires_at")
-    .eq("token_hash", tokenHash)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle()
-  if (error) throw error
-  if (!session) return null
-
-  const { data: profile, error: profileError } = await requireAdminClient()
-    .from("auth_users")
-    .select("*")
-    .eq("id", session.user_id)
-    .maybeSingle()
-  if (profileError) throw profileError
-  return profile ? toAuthUser(profile as ProfileRow) : null
+  const rows = await selectMysqlRows<ProfileRow>(
+    `SELECT users.id, users.public_uid, users.name, users.email, users.date_of_birth,
+            users.telegram_username, users.x_username, users.name_edit_used,
+            users.date_of_birth_edit_used
+     FROM auth_sessions AS sessions
+     INNER JOIN auth_users AS users ON users.id = sessions.user_id
+     WHERE sessions.token_hash = ? AND sessions.expires_at > CURRENT_TIMESTAMP(3)
+       AND users.is_blocked = FALSE
+     LIMIT 1`,
+    [tokenHash],
+  )
+  return rows[0] ? toAuthUser(rows[0]) : null
 }
 
 export async function isEmailOtpSession(token: string): Promise<boolean> {
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const { data, error } = await requireAdminClient()
-    .from("auth_sessions")
-    .select("auth_method")
-    .eq("token_hash", tokenHash)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle()
-  if (error) throw error
-  return data?.auth_method === "email_otp"
+  const rows = await selectMysqlRows<RowDataPacket & { auth_method: string }>(
+    `SELECT auth_method FROM auth_sessions
+     WHERE token_hash = ? AND expires_at > CURRENT_TIMESTAMP(3) LIMIT 1`,
+    [tokenHash],
+  )
+  return rows[0]?.auth_method === "email_otp"
 }
 
 export class ProfileOneTimeEditError extends Error {
@@ -703,31 +860,50 @@ export async function updateUserProfile(
     xUsername?: string | null
   },
 ): Promise<void> {
-  const result = await callRpc<RpcResult>("auth_update_user_profile", {
-    p_user_id: userId,
-    p_name: profile.name ?? null,
-    p_date_of_birth: profile.dateOfBirth ?? null,
-    p_telegram_username: profile.telegramUsername ?? null,
-    p_x_username: profile.xUsername ?? null,
-    p_update_name: profile.name !== undefined,
-    p_update_date_of_birth: profile.dateOfBirth !== undefined,
-    p_update_telegram_username: profile.telegramUsername !== undefined,
-    p_update_x_username: profile.xUsername !== undefined,
+  await withMysqlTransaction(async (connection) => {
+    const [rows] = await connection.execute<(RowDataPacket & {
+      name: string
+      date_of_birth: string | Date | null
+      telegram_username: string | null
+      x_username: string | null
+      name_edit_used: boolean | number
+      date_of_birth_edit_used: boolean | number
+    })[]>(
+      `SELECT name, date_of_birth, telegram_username, x_username,
+              name_edit_used, date_of_birth_edit_used
+       FROM auth_users WHERE id = ? FOR UPDATE`,
+      [userId],
+    )
+    const current = rows[0]
+    if (!current) throw new Error("The account profile was not found.")
+
+    const updateName = profile.name !== undefined && profile.name !== current.name
+    const oldBirthDate = normalizeDateOfBirth(current.date_of_birth)
+    const updateBirthDate = profile.dateOfBirth !== undefined && profile.dateOfBirth !== oldBirthDate
+    if (updateName && current.name_edit_used) throw new ProfileOneTimeEditError("name")
+    if (updateBirthDate && current.date_of_birth_edit_used) throw new ProfileOneTimeEditError("dateOfBirth")
+
+    await connection.execute(
+      `UPDATE auth_users
+       SET name = ?, date_of_birth = ?, telegram_username = ?, x_username = ?,
+           name_edit_used = ?, date_of_birth_edit_used = ?
+       WHERE id = ?`,
+      [
+        profile.name ?? current.name,
+        profile.dateOfBirth ?? current.date_of_birth,
+        profile.telegramUsername === undefined ? current.telegram_username : profile.telegramUsername,
+        profile.xUsername === undefined ? current.x_username : profile.xUsername,
+        Boolean(current.name_edit_used) || updateName,
+        Boolean(current.date_of_birth_edit_used) || updateBirthDate,
+        userId,
+      ],
+    )
   })
-  if (result.status === "name-already-edited") throw new ProfileOneTimeEditError("name")
-  if (result.status === "date-of-birth-already-edited") throw new ProfileOneTimeEditError("dateOfBirth")
-  if (result.status !== "updated" && result.status !== "unchanged") {
-    throw new Error("The Supabase profile RPC did not update the profile.")
-  }
 }
 
 export async function deleteSession(token: string): Promise<void> {
   const tokenHash = createHash("sha256").update(token).digest("hex")
-  const { error } = await requireAdminClient()
-    .from("auth_sessions")
-    .delete()
-    .eq("token_hash", tokenHash)
-  if (error) throw error
+  await getMysqlPool().execute("DELETE FROM auth_sessions WHERE token_hash = ?", [tokenHash])
 }
 
 export { SESSION_DURATION_SECONDS }

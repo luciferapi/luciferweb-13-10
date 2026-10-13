@@ -1,7 +1,8 @@
 import "server-only"
 import { randomUUID } from "node:crypto"
 import { downloadFromCloudflareR2, getCloudflareR2Config, uploadToCloudflareR2 } from "@/features/storage/server/r2-storage"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { getMysqlPool, selectMysqlRows } from "@/lib/mysql"
+import type { ResultSetHeader, RowDataPacket } from "mysql2"
 
 export type OwnerLiveBanner = {
   id: string
@@ -12,16 +13,12 @@ export type OwnerLiveBanner = {
   sortOrder: number
 }
 
-type BannerRow = {
+type BannerRow = RowDataPacket & {
   id: string
   message: string
   link_url: string | null
   is_enabled: boolean
   sort_order: number
-}
-
-type BannerRowWithLegacyImage = BannerRow & {
-  image_url?: string | null
 }
 
 type BannerImageMetadata = {
@@ -38,20 +35,6 @@ function ensureBannerImageStorage() {
   if (!config.privateBucket) {
     throw new Error("Set CLOUDFLARE_R2_PRIVATE_BUCKET for banner image metadata.")
   }
-}
-
-function isMissingImageUrlColumn(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false
-  const code = "code" in error && typeof error.code === "string" ? error.code : ""
-  const message = "message" in error && typeof error.message === "string" ? error.message : ""
-  return message.includes("image_url") &&
-    ((code === "42703") || (code === "PGRST204" && /column|schema cache/i.test(message)))
-}
-
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
 }
 
 function mapBanner(row: BannerRow, imageUrl: string | null): OwnerLiveBanner {
@@ -111,50 +94,35 @@ async function saveBannerImageUrl(id: string, imageUrl: string | null) {
 }
 
 export async function listOwnerLiveBanners(enabledOnly = false) {
-  const client = getAdminClient()
-  let query = client
-    .from("owner_live_banners")
-    .select("id, message, link_url, image_url, is_enabled, sort_order")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })
-
-  if (enabledOnly) query = query.eq("is_enabled", true)
-  const result = await query
-  let rows: BannerRowWithLegacyImage[] | null = result.data
-  let error = result.error
-  if (error && isMissingImageUrlColumn(error)) {
-    let fallbackQuery = client
-      .from("owner_live_banners")
-      .select("id, message, link_url, is_enabled, sort_order")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true })
-    if (enabledOnly) fallbackQuery = fallbackQuery.eq("is_enabled", true)
-    const fallbackResult = await fallbackQuery
-    rows = fallbackResult.data?.map((row) => ({ ...row, image_url: null })) ?? null
-    error = fallbackResult.error
-  }
-  if (error) throw error
-  return Promise.all((rows ?? []).map(async (banner) => {
-    return mapBanner(banner, await getBannerImageUrl(banner.id, banner.image_url ?? null))
+  const where = enabledOnly ? "WHERE is_enabled = TRUE" : ""
+  const rows = await selectMysqlRows<BannerRow>(
+    `SELECT id, message, link_url, image_url, is_enabled, sort_order
+     FROM owner_live_banners ${where}
+     ORDER BY sort_order, created_at`,
+  )
+  return Promise.all(rows.map(async (banner) => {
+    return mapBanner(banner, await getBannerImageUrl(banner.id, banner.image_url))
   }))
 }
 
 export async function createOwnerLiveBanner(input: Omit<OwnerLiveBanner, "id">) {
-  const client = getAdminClient()
+  const client = getMysqlPool()
   const id = randomUUID()
   await saveBannerImageUrl(id, input.imageUrl)
-  const { data, error } = await client
-    .from("owner_live_banners")
-    .insert({
-      id,
-      message: input.message || imageOnlyBannerMessage,
-      link_url: input.linkUrl,
-      is_enabled: input.isEnabled,
-      sort_order: input.sortOrder,
-    })
-    .select("id, message, link_url, is_enabled, sort_order")
-    .single()
-  if (error) {
+  let row: BannerRow | undefined
+  try {
+    await client.execute<ResultSetHeader>(
+      `INSERT INTO owner_live_banners (id, message, link_url, image_url, is_enabled, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, input.message || imageOnlyBannerMessage, input.linkUrl, input.imageUrl, input.isEnabled, input.sortOrder],
+    )
+    const rows = await selectMysqlRows<BannerRow>(
+      `SELECT id, message, link_url, image_url, is_enabled, sort_order
+       FROM owner_live_banners WHERE id = ? LIMIT 1`,
+      [id],
+    )
+    row = rows[0]
+  } catch (error) {
     try {
       await saveBannerImageUrl(id, null)
     } catch (cleanupError) {
@@ -162,54 +130,66 @@ export async function createOwnerLiveBanner(input: Omit<OwnerLiveBanner, "id">) 
     }
     throw error
   }
-  return mapBanner(data as BannerRow, input.imageUrl)
+  if (!row) throw new Error("The live banner was not saved.")
+  return mapBanner(row, input.imageUrl)
 }
 
 export async function updateOwnerLiveBanner(id: string, input: Omit<OwnerLiveBanner, "id">) {
-  const client = getAdminClient()
+  const client = getMysqlPool()
   const previousImageUrl = await getBannerImageUrl(id)
   await saveBannerImageUrl(id, input.imageUrl)
-  const { data, error } = await client
-    .from("owner_live_banners")
-    .update({
-      message: input.message || imageOnlyBannerMessage,
-      link_url: input.linkUrl,
-      is_enabled: input.isEnabled,
-      sort_order: input.sortOrder,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("id, message, link_url, is_enabled, sort_order")
-    .maybeSingle()
-  if (error || !data) {
+  let row: BannerRow | undefined
+  try {
+    await client.execute<ResultSetHeader>(
+      `UPDATE owner_live_banners
+       SET message = ?, link_url = ?, image_url = ?, is_enabled = ?, sort_order = ?,
+           updated_at = CURRENT_TIMESTAMP(3)
+       WHERE id = ?`,
+      [input.message || imageOnlyBannerMessage, input.linkUrl, input.imageUrl, input.isEnabled, input.sortOrder, id],
+    )
+    const rows = await selectMysqlRows<BannerRow>(
+      `SELECT id, message, link_url, image_url, is_enabled, sort_order
+       FROM owner_live_banners WHERE id = ? LIMIT 1`,
+      [id],
+    )
+    row = rows[0]
+  } catch (error) {
     try {
       await saveBannerImageUrl(id, previousImageUrl)
     } catch (rollbackError) {
       console.error("Could not restore banner image metadata in R2 after a failed database update.", rollbackError)
     }
-    if (error) throw error
+    throw error
+  }
+  if (!row) {
+    try {
+      await saveBannerImageUrl(id, previousImageUrl)
+    } catch (rollbackError) {
+      console.error("Could not restore banner image metadata in R2 after a missing banner update.", rollbackError)
+    }
     return null
   }
-  return mapBanner(data as BannerRow, input.imageUrl)
+  return mapBanner(row, input.imageUrl)
 }
 
 export async function deleteOwnerLiveBanner(id: string) {
   const previousImageUrl = await getBannerImageUrl(id)
   await saveBannerImageUrl(id, null)
-  const { data, error } = await getAdminClient()
-    .from("owner_live_banners")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle()
-  if (error || !data) {
+  let affectedRows: number
+  try {
+    const [result] = await getMysqlPool().execute<ResultSetHeader>(
+      "DELETE FROM owner_live_banners WHERE id = ?",
+      [id],
+    )
+    affectedRows = result.affectedRows
+  } catch (error) {
     try {
       await saveBannerImageUrl(id, previousImageUrl)
     } catch (rollbackError) {
       console.error("Could not restore banner image metadata in R2 after a failed database delete.", rollbackError)
     }
-    if (error) throw error
-    return false
+    throw error
   }
-  return Boolean(data)
+  if (affectedRows === 0 && previousImageUrl) await saveBannerImageUrl(id, previousImageUrl)
+  return affectedRows > 0
 }

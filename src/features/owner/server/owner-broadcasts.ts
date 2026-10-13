@@ -1,5 +1,6 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { selectMysqlRows } from "@/lib/mysql"
+import type { RowDataPacket } from "mysql2"
 
 const PAGE_SIZE = 25
 const RECIPIENT_BATCH_SIZE = 25
@@ -11,72 +12,75 @@ export type OwnerBroadcastRecipient = {
   email: string
 }
 
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
+type RecipientRow = RowDataPacket & {
+  id: string
+  public_uid: string
+  name: string
+  email: string | null
 }
 
 function normalizeSearch(value: string) {
   return value.replace(/[^\p{L}\p{N}@._+\- ]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80)
 }
 
-function mapRecipient(row: { id: string; public_uid: string; name: string; email: string | null }): OwnerBroadcastRecipient | null {
+function mapRecipient(row: RecipientRow): OwnerBroadcastRecipient | null {
   const email = row.email?.trim().toLowerCase()
   if (!email) return null
   return { id: row.id, publicUid: row.public_uid, name: row.name, email }
 }
 
-export async function listOwnerBroadcastRecipients(page: number, search: string) {
-  const from = (page - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
-  const client = getAdminClient()
-  let query = client
-    .from("auth_users")
-    .select("id, public_uid, name, email", { count: "exact" })
-    .not("email", "is", null)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(from, to)
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&")
+}
 
-  const term = normalizeSearch(search)
-  if (term) {
-    const pattern = `*${term}*`
-    query = query.or([
-      `name.ilike.${pattern}`,
-      `email.ilike.${pattern}`,
-      `public_uid.ilike.${pattern}`,
-    ].join(","))
-  }
-
-  const [{ data, error, count }, totalResult] = await Promise.all([
-    query,
-    client.from("auth_users").select("id", { count: "exact", head: true }).not("email", "is", null),
-  ])
-  if (error) throw error
-  if (totalResult.error) throw totalResult.error
+function recipientSearch(term: string) {
+  if (!term) return { where: "", values: [] as string[] }
+  const pattern = `%${escapeLike(term)}%`
   return {
-    recipients: (data ?? []).flatMap((row) => {
+    where: "AND (name LIKE ? OR email LIKE ? OR public_uid LIKE ?)",
+    values: [pattern, pattern, pattern],
+  }
+}
+
+export async function listOwnerBroadcastRecipients(page: number, search: string) {
+  const offset = (page - 1) * PAGE_SIZE
+  const { where, values } = recipientSearch(normalizeSearch(search))
+  const [rows, counts] = await Promise.all([
+    selectMysqlRows<RecipientRow>(
+      `SELECT id, public_uid, name, email FROM auth_users
+       WHERE email IS NOT NULL ${where}
+       ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+      [...values, PAGE_SIZE, offset],
+    ),
+    selectMysqlRows<RowDataPacket & { total: number | string }>(
+      `SELECT COUNT(*) AS total FROM auth_users WHERE email IS NOT NULL ${where}`,
+      values,
+    ),
+  ])
+  const total = Number(counts[0]?.total ?? 0)
+  if (!Number.isSafeInteger(total)) throw new Error("The broadcast recipient count is invalid.")
+  return {
+    recipients: rows.flatMap((row) => {
       const recipient = mapRecipient(row)
       return recipient ? [recipient] : []
     }),
-    total: count ?? 0,
-    totalRecipients: totalResult.count ?? 0,
+    total,
+    totalRecipients: total,
     page,
     pageSize: PAGE_SIZE,
   }
 }
 
 export async function getOwnerBroadcastRecipients(mode: "all" | "selected", userIds: string[]) {
-  const client = getAdminClient()
   if (mode === "selected") {
     const uniqueIds = [...new Set(userIds)]
-    const { data, error } = await client
-      .from("auth_users")
-      .select("id, public_uid, name, email")
-      .in("id", uniqueIds)
-    if (error) throw error
-    const byId = new Map((data ?? []).map((row) => [row.id, row]))
+    if (uniqueIds.length === 0) return []
+    const rows = await selectMysqlRows<RecipientRow>(
+      `SELECT id, public_uid, name, email FROM auth_users
+       WHERE id IN (${uniqueIds.map(() => "?").join(", ")})`,
+      uniqueIds,
+    )
+    const byId = new Map(rows.map((row) => [row.id, row]))
     const recipients = uniqueIds.map((id) => {
       const row = byId.get(id)
       return row ? mapRecipient(row) : null
@@ -88,16 +92,13 @@ export async function getOwnerBroadcastRecipients(mode: "all" | "selected", user
   }
 
   const recipients: OwnerBroadcastRecipient[] = []
-  for (let from = 0; ; from += 500) {
-    const { data, error } = await client
-      .from("auth_users")
-      .select("id, public_uid, name, email")
-      .not("email", "is", null)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(from, from + 499)
-    if (error) throw error
-    const rows = data ?? []
+  for (let offset = 0; ; offset += 500) {
+    const rows = await selectMysqlRows<RecipientRow>(
+      `SELECT id, public_uid, name, email FROM auth_users
+       WHERE email IS NOT NULL
+       ORDER BY created_at ASC, id ASC LIMIT 500 OFFSET ?`,
+      [offset],
+    )
     recipients.push(...rows.flatMap((row) => {
       const recipient = mapRecipient(row)
       return recipient ? [recipient] : []

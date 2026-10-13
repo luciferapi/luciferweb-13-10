@@ -1,8 +1,10 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
 import { getWithdrawalPayoutDetailsForUsers, type PayoutDetails } from "@/features/wallet/server/withdrawal-method-store"
+import { selectMysqlRows, withMysqlTransaction } from "@/lib/mysql"
+import type { RowDataPacket } from "mysql2"
 
 const PAGE_LIMIT = 100
+const primaryOwnerEmail = "kspgpraveen157@gmail.com"
 
 export type OwnerPayoutRequest = {
   requestId: string
@@ -23,10 +25,19 @@ export type OwnerPayoutRequest = {
   createdAt: string
 }
 
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
+type PayoutRow = RowDataPacket & {
+  request_id: string
+  withdrawal_id: string
+  user_id: string
+  amount_paise: number | string
+  method_type: PayoutDetails["method"]
+  payout_destination: string
+  payment_reference: string | null
+  owner_response: string | null
+  owner_note: string | null
+  processed_at: Date | string | null
+  status: OwnerPayoutRequest["status"]
+  created_at: Date | string
 }
 
 function safeAmount(value: number | string): number {
@@ -42,34 +53,32 @@ function isoDate(value: string | Date): string {
 }
 
 export async function listOwnerPayoutRequests(filter: "pending" | "all") {
-  const client = getAdminClient()
-  let requestsQuery = client
-    .from("wallet_withdrawal_requests")
-    .select("request_id, withdrawal_id, user_id, amount_paise, method_type, payout_destination, payment_reference, owner_response, owner_note, processed_at, status, created_at")
-    .order("created_at", { ascending: false })
-    .order("request_id", { ascending: false })
-    .limit(PAGE_LIMIT)
-  if (filter === "pending") requestsQuery = requestsQuery.eq("status", "pending")
-
-  const [requestsResult, pendingCountResult] = await Promise.all([
-    requestsQuery,
-    client.from("wallet_withdrawal_requests").select("request_id", { count: "exact", head: true }).eq("status", "pending"),
+  const where = filter === "pending" ? "WHERE status = 'pending'" : ""
+  const [rows, counts] = await Promise.all([
+    selectMysqlRows<PayoutRow>(
+      `SELECT request_id, withdrawal_id, user_id, amount_paise, method_type, payout_destination,
+              payment_reference, owner_response, owner_note, processed_at, status, created_at
+       FROM wallet_withdrawal_requests ${where}
+       ORDER BY created_at DESC, request_id DESC LIMIT ?`,
+      [PAGE_LIMIT],
+    ),
+    selectMysqlRows<RowDataPacket & { pending_count: number | string }>(
+      "SELECT COUNT(*) AS pending_count FROM wallet_withdrawal_requests WHERE status = 'pending'",
+    ),
   ])
-  if (requestsResult.error) throw requestsResult.error
-  if (pendingCountResult.error) throw pendingCountResult.error
 
-  const rows = requestsResult.data ?? []
   const userIds = [...new Set(rows.map((row) => row.user_id))]
   const pendingUserIds = [...new Set(rows.filter((row) => row.status === "pending").map((row) => row.user_id))]
-  const [profilesResult, payoutDetailsByUser] = await Promise.all([
+  const [profiles, payoutDetailsByUser] = await Promise.all([
     userIds.length
-      ? client.from("auth_users").select("id, public_uid, name, email").in("id", userIds)
-      : Promise.resolve({ data: [], error: null }),
+      ? selectMysqlRows<RowDataPacket & { id: string; public_uid: string; name: string; email: string | null }>(
+          `SELECT id, public_uid, name, email FROM auth_users WHERE id IN (${userIds.map(() => "?").join(", ")})`,
+          userIds,
+        )
+      : Promise.resolve([]),
     getWithdrawalPayoutDetailsForUsers(pendingUserIds),
   ])
-  if (profilesResult.error) throw profilesResult.error
-  const profilesByUser = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]))
-
+  const profilesByUser = new Map(profiles.map((profile) => [profile.id, profile]))
   const requests: OwnerPayoutRequest[] = rows.map((row) => {
     const profile = profilesByUser.get(row.user_id)
     const destination = row.status === "pending" ? payoutDetailsByUser.get(row.user_id) ?? null : null
@@ -96,12 +105,9 @@ export async function listOwnerPayoutRequests(filter: "pending" | "all") {
     }
   })
 
-  return {
-    requests,
-    pendingCount: pendingCountResult.count ?? 0,
-    limit: PAGE_LIMIT,
-    totalShown: requests.length,
-  }
+  const pendingCount = Number(counts[0]?.pending_count ?? 0)
+  if (!Number.isSafeInteger(pendingCount)) throw new Error("The pending payout count is invalid.")
+  return { requests, pendingCount, limit: PAGE_LIMIT, totalShown: requests.length }
 }
 
 export async function setOwnerPayoutStatus(input: {
@@ -113,16 +119,67 @@ export async function setOwnerPayoutStatus(input: {
   paymentReference: string | null
   ownerNote: string | null
 }) {
-  const { data, error } = await getAdminClient().rpc("owner_set_withdrawal_status", {
-    p_actor_user_id: input.actorUserId,
-    p_request_id: input.requestId,
-    p_status: input.status,
-    p_external_payment_confirmed: input.externalPaymentConfirmed,
-    p_owner_response: input.ownerResponse,
-    p_payment_reference: input.paymentReference,
-    p_owner_note: input.ownerNote,
+  if (input.status !== "paid" && input.status !== "rejected") return "invalid_status"
+  if (input.ownerResponse.trim().length < 3 || input.ownerResponse.trim().length > 1000) return "invalid_response"
+  if (input.ownerNote && input.ownerNote.length > 1000) return "invalid_owner_note"
+  if (input.status === "paid" && !input.externalPaymentConfirmed) return "payment_confirmation_required"
+  if (
+    (input.status === "paid" && (!input.paymentReference || input.paymentReference.length < 3 || input.paymentReference.length > 120)) ||
+    (input.status === "rejected" && input.paymentReference)
+  ) return "invalid_payment_reference"
+
+  return withMysqlTransaction(async (connection) => {
+    const [actors] = await connection.execute<RowDataPacket[]>(
+      `SELECT u.email, a.allowed_modules
+       FROM auth_users u LEFT JOIN owner_admins a ON a.user_id = u.id
+       WHERE u.id = ? AND u.is_blocked = FALSE LIMIT 1 FOR UPDATE`,
+      [input.actorUserId],
+    )
+    const actor = actors[0] as { email: string | null; allowed_modules: string[] | string | null } | undefined
+    let authorized = actor?.email?.toLowerCase() === primaryOwnerEmail
+    if (actor && !authorized && actor.allowed_modules) {
+      const modules: unknown = typeof actor.allowed_modules === "string"
+        ? JSON.parse(actor.allowed_modules)
+        : actor.allowed_modules
+      authorized = Array.isArray(modules) && modules.includes("payments")
+    }
+    if (!authorized) return "unauthorized"
+
+    const [requestRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT user_id, status FROM wallet_withdrawal_requests
+       WHERE request_id = ? LIMIT 1 FOR UPDATE`,
+      [input.requestId],
+    )
+    const request = requestRows[0] as { user_id: string; status: string } | undefined
+    if (!request || request.status !== "pending") return "not_pending"
+
+    await connection.execute(
+      `UPDATE wallet_withdrawal_requests
+       SET status = ?, owner_response = ?, payment_reference = ?, owner_note = ?,
+           processed_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3)
+       WHERE request_id = ?`,
+      [
+        input.status,
+        input.ownerResponse.trim(),
+        input.paymentReference,
+        input.ownerNote?.trim() || null,
+        input.requestId,
+      ],
+    )
+    await connection.execute(
+      `INSERT INTO owner_audit_logs (actor_user_id, action, subject_user_id, details)
+       VALUES (?, 'wallet.withdrawal_status_updated', ?, ?)`,
+      [
+        input.actorUserId,
+        request.user_id,
+        JSON.stringify({
+          requestId: input.requestId,
+          status: input.status,
+          paymentReference: input.paymentReference,
+          ownerNote: input.ownerNote?.trim() || null,
+        }),
+      ],
+    )
+    return "updated"
   })
-  if (error) throw error
-  if (typeof data !== "string") throw new Error("The payout status operation returned an invalid result.")
-  return data
 }

@@ -83,9 +83,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.includes("selected users")) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    const message = error instanceof Error && error.message === "Supabase admin access is not configured."
-      ? "The user database is not available."
-      : "Could not prepare or send the broadcast email."
+    const message = "Could not prepare or send the broadcast email."
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
