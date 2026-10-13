@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import gsap from 'gsap';
 import { BookOpen, ChartNoAxesColumn, ChevronDown, FolderKanban, LayoutDashboard, LayoutGrid, LogIn, LogOut, Menu, Moon, MoonStar, Monitor, PanelLeftClose, PanelLeftOpen, Pencil, Send, ShieldCheck, Sparkles, Sun, Settings2, UserRound, Wallet, X, LifeBuoy } from 'lucide-react';
@@ -53,6 +53,7 @@ type SessionUser = {
 
 export default function MagneticNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,6 +96,16 @@ export default function MagneticNav() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const routes = new Set([
+      ...NAV_ITEMS.map((item) => item.href),
+      ...POCKET_MONEY_SUB_ITEMS.map((item) => item.href),
+      ...(signedIn ? [WALLET_NAV_ITEM.href] : []),
+      ...(profile?.email.trim().toLowerCase() === 'kspgpraveen157@gmail.com' ? [OWNER_NAV_ITEM.href] : []),
+    ]);
+    routes.forEach((href) => router.prefetch(href));
+  }, [profile?.email, router, signedIn]);
 
   useEffect(() => {
     const header = mobileHeaderRef.current;
