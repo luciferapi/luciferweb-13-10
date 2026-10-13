@@ -368,17 +368,17 @@ export function SignInPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-20 text-foreground sm:px-6 lg:px-8">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.10),transparent_45%),linear-gradient(135deg,transparent_45%,rgba(217,70,239,0.04))]" />
       {checkingSession ? (
         <p className="relative text-sm text-muted-foreground" role="status">Checking your sign-in...</p>
       ) : (
-      <section ref={authPanelRef} className="relative w-full max-w-lg rounded-[28px] border border-border bg-card/95 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-7 lg:p-8" aria-labelledby="sign-in-title">
-        <Link href="/" className="mb-7 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-cyan-700 dark:hover:text-cyan-200">
+      <section ref={authPanelRef} className="relative w-full max-w-md rounded-3xl border border-border bg-card/95 p-4 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-6" aria-labelledby="sign-in-title">
+        <Link href="/" className="mb-5 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-cyan-700 dark:hover:text-cyan-200">
           <ArrowLeft aria-hidden="true" size={16} /> Home
         </Link>
 
-        <div className="mb-7 flex items-center gap-3">
+        <div className="mb-5 flex items-center gap-3">
           <span className="size-11 overflow-hidden rounded-xl border border-cyan-200/20 bg-muted/40">
             <img src="/images/luciferai-brand-logo.jpg" alt="" className="size-full object-cover" />
           </span>
@@ -395,7 +395,7 @@ export function SignInPage() {
         ) : null}
 
         {!pendingEmail && !privilegedOtpRequested && !forgotPassword && !resetToken && !resetComplete ? (
-          <div className="mb-6 grid grid-cols-2 rounded-xl border border-border bg-muted/40 p-1" role="tablist" aria-label="Authentication mode">
+          <div className="mb-5 grid grid-cols-2 rounded-xl border border-border bg-muted/40 p-1" role="tablist" aria-label="Authentication mode">
             {(["sign-in", "create-account"] as const).map((option) => (
               <button
                 key={option}
