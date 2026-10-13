@@ -32,8 +32,28 @@ function useSlowConnection() {
   return isSlow
 }
 
+function useBrowserOffline() {
+  const [isOffline, setIsOffline] = useState(false)
+
+  useEffect(() => {
+    const updateStatus = () => setIsOffline(!navigator.onLine)
+    updateStatus()
+    window.addEventListener("online", updateStatus)
+    window.addEventListener("offline", updateStatus)
+
+    return () => {
+      window.removeEventListener("online", updateStatus)
+      window.removeEventListener("offline", updateStatus)
+    }
+  }, [])
+
+  return isOffline
+}
+
 export function NetworkStatusGate({ children }: { children: React.ReactNode }) {
-  const isOffline = useOffline()
+  const frameworkOffline = useOffline()
+  const browserOffline = useBrowserOffline()
+  const isOffline = frameworkOffline || browserOffline
   const isSlow = useSlowConnection()
 
   if (isOffline) {
