@@ -21,22 +21,10 @@ function environmentValue(name: string): string | undefined {
   return process.env[name]?.trim()
 }
 
-function databaseEnvironmentSuffix(): string {
-  const primaryConfigured = ["DB_HOST", "DB_USER", "DB_PASSWORD"]
-    .every((name) => process.env[name] !== undefined && environmentValue(name) !== undefined)
-  if (primaryConfigured) return ""
-
-  const secondaryConfigured = ["DB_HOST_2", "DB_USER_2", "DB_PASSWORD_2"]
-    .every((name) => process.env[name] !== undefined && environmentValue(name) !== undefined)
-  return secondaryConfigured ? "_2" : ""
-}
-
 function requiredEnvironmentValue(name: string): string {
-  const suffix = databaseEnvironmentSuffix()
-  const value = environmentValue(`${name}${suffix}`)
+  const value = environmentValue(name)
   if (value) return value
-  if (name === "DB_NAME") return "u125883856_luciferwebdb"
-  throw new Error(`${name}${suffix} is required to connect to the MySQL database.`)
+  throw new Error(`${name} is required to connect to the MySQL database.`)
 }
 
 function positiveIntegerEnvironmentValue(name: string, fallback: number, maximum: number): number {
@@ -67,12 +55,11 @@ function getMysqlConfig(): MysqlConfig {
 }
 
 export function isMysqlConfigured(): boolean {
-  const suffix = databaseEnvironmentSuffix()
   return Boolean(
-    environmentValue(`DB_HOST${suffix}`) &&
-    environmentValue(`DB_USER${suffix}`) &&
-    process.env[`DB_PASSWORD${suffix}`] !== undefined &&
-    environmentValue(`DB_NAME${suffix}`)
+    environmentValue("DB_HOST") &&
+    environmentValue("DB_USER") &&
+    process.env.DB_PASSWORD !== undefined &&
+    environmentValue("DB_NAME")
   )
 }
 

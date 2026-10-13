@@ -55,10 +55,7 @@ function normalizePublicStorageUrl(publicUrl: string | null, bucket: string | nu
 }
 
 function getProjectEnv(name: string) {
-  const value = process.env[name]?.trim()
-  if (value) return value
-
-  return process.env[`${name}_2`]?.trim() || null
+  return process.env[name]?.trim() || null
 }
 
 export function getCloudflareR2Config() {
