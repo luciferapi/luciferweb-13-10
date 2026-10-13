@@ -107,3 +107,10 @@ export async function selectMysqlRows<T extends RowDataPacket>(
   const [rows] = await getMysqlPool().execute<T[]>(sql, [...values])
   return rows
 }
+
+export function getOpenRouterConfig() {
+  return {
+    apiKey: process.env.OPENROUTER_API_KEY_2?.trim() || process.env.OPENROUTER_API_KEY?.trim() || null,
+    url: process.env.OPENROUTER_URL_3?.trim() || process.env.OPENROUTER_URL?.trim() || "https://openrouter.ai/api/v1/chat/completions",
+  }
+}
