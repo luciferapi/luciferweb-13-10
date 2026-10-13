@@ -54,14 +54,21 @@ function normalizePublicStorageUrl(publicUrl: string | null, bucket: string | nu
   return normalizedPublicUrl
 }
 
+function getProjectEnv(name: string) {
+  const value = process.env[name]?.trim()
+  if (value) return value
+
+  return process.env[`${name}_2`]?.trim() || null
+}
+
 export function getCloudflareR2Config() {
-  const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT?.trim() || null
-  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID?.trim() || null
-  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID?.trim() || null
-  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || null
-  const bucket = process.env.CLOUDFLARE_R2_BUCKET?.trim() || null
-  const publicUrlRaw = process.env.CLOUDFLARE_R2_PUBLIC_URL?.trim() || null
-  const privateBucket = process.env.CLOUDFLARE_R2_PRIVATE_BUCKET?.trim() || null
+  const endpoint = getProjectEnv("CLOUDFLARE_R2_ENDPOINT")
+  const accountId = getProjectEnv("CLOUDFLARE_R2_ACCOUNT_ID")
+  const accessKeyId = getProjectEnv("CLOUDFLARE_R2_ACCESS_KEY_ID")
+  const secretAccessKey = getProjectEnv("CLOUDFLARE_R2_SECRET_ACCESS_KEY")
+  const bucket = getProjectEnv("CLOUDFLARE_R2_BUCKET")
+  const publicUrlRaw = getProjectEnv("CLOUDFLARE_R2_PUBLIC_URL")
+  const privateBucket = getProjectEnv("CLOUDFLARE_R2_PRIVATE_BUCKET")
 
   if (![endpoint, accountId, accessKeyId, secretAccessKey, bucket, publicUrlRaw, privateBucket].every(Boolean)) {
     throw new Error("Cloudflare R2 requires all CLOUDFLARE_R2_* storage variables, including a private bucket.")
