@@ -11,6 +11,8 @@ import { WalletTransactionHistory } from "@/features/wallet/components/wallet-tr
 import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { getAvailableWalletBalancePaise } from "@/features/wallet/server/wallet-withdrawal-store"
 
+export const dynamic = "force-dynamic"
+
 const quickActions = [
   { label: "Deposit", icon: ArrowDownToLine },
 ]
@@ -35,8 +37,35 @@ const historyTiles = [
   },
 ] as const
 
+function WalletUnavailable({ message }: { message: string }) {
+  return (
+    <WalletAnimated>
+      <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#dbeafe_42%,transparent),transparent_42%),#f4f5fb] text-[#172033] dark:bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#172554_28%,transparent),transparent_40%),#101216] dark:text-slate-100">
+        <section className="mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
+          <div className="w-full max-w-2xl rounded-2xl border border-amber-200 bg-white/90 p-6 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur dark:border-amber-900/60 dark:bg-slate-900/90 dark:shadow-none sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">LUCIFER AI WALLET</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">Wallet is temporarily unavailable</h1>
+            <p className="mt-3 max-w-[58ch] text-sm leading-6 text-slate-600 dark:text-slate-300">{message}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/wallet" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-[0.98]">Reload wallet</Link>
+              <Link href="/" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-[0.98] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Back to home</Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    </WalletAnimated>
+  )
+}
+
 export default async function WalletPage() {
-  const user = await getSignedInUser()
+  let user: Awaited<ReturnType<typeof getSignedInUser>>
+  try {
+    user = await getSignedInUser()
+  } catch (error) {
+    console.error("Could not load the wallet session.", error)
+    return <WalletUnavailable message="We could not verify your account right now. Please reload the wallet in a moment." />
+  }
+
   if (!user) {
     return (
       <WalletAnimated>
@@ -69,7 +98,12 @@ export default async function WalletPage() {
     )
   }
 
-  const balancePaise = await getAvailableWalletBalancePaise(user.id)
+  let balancePaise: number | null = null
+  try {
+    balancePaise = await getAvailableWalletBalancePaise(user.id)
+  } catch (error) {
+    console.error("Could not load the wallet balance.", error)
+  }
 
   return (
     <WalletAnimated>
@@ -92,11 +126,17 @@ export default async function WalletPage() {
             <div>
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Available balance</p>
               <p className="mt-2 font-mono text-4xl font-bold tracking-tight tabular-nums text-slate-950 dark:text-white sm:text-5xl">
-                {(balancePaise / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })}
+                {balancePaise === null ? "Unavailable" : (balancePaise / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })}
               </p>
             </div>
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400">INR</p>
           </section>
+
+          {balancePaise === null ? (
+            <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              Your wallet balance is temporarily unavailable. You can reload this page to try again.
+            </p>
+          ) : null}
 
           <section
             aria-label="Wallet actions"
