@@ -37,7 +37,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
     <div
       data-chat-message-content
       className={cn(
-        "flex max-w-[92%] gap-3 sm:max-w-[84%]",
+        "flex max-w-[96%] gap-3 sm:max-w-[90%]",
         isUser
           ? "ml-auto flex-row-reverse"
           : "mr-auto items-end",
@@ -46,13 +46,16 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       {/* Avatar */}
       <div
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-700/70 bg-slate-900",
+          "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border",
+          isUser
+            ? "border-cyan-100/15 bg-cyan-200/10 text-cyan-100"
+            : "border-white/10 bg-slate-900 shadow-[0_6px_20px_rgba(0,0,0,0.18)]",
           !isUser && isStreaming && "sticky bottom-4 self-end transition-all duration-300",
         )}
         aria-hidden="true"
       >
         {isUser ? (
-          <User className="w-4 h-4 text-stone-800" />
+          <User aria-hidden="true" className="size-4" />
         ) : (
           <Image src="/images/ai-logo.jpg" alt="LUCIFER AI assistant logo" width={32} height={32} className="h-full w-full object-cover" />
         )}
@@ -61,15 +64,15 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       {/* Message content */}
       <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
         {/* Role label (optional, shown on larger screens) */}
-        <span className="mb-1 mt-1 hidden text-xs text-stone-400 sm:block">{isUser ? "You" : "Assistant"}</span>
+        <span className="mb-1.5 mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 sm:block">{isUser ? "You" : "Lucifer AI"}</span>
 
         {/* Bubble */}
         <div
           className={cn(
-            "overflow-hidden rounded-2xl",
+            "overflow-hidden rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.12)]",
             isUser
-              ? "rounded-br-md border border-cyan-200/15 bg-cyan-300/10 text-slate-100"
-              : "rounded-bl-md border border-slate-800/80 bg-slate-950/45 text-slate-200",
+              ? "rounded-br-md border border-cyan-100/15 bg-gradient-to-br from-cyan-200/[0.12] to-violet-300/[0.08] text-slate-100"
+              : "rounded-bl-md border border-white/[0.075] bg-slate-900/60 text-slate-200",
           )}
         >
           {!isUser && message.content.trim() && (
@@ -77,7 +80,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] font-medium text-slate-300 transition hover:bg-slate-800"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[10px] font-medium text-slate-300 transition hover:border-cyan-100/20 hover:bg-slate-800 hover:text-cyan-100"
                 aria-label="Copy assistant message"
               >
                 {copied ? <CopyCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -110,7 +113,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         </div>
 
         {/* Timestamp */}
-        <span className="text-xs text-stone-400 mt-1">{formatTime(message.createdAt)}</span>
+        <span className="mt-1.5 text-[10px] tabular-nums text-slate-500">{formatTime(message.createdAt)}</span>
       </div>
     </div>
   )

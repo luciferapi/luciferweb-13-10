@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useRef, useCallback, type KeyboardEvent, useEffect } from "react"
 import gsap from "gsap"
-import { Square, Mic, MicOff, Brain, Paperclip, X, Send } from "lucide-react"
+import { Square, Mic, MicOff, Brain, Paperclip, X, Send, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -261,10 +261,11 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-10 px-3 sm:bottom-6 sm:px-6 xl:left-[var(--navigation-width)]">
       <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-3xl">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-10 -top-3 h-10 rounded-full bg-cyan-400/20 blur-2xl" />
         <div
           className={cn(
-            "relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/95 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-colors duration-200 sm:rounded-3xl sm:p-4",
-            "focus-within:border-cyan-300/45 focus-within:ring-2 focus-within:ring-cyan-300/10",
+            "relative z-10 flex flex-col gap-3 overflow-hidden rounded-[1.65rem] border border-white/[0.09] bg-slate-950/85 p-3 shadow-[0_22px_70px_rgba(0,0,0,0.52)] backdrop-blur-2xl transition-colors duration-200 sm:rounded-[1.9rem] sm:p-4",
+            "focus-within:border-cyan-200/30 focus-within:ring-2 focus-within:ring-cyan-200/10",
           )}
         >
           <div className="flex gap-2 items-center">
@@ -291,7 +292,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 handleInput()
               }}
               onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "Listening..." : "Message Lucifer AI..."}
+              placeholder={isRecording ? "Listening..." : "Ask Lucifer AI anything..."}
               disabled={isStreaming || disabled}
               rows={1}
               className={cn(
@@ -380,13 +381,14 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 render={
                   <Button
                     variant="ghost"
-                    size="icon"
                     disabled={isStreaming || disabled}
-                    className="h-9 w-9 shrink-0 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700"
-                    aria-label="Select AI model"
+                    className="h-9 min-w-0 max-w-[min(12rem,40vw)] gap-1.5 rounded-xl bg-slate-800/90 px-2.5 text-slate-200 hover:bg-slate-700"
+                    aria-label={`Select AI model. Current model: ${currentModel.name}`}
                     onClick={playClickSound}
                   >
-                    <Brain className="w-4 h-4" />
+                    <Brain aria-hidden="true" className="size-4 shrink-0 text-cyan-200" />
+                    <span className="truncate text-xs font-semibold">{currentModel.name}</span>
+                    <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" />
                   </Button>
                 }
               />
@@ -419,7 +421,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
               </DropdownMenuPortal>
             </DropdownMenu>
 
-            <span className="min-w-0 truncate text-xs font-medium tracking-wide text-slate-400">{currentModel.name}</span>
+            <span className="ml-auto hidden truncate text-[11px] text-slate-500 md:block">Enter to send <span aria-hidden="true">·</span> Shift+Enter for a new line</span>
           </div>
         </div>
       </div>

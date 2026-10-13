@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import gsap from "gsap"
-import { AlertCircle, ArrowUpRight, RefreshCw } from "lucide-react"
+import { AlertCircle, ArrowUpRight, BookOpen, Bug, Code2, RefreshCw, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { AnimatedOrb } from "./animated-orb"
@@ -18,6 +18,33 @@ interface MessageListProps {
   isLoaded: boolean
   onSendPrompt: (prompt: string) => void
 }
+
+const starterPrompts = [
+  {
+    title: "Fix a tricky bug",
+    prompt: "Help me debug a coding issue",
+    detail: "Find the root cause and a clear fix.",
+    icon: Bug,
+  },
+  {
+    title: "Build an idea",
+    prompt: "Help me plan a web app",
+    detail: "Shape the idea into a practical plan.",
+    icon: Code2,
+  },
+  {
+    title: "Learn something",
+    prompt: "Explain a technical idea simply",
+    detail: "Make a complex topic easy to grasp.",
+    icon: BookOpen,
+  },
+  {
+    title: "Explore AI",
+    prompt: "Give me a useful AI project idea",
+    detail: "Find a small experiment worth building.",
+    icon: Sparkles,
+  },
+]
 
 export function MessageList({
   messages,
@@ -133,7 +160,7 @@ export function MessageList({
   if (!isLoaded) {
     return (
       <div
-        className="absolute inset-0 flex items-center justify-center"
+        className="absolute inset-0 flex items-center justify-center xl:left-[var(--navigation-width)]"
         role="status"
         aria-label="Loading Lucifer AI"
       >
@@ -149,40 +176,47 @@ export function MessageList({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className={`absolute inset-0 overflow-y-auto px-4 sm:px-6 ${hasConversation ? "pb-56 pt-40" : "pb-32 pt-20 sm:pt-28"}`}
+      className={`absolute inset-0 z-[1] overflow-y-auto px-4 sm:px-6 xl:left-[var(--navigation-width)] ${hasConversation ? "pb-56 pt-40 sm:pt-44 xl:pt-32" : "pb-44 pt-36 sm:pt-40 xl:pt-28"}`}
       role="log"
       aria-label="Lucifer AI chat messages"
       aria-live="polite"
       aria-relevant="additions text"
     >
       {messages.length === 0 && !error && !isStreaming && (
-        <div ref={emptyStateRef} className="mx-auto mt-0 flex w-full max-w-3xl flex-col items-center text-center sm:mt-[clamp(1rem,5vh,3rem)]">
-          <div data-intro-item className="mb-3 overflow-hidden rounded-2xl border border-cyan-200/20 bg-slate-900 shadow-[0_12px_32px_rgba(0,0,0,0.3)] sm:mb-5">
-            <img src="/images/ai-logo.jpg" alt="LUCIFER AI assistant logo" className="h-12 w-12 object-cover sm:h-16 sm:w-16" />
+        <div ref={emptyStateRef} className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
+          <div data-intro-item className="mb-5 grid size-16 place-items-center overflow-hidden rounded-[1.4rem] border border-cyan-100/15 bg-slate-900/70 shadow-[0_16px_48px_rgba(8,145,178,0.16)] sm:mb-6">
+            <img src="/images/ai-logo.jpg" alt="LUCIFER AI assistant logo" className="size-full object-cover" />
           </div>
-
-          <h1 data-intro-item className="max-w-2xl text-balance text-2xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
-            What are we building today?
+          <p data-intro-item className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-100/10 bg-cyan-200/[0.055] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.19em] text-cyan-100/80 sm:text-[11px]">
+            <Sparkles aria-hidden="true" className="size-3.5 text-cyan-300" />
+            Your AI workspace
+          </p>
+          <h1 data-intro-item className="max-w-3xl text-balance font-heading text-4xl font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-5xl lg:text-6xl">
+            Think clearly. <span className="bg-gradient-to-r from-cyan-200 via-sky-300 to-violet-300 bg-clip-text text-transparent">Build boldly.</span>
           </h1>
-          <p data-intro-item className="mt-2 max-w-lg text-sm leading-5 text-slate-400 sm:mt-3 sm:text-base sm:leading-6">
-            A focused AI workspace for debugging, planning, and turning ideas into working products.
+          <p data-intro-item className="mt-3 max-w-xl text-sm leading-6 text-slate-400 sm:mt-4 sm:text-base sm:leading-7">
+            Bring a question, a bug, or a half-formed idea. Leave with a useful next step.
           </p>
 
-          <div className="mt-4 grid w-full grid-cols-1 gap-2 text-left sm:mt-8 sm:grid-cols-3 sm:gap-3">
-            {[
-              "Debug a coding issue",
-              "Explain a technical idea",
-              "Plan a web app",
-            ].map((prompt) => (
+          <div className="mt-7 grid w-full grid-cols-1 gap-3 text-left sm:grid-cols-2 lg:mt-9 lg:grid-cols-4">
+            {starterPrompts.map(({ title, prompt, detail, icon: Icon }) => (
               <button
-                key={prompt}
+                key={title}
                 type="button"
                 data-intro-item
                 onClick={() => onSendPrompt(prompt)}
-                className="group flex min-h-12 items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm font-medium leading-5 text-slate-300 transition hover:-translate-y-0.5 hover:border-cyan-200/30 hover:bg-slate-900 hover:text-white active:translate-y-0 sm:min-h-20 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3"
+                className="group flex min-h-[7.25rem] flex-col justify-between rounded-2xl border border-white/[0.075] bg-slate-950/40 p-4 text-left shadow-[0_12px_36px_rgba(0,0,0,0.12)] transition duration-200 hover:-translate-y-1 hover:border-cyan-100/25 hover:bg-slate-900/75 hover:shadow-[0_18px_40px_rgba(8,145,178,0.1)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70"
               >
-                <span>{prompt}</span>
-                <ArrowUpRight aria-hidden="true" size={16} className="shrink-0 text-slate-500 transition group-hover:text-cyan-200" />
+                <span className="flex w-full items-center justify-between">
+                  <span className="grid size-9 place-items-center rounded-xl border border-cyan-100/10 bg-cyan-200/[0.06] text-cyan-200 transition group-hover:border-cyan-100/20 group-hover:bg-cyan-200/10">
+                    <Icon aria-hidden="true" className="size-4" />
+                  </span>
+                  <ArrowUpRight aria-hidden="true" className="size-4 text-slate-600 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-cyan-200" />
+                </span>
+                <span className="mt-4 block">
+                  <span className="block text-sm font-semibold text-slate-100">{title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-400">{detail}</span>
+                </span>
               </button>
             ))}
           </div>
