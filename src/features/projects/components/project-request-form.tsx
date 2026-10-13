@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
 import { LoaderCircle, ShieldCheck, X } from "lucide-react"
 import type { RazorpaySuccess } from "@/features/payments/server/razorpay-types"
-import { RazorpayTestCredentials } from "@/features/payments/components/razorpay-test-credentials"
 import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
@@ -311,8 +310,7 @@ export function ProjectRequestForm() {
           ) : null}
           {message ? <p className="text-sm text-rose-600 dark:text-rose-200" role="alert">{message}</p> : null}
           {needsSignIn ? <Link href="/login?next=%2Fcontact" className="inline-flex font-semibold text-cyan-700 dark:text-cyan-200 underline underline-offset-4">Sign in to continue</Link> : null}
-          <RazorpayTestCredentials />
-          <label data-contact-field className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground dark:bg-white/[0.035]">
+                  <label data-contact-field className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground dark:bg-white/[0.035]">
             <input type="checkbox" required checked={feeAccepted} onChange={(event) => setFeeAccepted(event.target.checked)} aria-describedby="project-request-fee-help" className="mt-1 size-4 shrink-0 accent-cyan-500 dark:accent-cyan-300" />
             <span id="project-request-fee-help">The ₹1 fee helps discourage spam and prioritize genuine project requests. It is non-refundable, even if your request is declined or cannot be completed.</span>
           </label>

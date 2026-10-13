@@ -5,7 +5,6 @@ import { Loader2, ShieldCheck } from "lucide-react"
 import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 import type { RazorpaySuccess } from "@/features/payments/server/razorpay-types"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
-import { RazorpayTestCredentials } from "@/features/payments/components/razorpay-test-credentials"
 import { getRazorpayKeyId, loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import { trackConversion } from "@/lib/analytics"
 
@@ -142,9 +141,7 @@ export function ApiEndpointPurchaseButton({
         {busy ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <ShieldCheck aria-hidden="true" className="h-4 w-4" />}
         {busy ? "Opening checkout" : `Buy Explorer access for ${formatPriceInr(endpoint.pricePaise)}`}
       </button>
-      <div className="mt-3">
-        <RazorpayTestCredentials />
-      </div>
+
       {message ? <p className="mt-2 text-sm text-muted-foreground" role="status">{message}</p> : null}
     </div>
   )
