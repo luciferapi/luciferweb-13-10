@@ -6,7 +6,12 @@ export const revalidate = 30
 
 export async function GET() {
   if (!isMysqlConfigured()) {
-    return NextResponse.json({ totalProjects: 0, totalPurchases: 0 }, { status: 503 })
+    // Keep the public homepage/API usable in local previews before MySQL is configured.
+    // Once configured, the query below remains the source of truth for live counts.
+    return NextResponse.json(
+      { totalProjects: 0, totalPurchases: 0 },
+      { headers: { "Cache-Control": "no-store" } },
+    )
   }
 
   try {
