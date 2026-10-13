@@ -739,7 +739,7 @@ export default function MagneticNav() {
               onClick={() => setMenuOpen((open) => !open)}
               className="grid size-10 shrink-0 place-items-center rounded-xl text-lime transition hover:text-lime/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] xl:hidden"
             >
-              {menuOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
+              {menuOpen ? <X aria-hidden="true" size={25} strokeWidth={2.5} /> : <Menu aria-hidden="true" size={25} strokeWidth={2.5} />}
             </button>
           </div>
         </div>
