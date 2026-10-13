@@ -13,11 +13,17 @@ export type SmtpTransporter = ReturnType<typeof nodemailer.createTransport>
 let cachedConfiguration: SmtpConfiguration | null = null
 let cachedTransporter: SmtpTransporter | null = null
 
+function firstEnvironmentValue(name: string): string | undefined {
+  return [name, `${name}_2`, `${name}_3`, `${name}_4`]
+    .map((key) => process.env[key]?.trim())
+    .find(Boolean)
+}
+
 export function resolveSmtpConfiguration(): SmtpConfiguration {
-  const user = process.env.SMTP_USER?.trim()
-  const password = process.env.SMTP_PASSWORD
-  const host = process.env.SMTP_HOST?.trim()
-  const portValue = process.env.SMTP_PORT?.trim()
+  const user = firstEnvironmentValue("SMTP_USER")
+  const password = firstEnvironmentValue("SMTP_PASSWORD")
+  const host = firstEnvironmentValue("SMTP_HOST")
+  const portValue = firstEnvironmentValue("SMTP_PORT") ?? "587"
   const port = Number(portValue)
 
   if (!user || !password || !host) {
@@ -32,12 +38,12 @@ export function resolveSmtpConfiguration(): SmtpConfiguration {
 }
 
 export function isSmtpConfigured(): boolean {
-  return Boolean(
-    process.env.SMTP_USER?.trim() &&
-    process.env.SMTP_PASSWORD &&
-    process.env.SMTP_HOST?.trim() &&
-    process.env.SMTP_PORT?.trim(),
-  )
+  try {
+    resolveSmtpConfiguration()
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function getSmtpSender(): string {

@@ -1,4 +1,4 @@
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { GetObjectCommand, HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 const notFound = (error: unknown) =>
   typeof error === "object" &&
@@ -55,10 +55,7 @@ function normalizePublicStorageUrl(publicUrl: string | null, bucket: string | nu
 }
 
 function getProjectEnv(name: string) {
-  const value = process.env[name]?.trim()
-  if (value) return value
-
-  return process.env[`${name}_2`]?.trim() || null
+  return process.env[name]?.trim() || null
 }
 
 export function getCloudflareR2Config() {
@@ -148,6 +145,21 @@ export async function uploadToCloudflareR2(
     })))
 
   return { url: isPublic ? buildPublicStorageUrl(objectKey) : null }
+}
+
+export async function verifyCloudflareR2Configuration(): Promise<void> {
+  const config = getCloudflareR2Config()
+  const privateBucket = config.privateBucket
+  if (!privateBucket) {
+    throw new Error("Set CLOUDFLARE_R2_PRIVATE_BUCKET for private backend storage.")
+  }
+
+  await withR2Client(config, (client) => client.send(new HeadBucketCommand({
+    Bucket: config.bucket,
+  })))
+  await withR2Client(config, (client) => client.send(new HeadBucketCommand({
+    Bucket: privateBucket,
+  })))
 }
 
 export async function getCloudflareR2ObjectSize(objectKey: string) {

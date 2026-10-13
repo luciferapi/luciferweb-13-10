@@ -23,8 +23,8 @@ function environmentValue(name: string): string | undefined {
 
 function requiredEnvironmentValue(name: string): string {
   const value = environmentValue(name)
-  if (!value) throw new Error(`${name} is required to connect to the MySQL database.`)
-  return value
+  if (value) return value
+  throw new Error(`${name} is required to connect to the MySQL database.`)
 }
 
 function positiveIntegerEnvironmentValue(name: string, fallback: number, maximum: number): number {
@@ -59,7 +59,7 @@ export function isMysqlConfigured(): boolean {
     environmentValue("DB_HOST") &&
     environmentValue("DB_USER") &&
     process.env.DB_PASSWORD !== undefined &&
-    environmentValue("DB_NAME"),
+    environmentValue("DB_NAME")
   )
 }
 

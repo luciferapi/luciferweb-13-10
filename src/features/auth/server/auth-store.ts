@@ -99,7 +99,12 @@ function toAuthUser(row: ProfileRow): AuthUser {
 }
 
   function getOtpHashSecret(): string {
-    const secret = process.env.AUTH_OTP_HMAC_SECRET?.trim()
+    const secret = [
+      process.env.AUTH_OTP_HMAC_SECRET,
+      process.env.AUTH_OTP_HMAC_SECRET_2,
+      process.env.AUTH_OTP_HMAC_SECRET_3,
+      process.env.AUTH_OTP_HMAC_SECRET_4,
+    ].map((value) => value?.trim()).find(Boolean)
     if (!secret) throw new Error("AUTH_OTP_HMAC_SECRET is required to protect one-time codes.")
     return secret
   }

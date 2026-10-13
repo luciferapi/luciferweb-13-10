@@ -12,8 +12,14 @@ type RateLimitOptions = {
 }
 
 function getRateLimitSecret(): string {
-  const secret = process.env.RATE_LIMIT_HMAC_SECRET?.trim()
-  if (!secret) throw new Error("RATE_LIMIT_HMAC_SECRET is required for API rate-limit keys.")
+  const secret = (
+    process.env.RATE_LIMIT_HMAC_SECRET ??
+    process.env.AUTH_OTP_HMAC_SECRET ??
+    process.env.AUTH_OTP_HMAC_SECRET_2
+  )?.trim()
+  if (!secret) {
+    throw new Error("RATE_LIMIT_HMAC_SECRET or AUTH_OTP_HMAC_SECRET is required for API rate-limit keys.")
+  }
   return secret
 }
 
