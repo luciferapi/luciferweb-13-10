@@ -122,10 +122,3 @@ export async function selectMysqlRows<T extends RowDataPacket>(
   const [rows] = await getMysqlPool().execute<T[]>(sql, [...values])
   return rows
 }
-
-export function getOpenRouterConfig() {
-  return {
-    apiKey: process.env.OPENROUTER_API_KEY?.trim() || null,
-    url: process.env.OPENROUTER_URL?.trim() || null,
-  }
-}

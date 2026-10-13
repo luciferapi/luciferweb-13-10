@@ -36,25 +36,21 @@ export async function POST(request: Request) {
   })
   if (rateLimitResponse) return rateLimitResponse
 
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim()
-  const openRouterUrl = process.env.OPENROUTER_URL?.trim()
-  if (!apiKey || !openRouterUrl) {
-    console.error("Hero assistant is unavailable because OpenRouter configuration is incomplete.")
-    return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 503 })
-  }
+  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").trim().replace(/\/$/, "")
+  const model = (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
+  if (!model) return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 503 })
 
   let response: Response
   try {
-    response = await fetch(openRouterUrl, {
+    const headers: HeadersInit = { "Content-Type": "application/json" }
+    const apiKey = process.env.OLLAMA_API_KEY?.trim()
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+    response = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://luciferapi.com",
-        "X-OpenRouter-Title": "LUCIFER AI",
-      },
+      headers,
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.5",
+        model,
+        stream: false,
         messages: [
           {
             role: "system",
@@ -63,29 +59,30 @@ export async function POST(request: Request) {
           },
           { role: "user", content: prompt },
         ],
-        max_tokens: 160,
+        options: { num_predict: 160 },
       }),
+      signal: AbortSignal.timeout(45_000),
     })
   } catch (error) {
-    console.error("Hero assistant request to OpenRouter failed.", error)
+    console.error("Hero assistant request to Ollama failed.", error)
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 
   if (!response.ok) {
-    console.error("OpenRouter returned HTTP", response.status, "for the hero assistant.")
+    console.error("Ollama returned HTTP", response.status, "for the hero assistant.")
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 
   try {
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> }
-    const text = data.choices?.[0]?.message?.content
+    const data = (await response.json()) as { message?: { content?: string } }
+    const text = data.message?.content
     if (typeof text !== "string" || !text.trim()) {
-      console.error("OpenRouter returned no assistant text for the hero assistant.")
+    console.error("Ollama returned no assistant text for the hero assistant.")
       return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
     }
     return NextResponse.json({ text: text.trim() })
   } catch {
-    console.error("OpenRouter returned an invalid JSON response for the hero assistant.")
+    console.error("Ollama returned an invalid JSON response for the hero assistant.")
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 }

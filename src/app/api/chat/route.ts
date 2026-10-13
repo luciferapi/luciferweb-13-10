@@ -1,23 +1,11 @@
-import { gateway, streamText, type ModelMessage } from "ai"
+import type { ModelMessage } from "ai"
 import { NextResponse } from "next/server"
 import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { chooseAutomaticModule, findBuiltInModule } from "@/features/chat/modules"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
-const DEFAULT_MODEL = "openai/gpt-4o"
-const ALLOWED_MODELS = new Set([
-  "ollama/llama3.2",
-  "google/gemini-2.5-flash",
-  "openai/gpt-4o",
-  "openai/gpt-4.1",
-  "openai/gpt-4.1-mini",
-  "openai/gpt-4.1-nano",
-  "anthropic/claude-sonnet-4",
-  "anthropic/claude-sonnet-4.5",
-  "meta-llama/llama-3.3-70b-instruct",
-  "x-ai/grok-4",
-])
+const DEFAULT_MODEL = "ollama/llama3.2"
 
 function normalizeModelId(model?: string) {
   if (!model) return DEFAULT_MODEL
@@ -32,19 +20,7 @@ function normalizeModelId(model?: string) {
     }
   }
 
-  if (trimmed === "google/gemini-2.0-flash-001" || trimmed === "google/gemini-3.8-flash") {
-    return "google/gemini-2.5-flash"
-  }
-
-  if (normalized === "google/gemini-2.0-flash-001" || normalized === "google/gemini-3.8-flash") {
-    return "google/gemini-2.5-flash"
-  }
-
-  if (ALLOWED_MODELS.has(trimmed) || ALLOWED_MODELS.has(normalized)) {
-    return normalized
-  }
-
-  return DEFAULT_MODEL
+  return normalized.startsWith("ollama/") ? normalized : DEFAULT_MODEL
 }
 
 function normalizeMessages(messages: unknown): ModelMessage[] {
@@ -236,27 +212,11 @@ export async function POST(request: Request) {
       : ""
     const systemWithModule = `${system}${moduleContext}`
 
-    if (isOllamaModel(modelId)) {
-      return await streamOllamaResponse(systemWithModule, messages, modelId)
-    }
-
-    const result = streamText({
-      model: gateway(modelId),
-      system: systemWithModule,
-      messages,
-      maxOutputTokens: 1200,
-      abortSignal: AbortSignal.timeout(45_000),
-    })
-
-    const usesUiMessageStream = Array.isArray(body.messages) && body.messages.some((message) => Array.isArray(message.parts))
-
-    if (request.headers.get("accept")?.includes("text/plain") || new URL(request.url).searchParams.get("format") === "text" || !usesUiMessageStream) {
-      return result.toTextStreamResponse()
-    }
-
-    return result.toUIMessageStreamResponse()
+    const configuredModel = process.env.OLLAMA_MODEL?.trim() || "llama3.2"
+    const ollamaModelId = isOllamaModel(modelId) ? modelId : `ollama/${configuredModel}`
+    return await streamOllamaResponse(systemWithModule, messages, ollamaModelId)
   } catch (error) {
-    console.error("[chat] AI Gateway request failed", error)
+    console.error("[chat] Ollama request failed", error)
     return NextResponse.json(
       { error: "LUCIFER AI could not complete that response. Please try again." },
       { status: 502 },

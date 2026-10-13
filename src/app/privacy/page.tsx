@@ -50,10 +50,10 @@ const sections = [
     content: (
       <>
         <p>
-          The signed-in AI Chat feature sends the text in your prompt and the conversation context you submit to the AI Gateway used by the site, currently Vercel AI Gateway, with the model you select. The chat request also includes your account display name in its assistant context. Available model families include OpenAI, Google, Anthropic, Meta, and xAI. The gateway and the selected model provider process the request to return a response under their own terms and privacy practices. The chat feature saves conversation history and your selected model in your browser’s local storage; the current chat route does not save chat transcripts in the site’s MySQL application database.
+          The AI Chat feature sends the text in your prompt and the conversation context you submit to the server-configured Ollama endpoint and model. The chat request can also include your account display name in its assistant context. The chat feature saves conversation history and your selected Ollama model in your browser’s local storage; the current chat route does not save chat transcripts in the site’s MySQL application database.
         </p>
         <p>
-          The optional homepage assistant is separate. When you submit a question to it, our server sends that prompt to OpenRouter, currently requesting Anthropic Claude Sonnet 4.5, to generate a reply. Do not submit information you are not comfortable sharing with these AI services and model providers.
+          The optional homepage assistant is separate. When you submit a question to it, our server sends that prompt to the configured Ollama model to generate a reply. Do not submit information you are not comfortable sharing with this AI service.
         </p>
       </>
     ),
@@ -78,8 +78,8 @@ const sections = [
         <p>Depending on the feature, information may be processed by these services:</p>
         <ul>
           <li><strong>Hostinger:</strong> the site’s MySQL database and, by default, the SMTP email relay used for verification, sign-in, password-reset, support, project-request, and owner-initiated broadcast messages. The SMTP relay may be changed through site configuration.</li>
-          <li><strong>Vercel:</strong> site hosting and related runtime services, Vercel AI Gateway for signed-in AI Chat, Vercel-hosted assets, and optional Vercel Analytics.</li>
-          <li><strong>OpenRouter and the selected model provider:</strong> the homepage assistant sends prompts to OpenRouter; signed-in AI Chat uses the AI Gateway and the selected model provider.</li>
+          <li><strong>Vercel:</strong> site hosting and related runtime services, Vercel-hosted assets, and optional Vercel Analytics.</li>
+          <li><strong>Ollama:</strong> the homepage assistant and AI Chat send prompts to the server-configured Ollama endpoint and model.</li>
           <li><strong>Razorpay:</strong> payment checkout, order/payment verification, and the IFSC bank-branch lookup.</li>
           <li><strong>Cloudflare R2:</strong> storage and delivery of site-managed project media and downloadable source files.</li>
           <li><strong>Google, X, and Telegram:</strong> identity services used when you choose an enabled social sign-in option. The Telegram sign-in widget loads a script from Telegram when you start that option.</li>

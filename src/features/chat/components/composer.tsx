@@ -18,12 +18,6 @@ import { AudioWaveform } from "./audio-waveform"
 
 export type AIModel =
   | "ollama/llama3.2"
-  | "google/gemini-2.5-flash"
-  | "openai/gpt-4o"
-  | "openai/gpt-4.1"
-  | "anthropic/claude-sonnet-4"
-  | "anthropic/claude-sonnet-4.5"
-  | "meta-llama/llama-3.3-70b-instruct"
 
 type SpeechRecognitionResult = {
   isFinal: boolean
@@ -61,12 +55,6 @@ declare global {
 
 export const AI_MODELS: { id: AIModel; name: string }[] = [
   { id: "ollama/llama3.2", name: "Ollama (local)" },
-  { id: "google/gemini-2.5-flash", name: "Gemini 2.5" },
-  { id: "openai/gpt-4o", name: "GPT-4o" },
-  { id: "openai/gpt-4.1", name: "GPT-4.1" },
-  { id: "anthropic/claude-sonnet-4", name: "Claude 4" },
-  { id: "anthropic/claude-sonnet-4.5", name: "Claude 4.5" },
-  { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B" },
 ]
 
 interface ComposerProps {

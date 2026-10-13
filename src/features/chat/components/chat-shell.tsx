@@ -97,7 +97,7 @@ export function ChatShell() {
   const [isLoaded, setIsLoaded] = useState(true)
 
 const [selectedModel, setSelectedModel] = useState<AIModel>(
-    "openai/gpt-4o",
+    "ollama/llama3.2",
   )
   const [ollamaModel, setOllamaModel] = useState("llama3.2")
   const [selectedModule, setSelectedModule] = useState("auto")
