@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { findUserBySession } from "@/features/auth/server/auth-store"
-import { getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
+import { createRazorpayOrder, getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
 import { PROJECT_REQUEST_FEE_PAISE, savePendingProjectRequest } from "@/features/projects/server/project-request-store"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
@@ -79,23 +79,11 @@ export async function POST(request: Request) {
 
   const requestRef = randomUUID()
   try {
-    const response = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      headers: {
-        Authorization: credentials.authorization,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        amount: PROJECT_REQUEST_FEE_PAISE,
-        currency: "INR",
-        receipt: `request_${requestRef.replace(/-/g, "")}`,
-        notes: { request_ref: requestRef, user_id: user.id },
-      }),
-      cache: "no-store",
+    const { response, order } = await createRazorpayOrder(credentials, {
+      amountPaise: PROJECT_REQUEST_FEE_PAISE,
+      receipt: `request_${requestRef.replace(/-/g, "")}`,
+      notes: { request_ref: requestRef, user_id: user.id },
     })
-
-    const order = await response.json().catch(() => null)
     if (response.status === 401) return NextResponse.json({ error: "Razorpay rejected the server credentials." }, { status: 502 })
     if (!response.ok || typeof order?.id !== "string" || order.amount !== PROJECT_REQUEST_FEE_PAISE || order.currency !== "INR") {
       return NextResponse.json({ error: "Razorpay could not create the request payment order." }, { status: 500 })

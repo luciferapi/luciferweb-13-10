@@ -19,6 +19,35 @@ export function getRazorpayCredentials() {
   return null
 }
 
+export type RazorpayOrder = {
+  id: string
+  amount: number
+  currency: string
+}
+
+export async function createRazorpayOrder(
+  credentials: NonNullable<ReturnType<typeof getRazorpayCredentials>>,
+  input: { amountPaise: number; receipt: string; notes: Record<string, string> },
+): Promise<{ response: Response; order: RazorpayOrder | null }> {
+  const response = await fetch("https://api.razorpay.com/v1/orders", {
+    method: "POST",
+    headers: {
+      Authorization: credentials.authorization,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      amount: input.amountPaise,
+      currency: "INR",
+      receipt: input.receipt,
+      notes: input.notes,
+    }),
+    cache: "no-store",
+  })
+  const order = await response.json().catch(() => null) as RazorpayOrder | null
+  return { response, order }
+}
+
 export async function fetchRazorpayOrder(orderId: string, authorization: string) {
   return fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`, {
     headers: { Authorization: authorization, Accept: "application/json" },

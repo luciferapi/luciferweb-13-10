@@ -8,7 +8,7 @@ import {
   savePendingApiEndpointPurchase,
 } from "@/features/api-endpoints/server/api-purchases"
 import { listApiEndpoints } from "@/features/api-endpoints/server/api-endpoints"
-import { getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
+import { createRazorpayOrder, getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 
@@ -56,23 +56,11 @@ export async function POST(request: Request) {
     const credentials = getRazorpayCredentials()
     if (!credentials) return NextResponse.json({ error: "Razorpay is not configured on the server." }, { status: 503 })
 
-    const response = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      headers: {
-        Authorization: credentials.authorization,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        amount: endpoint.pricePaise,
-        currency: "INR",
-        receipt: `api_${randomUUID().replace(/-/g, "")}`,
-        notes: { product_type: "api_endpoint", api_endpoint_id: endpoint.id, user_id: user.id },
-      }),
-      cache: "no-store",
+    const { response, order } = await createRazorpayOrder(credentials, {
+      amountPaise: endpoint.pricePaise,
+      receipt: `api_${randomUUID().replace(/-/g, "")}`,
+      notes: { product_type: "api_endpoint", api_endpoint_id: endpoint.id, user_id: user.id },
     })
-
-    const order: unknown = await response.json().catch(() => null)
     if (response.status === 401) {
       return NextResponse.json({ error: "Razorpay rejected the server credentials." }, { status: 502 })
     }
