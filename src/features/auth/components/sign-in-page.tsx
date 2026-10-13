@@ -231,10 +231,9 @@ export function SignInPage() {
     }
   }
 
-  async function handleVerifyEmail(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function verifyEmailCode(code: string) {
     setError("")
-    if (!/^\d{6}$/.test(verificationCode)) {
+    if (!/^\d{6}$/.test(code)) {
       setError("Enter the complete six-digit verification code.")
       return
     }
@@ -245,7 +244,7 @@ export function SignInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: pendingEmail,
-          otp: verificationCode,
+          otp: code,
           verificationType,
         }),
       })
@@ -257,6 +256,11 @@ export function SignInPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleVerifyEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    void verifyEmailCode(verificationCode)
   }
 
   async function handleRequestLoginOtp() {
@@ -287,10 +291,9 @@ export function SignInPage() {
     }
   }
 
-  async function handleVerifyLoginOtp(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function verifyLoginOtp(code: string) {
     setError("")
-    if (!/^\d{6}$/.test(verificationCode)) {
+    if (!/^\d{6}$/.test(code)) {
       setError("Enter the complete six-digit sign-in code.")
       return
     }
@@ -299,7 +302,7 @@ export function SignInPage() {
       const response = await fetch("/api/auth/login-code/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailInput, otp: verificationCode }),
+        body: JSON.stringify({ email: emailInput, otp: code }),
       })
       const result = await response.json() as { error?: string }
       if (!response.ok) throw new Error(result.error ?? "Could not verify the sign-in code.")
@@ -309,6 +312,11 @@ export function SignInPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleVerifyLoginOtp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    void verifyLoginOtp(verificationCode)
   }
 
   async function handleForgotPassword(event: FormEvent<HTMLFormElement>) {
@@ -476,8 +484,10 @@ export function SignInPage() {
                   placeholder="000000"
                   value={verificationCode}
                   onChange={(event) => {
-                    setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                    const code = event.target.value.replace(/\D/g, "").slice(0, 6)
+                    setVerificationCode(code)
                     setError("")
+                    if (code.length === 6 && !isSubmitting) void verifyEmailCode(code)
                   }}
                   aria-label="Six-digit verification code"
                   aria-describedby="verification-code-help"
@@ -534,8 +544,10 @@ export function SignInPage() {
                   placeholder="000000"
                   value={verificationCode}
                   onChange={(event) => {
-                    setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                    const code = event.target.value.replace(/\D/g, "").slice(0, 6)
+                    setVerificationCode(code)
                     setError("")
+                    if (code.length === 6 && !isSubmitting) void verifyLoginOtp(code)
                   }}
                   aria-label="Six-digit owner sign-in code"
                   autoFocus
