@@ -16,10 +16,10 @@ let cachedConfiguration: SmtpConfiguration | null = null
 let cachedTransporter: SmtpTransporter | null = null
 
 export function resolveSmtpConfiguration(): SmtpConfiguration {
-  const user = process.env.SMTP_USER?.trim()
-  const password = process.env.SMTP_PASSWORD
-  const host = process.env.SMTP_HOST?.trim() || DEFAULT_SMTP_HOST
-  const port = Number(process.env.SMTP_PORT ?? "465")
+  const user = process.env.SMTP_USER?.trim() || process.env.SMTP_USER_2?.trim()
+  const password = process.env.SMTP_PASSWORD ?? process.env.SMTP_PASSWORD_2
+  const host = process.env.SMTP_HOST?.trim() || process.env.SMTP_HOST_2?.trim() || DEFAULT_SMTP_HOST
+  const port = Number(process.env.SMTP_PORT ?? process.env.SMTP_PORT_2 ?? "465")
 
   if (!user || !password) {
     throw new Error("SMTP_USER and SMTP_PASSWORD are required to send email.")
@@ -33,7 +33,10 @@ export function resolveSmtpConfiguration(): SmtpConfiguration {
 }
 
 export function isSmtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_USER?.trim() && process.env.SMTP_PASSWORD)
+  return Boolean(
+    (process.env.SMTP_USER?.trim() || process.env.SMTP_USER_2?.trim()) &&
+    (process.env.SMTP_PASSWORD || process.env.SMTP_PASSWORD_2),
+  )
 }
 
 export function getSmtpSender(): string {

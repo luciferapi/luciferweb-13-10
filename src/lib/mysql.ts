@@ -17,8 +17,12 @@ declare global {
   var __luciferMysqlPool: Pool | undefined
 }
 
-function requiredEnvironmentValue(name: string): string {
-  const value = process.env[name]?.trim()
+function environmentValue(name: string, fallbackName?: string): string | undefined {
+  return process.env[name]?.trim() || (fallbackName ? process.env[fallbackName]?.trim() : undefined)
+}
+
+function requiredEnvironmentValue(name: string, fallbackName?: string): string {
+  const value = environmentValue(name, fallbackName)
   if (!value) throw new Error(`${name} is required to connect to the MySQL database.`)
   return value
 }
@@ -40,12 +44,12 @@ function getMysqlConfig(): MysqlConfig {
   }
 
   return {
-    host: requiredEnvironmentValue("DB_HOST"),
+    host: requiredEnvironmentValue("DB_HOST", "DB_HOST_2"),
     port: positiveIntegerEnvironmentValue("DB_PORT", 3306, 65535),
-    user: requiredEnvironmentValue("DB_USER"),
+    user: requiredEnvironmentValue("DB_USER", "DB_USER_2"),
     // MySQL permits passwordless local users; the connection itself should determine whether credentials are accepted.
-    password: process.env.DB_PASSWORD?.trim() ?? "",
-    database: requiredEnvironmentValue("DB_NAME"),
+    password: environmentValue("DB_PASSWORD", "DB_PASSWORD_2") ?? "",
+    database: requiredEnvironmentValue("DB_NAME", "DB_NAME_2"),
     connectionLimit: positiveIntegerEnvironmentValue("DB_CONNECTION_LIMIT", 10, 100),
     ssl: sslValue === "true",
   }
@@ -53,10 +57,10 @@ function getMysqlConfig(): MysqlConfig {
 
 export function isMysqlConfigured(): boolean {
   return Boolean(
-    process.env.DB_HOST?.trim() &&
-    process.env.DB_USER?.trim() &&
-    process.env.DB_PASSWORD !== undefined &&
-    process.env.DB_NAME?.trim(),
+    environmentValue("DB_HOST", "DB_HOST_2") &&
+    environmentValue("DB_USER", "DB_USER_2") &&
+    (process.env.DB_PASSWORD !== undefined || process.env.DB_PASSWORD_2 !== undefined) &&
+    environmentValue("DB_NAME", "DB_NAME_2"),
   )
 }
 
