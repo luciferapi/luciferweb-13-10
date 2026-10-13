@@ -1,12 +1,13 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { getMysqlPool, selectMysqlRows } from "@/lib/mysql"
+import type { ResultSetHeader, RowDataPacket } from "mysql2"
 import { findProjectDemoVideo } from "@/features/projects/server/project-demo-videos"
 import { getProjectImage } from "@/features/projects/server/project-images"
 
 import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 export type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 
-type ApiEndpointRow = {
+type ApiEndpointRow = RowDataPacket & {
   id: string
   name: string
   endpoint_path: string
@@ -17,12 +18,6 @@ type ApiEndpointRow = {
   link_url: string
   is_enabled: boolean | number
   price_paise: number | string
-}
-
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
 }
 
 async function toApiEndpoint(row: ApiEndpointRow): Promise<ApiEndpoint> {
@@ -45,67 +40,63 @@ async function toApiEndpoint(row: ApiEndpointRow): Promise<ApiEndpoint> {
 }
 
 export async function listApiEndpoints(includeDisabled = false): Promise<ApiEndpoint[]> {
-  let query = getAdminClient()
-    .from("api_endpoints")
-    .select("id, name, endpoint_path, note, category, image_url, demo_video, link_url, is_enabled, price_paise")
-
-  if (!includeDisabled) query = query.eq("is_enabled", true)
-
-  const { data, error } = await query.order("category").order("name").order("id")
-  if (error) throw error
-  return Promise.all(((data ?? []) as ApiEndpointRow[]).map(toApiEndpoint))
+  const where = includeDisabled ? "" : "WHERE is_enabled = TRUE"
+  const rows = await selectMysqlRows<ApiEndpointRow>(
+    `SELECT id, name, endpoint_path, note, category, image_url, demo_video, link_url,
+            is_enabled, price_paise
+     FROM api_endpoints ${where}
+     ORDER BY category, name, id`,
+  )
+  return Promise.all(rows.map(toApiEndpoint))
 }
 
 export async function createApiEndpoint(endpoint: ApiEndpoint): Promise<void> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoints")
-    .insert({
-      id: endpoint.id,
-      name: endpoint.name,
-      endpoint_path: endpoint.path,
-      note: endpoint.note,
-      category: endpoint.category,
-      image_url: endpoint.imageUrl,
-      demo_video: endpoint.demoVideo || null,
-      link_url: endpoint.linkUrl,
-      is_enabled: endpoint.isEnabled,
-      price_paise: endpoint.pricePaise,
-    })
-    .select("id")
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data) throw new Error("The API endpoint was not saved.")
+  await getMysqlPool().execute<ResultSetHeader>(
+    `INSERT INTO api_endpoints
+      (id, name, endpoint_path, note, category, image_url, demo_video, link_url, is_enabled, price_paise)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      endpoint.id,
+      endpoint.name,
+      endpoint.path,
+      endpoint.note,
+      endpoint.category,
+      endpoint.imageUrl,
+      endpoint.demoVideo || null,
+      endpoint.linkUrl,
+      endpoint.isEnabled,
+      endpoint.pricePaise,
+    ],
+  )
 }
 
 export async function updateApiEndpoint(endpoint: ApiEndpoint): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoints")
-    .update({
-      name: endpoint.name,
-      endpoint_path: endpoint.path,
-      note: endpoint.note,
-      category: endpoint.category,
-      image_url: endpoint.imageUrl,
-      demo_video: endpoint.demoVideo || null,
-      link_url: endpoint.linkUrl,
-      is_enabled: endpoint.isEnabled,
-      price_paise: endpoint.pricePaise,
-    })
-    .eq("id", endpoint.id)
-    .select("id")
-
-  if (error) throw error
-  return (data?.length ?? 0) > 0
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `UPDATE api_endpoints
+     SET name = ?, endpoint_path = ?, note = ?, category = ?, image_url = ?,
+         demo_video = ?, link_url = ?, is_enabled = ?, price_paise = ?,
+         updated_at = CURRENT_TIMESTAMP(3)
+     WHERE id = ?`,
+    [
+      endpoint.name,
+      endpoint.path,
+      endpoint.note,
+      endpoint.category,
+      endpoint.imageUrl,
+      endpoint.demoVideo || null,
+      endpoint.linkUrl,
+      endpoint.isEnabled,
+      endpoint.pricePaise,
+      endpoint.id,
+    ],
+  )
+  return result.affectedRows > 0
 }
 
 export async function deleteApiEndpoint(id: string): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("api_endpoints")
-    .delete()
-    .eq("id", id)
-    .select("id")
-
-  if (error) throw error
-  return (data?.length ?? 0) > 0
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    "DELETE FROM api_endpoints WHERE id = ?",
+    [id],
+  )
+  return result.affectedRows > 0
 }

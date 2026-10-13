@@ -1,5 +1,7 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { randomUUID } from "node:crypto"
+import { getMysqlPool, selectMysqlRows, withMysqlTransaction } from "@/lib/mysql"
+import type { RowDataPacket } from "mysql2"
 
 export const supportStatuses = ["open", "in_progress", "waiting_on_user", "resolved"] as const
 export type SupportStatus = (typeof supportStatuses)[number]
@@ -31,16 +33,38 @@ export type SupportTicket = {
   escalationNote?: string | null
 }
 
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
+const primaryOwnerEmail = "kspgpraveen157@gmail.com"
+
+type TicketRow = RowDataPacket & {
+  id: string
+  ticket_code: string
+  user_id: string
+  issue_type: string
+  order_id: string | null
+  initial_message: string
+  status: string
+  created_at: Date | string
+  updated_at: Date | string
+  escalated_at: Date | string | null
+  escalated_by: string | null
+  escalation_note: string | null
+  name?: string | null
+  email?: string | null
+  public_uid?: string | null
 }
 
-function toIsoDate(value: string) {
-  const date = new Date(value)
+function toIsoDate(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) throw new Error("A support ticket has an invalid date.")
   return date.toISOString()
+}
+
+function isSupportStatus(value: string): value is SupportStatus {
+  return supportStatuses.some((status) => status === value)
+}
+
+function isSupportIssueType(value: string): value is SupportIssueType {
+  return value === "account" || value === "payment" || value === "project" || value === "api" || value === "other"
 }
 
 export async function createSupportTicket(input: {
@@ -50,19 +74,13 @@ export async function createSupportTicket(input: {
   orderId: string | null
   message: string
 }) {
-  const { data, error } = await getAdminClient()
-    .from("support_tickets")
-    .insert({
-      ticket_code: input.ticketCode,
-      user_id: input.userId,
-      issue_type: input.issueType,
-      order_id: input.orderId,
-      initial_message: input.message,
-    })
-    .select("id")
-    .single()
-  if (error) throw error
-  return data.id
+  const id = randomUUID()
+  await getMysqlPool().execute(
+    `INSERT INTO support_tickets (id, ticket_code, user_id, issue_type, order_id, initial_message)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, input.ticketCode, input.userId, input.issueType, input.orderId, input.message],
+  )
+  return id
 }
 
 export async function listSupportTickets(input: {
@@ -71,44 +89,53 @@ export async function listSupportTickets(input: {
   escalatedOnly?: boolean
   includeInternal?: boolean
 }) {
-  const client = getAdminClient()
-  let ticketQuery = client
-    .from("support_tickets")
-    .select("id, ticket_code, user_id, issue_type, order_id, initial_message, status, created_at, updated_at, escalated_at, escalated_by, escalation_note")
-    .order("updated_at", { ascending: false })
-    .limit(100)
-  if (input.userId) ticketQuery = ticketQuery.eq("user_id", input.userId)
-  if (input.status && input.status !== "all") ticketQuery = ticketQuery.eq("status", input.status)
-  if (input.escalatedOnly) ticketQuery = ticketQuery.not("escalated_at", "is", null)
-  const { data: tickets, error: ticketsError } = await ticketQuery
-  if (ticketsError) throw ticketsError
+  const conditions: string[] = []
+  const values: (string | number)[] = []
+  if (input.userId) {
+    conditions.push("t.user_id = ?")
+    values.push(input.userId)
+  }
+  if (input.status && input.status !== "all") {
+    conditions.push("t.status = ?")
+    values.push(input.status)
+  }
+  if (input.escalatedOnly) conditions.push("t.escalated_at IS NOT NULL")
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
+  const tickets = await selectMysqlRows<TicketRow>(
+    `SELECT t.id, t.ticket_code, t.user_id, t.issue_type, t.order_id, t.initial_message,
+            t.status, t.created_at, t.updated_at, t.escalated_at, t.escalated_by,
+            t.escalation_note, u.name, u.email, u.public_uid
+     FROM support_tickets t
+     LEFT JOIN auth_users u ON u.id = t.user_id
+     ${where}
+     ORDER BY t.updated_at DESC LIMIT 100`,
+    values,
+  )
+  if (tickets.length === 0) return { tickets: [] as SupportTicket[], totalShown: 0, limit: 100 }
 
-  const rows = tickets ?? []
-  if (rows.length === 0) return { tickets: [] as SupportTicket[], totalShown: 0, limit: 100 }
-  const ticketIds = rows.map((ticket) => ticket.id)
-  const userIds = [...new Set(rows.map((ticket) => ticket.user_id))]
-  const [messagesResult, profilesResult] = await Promise.all([
-    client
-      .from("support_ticket_messages")
-      .select("id, ticket_id, author_role, author_name, author_email, body, created_at")
-      .in("ticket_id", ticketIds)
-      .order("created_at", { ascending: true })
-      .limit(2000),
-    client
-      .from("auth_users")
-      .select("id, name, email, public_uid")
-      .in("id", userIds),
-  ])
-  if (messagesResult.error) throw messagesResult.error
-  if (profilesResult.error) throw profilesResult.error
-
+  const ticketIds = tickets.map((ticket) => ticket.id)
+  const messages = await selectMysqlRows<RowDataPacket & {
+    id: string
+    ticket_id: string
+    author_role: string
+    author_name: string
+    author_email: string | null
+    body: string
+    created_at: Date | string
+  }>(
+    `SELECT id, ticket_id, author_role, author_name, author_email, body, created_at
+     FROM support_ticket_messages
+     WHERE ticket_id IN (${ticketIds.map(() => "?").join(", ")})
+     ORDER BY created_at ASC LIMIT 2000`,
+    ticketIds,
+  )
   const messagesByTicket = new Map<string, SupportTicketMessage[]>()
-  for (const message of messagesResult.data ?? []) {
+  for (const message of messages) {
     if (message.author_role !== "customer" && message.author_role !== "staff") {
       throw new Error(`Support ticket message ${message.id} has an invalid author role.`)
     }
-    const ticketMessages = messagesByTicket.get(message.ticket_id) ?? []
-    ticketMessages.push({
+    const group = messagesByTicket.get(message.ticket_id) ?? []
+    group.push({
       id: message.id,
       role: message.author_role,
       authorName: message.author_name,
@@ -116,23 +143,17 @@ export async function listSupportTickets(input: {
       body: message.body,
       createdAt: toIsoDate(message.created_at),
     })
-    messagesByTicket.set(message.ticket_id, ticketMessages)
+    messagesByTicket.set(message.ticket_id, group)
   }
-  const profilesById = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]))
 
-  const result: SupportTicket[] = rows.map((ticket) => {
-    if (!["account", "payment", "project", "api", "other"].includes(ticket.issue_type)) {
-      throw new Error(`Support ticket ${ticket.ticket_code} has an invalid issue type.`)
-    }
-    if (!supportStatuses.includes(ticket.status as SupportStatus)) {
-      throw new Error(`Support ticket ${ticket.ticket_code} has an invalid status.`)
-    }
-    const profile = profilesById.get(ticket.user_id)
+  const result: SupportTicket[] = tickets.map((ticket) => {
+    if (!isSupportIssueType(ticket.issue_type)) throw new Error(`Support ticket ${ticket.ticket_code} has an invalid issue type.`)
+    if (!isSupportStatus(ticket.status)) throw new Error(`Support ticket ${ticket.ticket_code} has an invalid status.`)
     const initialMessage: SupportTicketMessage = {
       id: `${ticket.id}:initial`,
       role: "customer",
-      authorName: profile?.name ?? "Customer",
-      authorEmail: profile?.email ?? null,
+      authorName: ticket.name ?? "Customer",
+      authorEmail: ticket.email ?? null,
       body: ticket.initial_message,
       createdAt: toIsoDate(ticket.created_at),
     }
@@ -140,13 +161,13 @@ export async function listSupportTickets(input: {
       id: ticket.id,
       ticketCode: ticket.ticket_code,
       userId: ticket.user_id,
-      userName: profile?.name ?? "Deleted account",
-      userEmail: profile?.email ?? null,
-      publicUid: profile?.public_uid ?? null,
-      issueType: ticket.issue_type as SupportIssueType,
+      userName: ticket.name ?? "Deleted account",
+      userEmail: ticket.email ?? null,
+      publicUid: ticket.public_uid ?? null,
+      issueType: ticket.issue_type,
       orderId: ticket.order_id,
       initialMessage: ticket.initial_message,
-      status: ticket.status as SupportStatus,
+      status: ticket.status,
       createdAt: toIsoDate(ticket.created_at),
       updatedAt: toIsoDate(ticket.updated_at),
       messages: [initialMessage, ...(messagesByTicket.get(ticket.id) ?? [])],
@@ -161,31 +182,25 @@ export async function listSupportTickets(input: {
 }
 
 export async function getSupportTicketIdentity(ticketId: string) {
-  const client = getAdminClient()
-  const { data: ticket, error: ticketError } = await client
-    .from("support_tickets")
-    .select("id, ticket_code, user_id, issue_type, status, escalated_at")
-    .eq("id", ticketId)
-    .maybeSingle()
-  if (ticketError) throw ticketError
+  const rows = await selectMysqlRows<TicketRow>(
+    `SELECT t.id, t.ticket_code, t.user_id, t.issue_type, t.status, t.escalated_at, u.name, u.email
+     FROM support_tickets t LEFT JOIN auth_users u ON u.id = t.user_id
+     WHERE t.id = ? LIMIT 1`,
+    [ticketId],
+  )
+  const ticket = rows[0]
   if (!ticket) return null
-
-  const { data: profile, error: profileError } = await client
-    .from("auth_users")
-    .select("name, email")
-    .eq("id", ticket.user_id)
-    .maybeSingle()
-  if (profileError) throw profileError
-  if (!profile?.email) throw new Error("The support ticket customer has no account email.")
-
+  if (!ticket.email) throw new Error("The support ticket customer has no account email.")
+  if (!isSupportIssueType(ticket.issue_type)) throw new Error(`Support ticket ${ticket.ticket_code} has an invalid issue type.`)
+  if (!isSupportStatus(ticket.status)) throw new Error(`Support ticket ${ticket.ticket_code} has an invalid status.`)
   return {
     id: ticket.id,
     ticketCode: ticket.ticket_code,
     userId: ticket.user_id,
-    userName: profile.name,
-    userEmail: profile.email,
-    issueType: ticket.issue_type as SupportIssueType,
-    status: ticket.status as SupportStatus,
+    userName: ticket.name ?? "Customer",
+    userEmail: ticket.email,
+    issueType: ticket.issue_type,
+    status: ticket.status,
     escalatedAt: ticket.escalated_at ? toIsoDate(ticket.escalated_at) : null,
   }
 }
@@ -199,18 +214,63 @@ export async function updateSupportTicket(input: {
   body: string | null
   status: SupportStatus | null
 }) {
-  const { data, error } = await getAdminClient().rpc("support_update_ticket", {
-    p_ticket_id: input.ticketId,
-    p_actor_user_id: input.actorUserId,
-    p_author_role: input.authorRole,
-    p_author_name: input.authorName,
-    p_author_email: input.authorEmail,
-    p_body: input.body,
-    p_status: input.status,
+  if (input.body !== null && (input.body.trim().length < 1 || input.body.trim().length > 5000)) return "invalid_message"
+  if (input.status !== null && !isSupportStatus(input.status)) return "invalid_status"
+  if (input.body === null && input.status === null) return "invalid_message"
+
+  return withMysqlTransaction(async (connection) => {
+    const [ticketRows] = await connection.execute<RowDataPacket[]>(
+      "SELECT user_id FROM support_tickets WHERE id = ? LIMIT 1 FOR UPDATE",
+      [input.ticketId],
+    )
+    const ticket = ticketRows[0] as { user_id: string } | undefined
+    if (!ticket) return "not_found"
+    const [actorRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT u.email, u.is_blocked, a.allowed_modules
+       FROM auth_users u LEFT JOIN owner_admins a ON a.user_id = u.id
+       WHERE u.id = ? LIMIT 1`,
+      [input.actorUserId],
+    )
+    const actor = actorRows[0] as {
+      email: string | null
+      is_blocked: boolean | number
+      allowed_modules: string[] | string | null
+    } | undefined
+    if (!actor || Boolean(actor.is_blocked)) return "unauthorized"
+
+    if (input.authorRole === "customer") {
+      if (ticket.user_id !== input.actorUserId || input.status !== null) return "unauthorized"
+    } else {
+      let modules: unknown = actor.allowed_modules
+      if (typeof modules === "string") modules = JSON.parse(modules)
+      const authorized = actor.email?.toLowerCase() === primaryOwnerEmail ||
+        (Array.isArray(modules) && (modules.includes("support") || modules.includes("escalations")))
+      if (!authorized || !input.status) return "unauthorized"
+    }
+
+    if (input.body !== null) {
+      await connection.execute(
+        `INSERT INTO support_ticket_messages
+          (id, ticket_id, author_user_id, author_role, author_name, author_email, body)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          randomUUID(),
+          input.ticketId,
+          input.actorUserId,
+          input.authorRole,
+          input.authorName.trim().slice(0, 100),
+          input.authorEmail?.trim().toLowerCase() ?? null,
+          input.body.trim(),
+        ],
+      )
+    }
+    const nextStatus = input.status ?? "open"
+    await connection.execute(
+      "UPDATE support_tickets SET status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?",
+      [nextStatus, input.ticketId],
+    )
+    return "updated"
   })
-  if (error) throw error
-  if (typeof data !== "string") throw new Error("The support ticket update returned an invalid result.")
-  return data
 }
 
 export async function forwardSupportTicket(input: {
@@ -218,12 +278,47 @@ export async function forwardSupportTicket(input: {
   actorUserId: string
   note: string
 }) {
-  const { data, error } = await getAdminClient().rpc("owner_forward_support_ticket", {
-    p_ticket_id: input.ticketId,
-    p_actor_user_id: input.actorUserId,
-    p_escalation_note: input.note,
+  const note = input.note.trim()
+  if (note.length < 3 || note.length > 1000) return "invalid_note"
+  return withMysqlTransaction(async (connection) => {
+    const [actorRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT u.email, u.is_blocked, a.allowed_modules
+       FROM auth_users u LEFT JOIN owner_admins a ON a.user_id = u.id
+       WHERE u.id = ? LIMIT 1 FOR UPDATE`,
+      [input.actorUserId],
+    )
+    const actor = actorRows[0] as {
+      email: string | null
+      is_blocked: boolean | number
+      allowed_modules: string[] | string | null
+    } | undefined
+    if (!actor || Boolean(actor.is_blocked)) return "unauthorized"
+    let modules: unknown = actor.allowed_modules
+    if (typeof modules === "string") modules = JSON.parse(modules)
+    const authorized = actor.email?.toLowerCase() === primaryOwnerEmail ||
+      (Array.isArray(modules) && modules.includes("support"))
+    if (!authorized) return "unauthorized"
+
+    const [ticketRows] = await connection.execute<RowDataPacket[]>(
+      "SELECT user_id, escalated_at FROM support_tickets WHERE id = ? LIMIT 1 FOR UPDATE",
+      [input.ticketId],
+    )
+    const ticket = ticketRows[0] as { user_id: string; escalated_at: Date | string | null } | undefined
+    if (!ticket) return "not_found"
+    if (ticket.escalated_at) return "already_forwarded"
+
+    await connection.execute(
+      `UPDATE support_tickets
+       SET escalated_at = CURRENT_TIMESTAMP(3), escalated_by = ?, escalation_note = ?,
+           updated_at = CURRENT_TIMESTAMP(3)
+       WHERE id = ?`,
+      [input.actorUserId, note, input.ticketId],
+    )
+    await connection.execute(
+      `INSERT INTO owner_audit_logs (actor_user_id, action, subject_user_id, details)
+       VALUES (?, 'support.ticket_forwarded', ?, ?)`,
+      [input.actorUserId, ticket.user_id, JSON.stringify({ ticketId: input.ticketId, note })],
+    )
+    return "forwarded"
   })
-  if (error) throw error
-  if (typeof data !== "string") throw new Error("The support escalation returned an invalid result.")
-  return data
 }

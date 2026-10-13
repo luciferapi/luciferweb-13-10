@@ -1,6 +1,7 @@
 import "server-only"
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { getMysqlPool, selectMysqlRows } from "@/lib/mysql"
+import type { RowDataPacket } from "mysql2"
 
 export type UpiPayoutDetails = {
   method: "upi"
@@ -24,18 +25,13 @@ export type WithdrawalMethodSummary = {
   updatedAt: string
 }
 
-type WithdrawalMethodRow = {
+type WithdrawalMethodRow = RowDataPacket & {
+  user_id?: string
   method_type: PayoutDetails["method"]
   encrypted_payload: string
   iv: string
   auth_tag: string
   updated_at: Date | string
-}
-
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
 }
 
 export class WithdrawalMethodAlreadyExistsError extends Error {
@@ -126,15 +122,15 @@ function getMaskedDestination(details: PayoutDetails) {
 }
 
 export async function getWithdrawalMethod(userId: string): Promise<WithdrawalMethodSummary | null> {
-  const { data: row, error } = await getAdminClient()
-    .from("user_withdrawal_methods")
-    .select("method_type, encrypted_payload, iv, auth_tag, updated_at")
-    .eq("user_id", userId)
-    .maybeSingle()
-  if (error) throw error
+  const rows = await selectMysqlRows<WithdrawalMethodRow>(
+    `SELECT method_type, encrypted_payload, iv, auth_tag, updated_at
+     FROM user_withdrawal_methods WHERE user_id = ? LIMIT 1`,
+    [userId],
+  )
+  const row = rows[0]
   if (!row) return null
 
-  const details = decryptDetails(row as WithdrawalMethodRow)
+  const details = decryptDetails(row)
   const updatedAt = row.updated_at instanceof Date
     ? row.updated_at.toISOString()
     : new Date(row.updated_at).toISOString()
@@ -148,26 +144,27 @@ export async function getWithdrawalMethod(userId: string): Promise<WithdrawalMet
 }
 
 export async function getWithdrawalPayoutDetails(userId: string): Promise<PayoutDetails | null> {
-  const { data, error } = await getAdminClient()
-    .from("user_withdrawal_methods")
-    .select("method_type, encrypted_payload, iv, auth_tag, updated_at")
-    .eq("user_id", userId)
-    .maybeSingle()
-  if (error) throw error
-  return data ? decryptDetails(data as WithdrawalMethodRow) : null
+  const rows = await selectMysqlRows<WithdrawalMethodRow>(
+    `SELECT method_type, encrypted_payload, iv, auth_tag, updated_at
+     FROM user_withdrawal_methods WHERE user_id = ? LIMIT 1`,
+    [userId],
+  )
+  return rows[0] ? decryptDetails(rows[0]) : null
 }
 
 export async function getWithdrawalPayoutDetailsForUsers(userIds: string[]): Promise<Map<string, PayoutDetails>> {
   if (userIds.length === 0) return new Map()
-  const { data, error } = await getAdminClient()
-    .from("user_withdrawal_methods")
-    .select("user_id, method_type, encrypted_payload, iv, auth_tag, updated_at")
-    .in("user_id", userIds)
-  if (error) throw error
+  const placeholders = userIds.map(() => "?").join(", ")
+  const rows = await selectMysqlRows<WithdrawalMethodRow>(
+    `SELECT user_id, method_type, encrypted_payload, iv, auth_tag, updated_at
+     FROM user_withdrawal_methods WHERE user_id IN (${placeholders})`,
+    userIds,
+  )
 
   const detailsByUser = new Map<string, PayoutDetails>()
-  for (const row of data ?? []) {
-    detailsByUser.set(row.user_id, decryptDetails(row as WithdrawalMethodRow))
+  for (const row of rows) {
+    if (!row.user_id) throw new Error("A saved withdrawal method is missing its owner identifier.")
+    detailsByUser.set(row.user_id, decryptDetails(row))
   }
   return detailsByUser
 }
@@ -176,22 +173,18 @@ export async function saveWithdrawalMethod(userId: string, details: PayoutDetail
   const { encryptedPayload, iv, authTag } = encryptDetails(details)
 
   try {
-    const { error } = await getAdminClient()
-      .from("user_withdrawal_methods")
-      .insert({
-        user_id: userId,
-        method_type: details.method,
-        encrypted_payload: encryptedPayload,
-        iv,
-        auth_tag: authTag,
-      })
-    if (error) throw error
+    await getMysqlPool().execute(
+      `INSERT INTO user_withdrawal_methods
+        (user_id, method_type, encrypted_payload, iv, auth_tag)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, details.method, encryptedPayload, iv, authTag],
+    )
   } catch (error) {
     if (
       typeof error === "object" &&
       error !== null &&
       "code" in error &&
-      error.code === "23505"
+      error.code === "ER_DUP_ENTRY"
     ) {
       throw new WithdrawalMethodAlreadyExistsError()
     }

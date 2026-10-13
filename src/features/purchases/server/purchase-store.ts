@@ -1,5 +1,6 @@
 import "server-only"
-import { getSupabaseAdminClient } from "@/lib/supabase-admin"
+import { getMysqlPool, selectMysqlRows, withMysqlTransaction } from "@/lib/mysql"
+import type { ResultSetHeader, RowDataPacket } from "mysql2"
 
 export type ProjectPurchase = {
   paymentId: string | null
@@ -12,7 +13,7 @@ export type ProjectPurchase = {
   purchasedAt: string
 }
 
-type PurchaseRow = {
+type PurchaseRow = RowDataPacket & {
   payment_id: string | null
   order_id: string
   project_code: string
@@ -23,12 +24,6 @@ type PurchaseRow = {
   purchased_at: string | Date
 }
 
-function getAdminClient() {
-  const client = getSupabaseAdminClient()
-  if (!client) throw new Error("Supabase admin access is not configured.")
-  return client
-}
-
 export async function savePendingProjectPurchase(purchase: {
   orderId: string
   userId: string
@@ -36,23 +31,13 @@ export async function savePendingProjectPurchase(purchase: {
   projectTitle: string
   amountPaise: number
 }): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("project_purchases")
-    .insert({
-      payment_id: null,
-      order_id: purchase.orderId,
-      user_id: purchase.userId,
-      project_code: purchase.projectCode,
-      project_title: purchase.projectTitle,
-      amount_paise: purchase.amountPaise,
-      currency: "INR",
-      status: "pending",
-    })
-    .select("order_id")
-    .maybeSingle()
-
-  if (error) throw error
-  return Boolean(data)
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `INSERT INTO project_purchases
+      (payment_id, order_id, user_id, project_code, project_title, amount_paise, currency, status)
+     VALUES (NULL, ?, ?, ?, ?, ?, 'INR', 'pending')`,
+    [purchase.orderId, purchase.userId, purchase.projectCode, purchase.projectTitle, purchase.amountPaise],
+  )
+  return result.affectedRows === 1
 }
 
 export async function saveProjectPurchase(purchase: {
@@ -63,54 +48,69 @@ export async function saveProjectPurchase(purchase: {
   projectTitle: string
   amountPaise: number
 }): Promise<boolean> {
-  const { data, error } = await getAdminClient().rpc("mark_project_purchase_paid", {
-    p_payment_id: purchase.paymentId,
-    p_order_id: purchase.orderId,
-    p_user_id: purchase.userId,
-    p_project_code: purchase.projectCode,
-    p_project_title: purchase.projectTitle,
-    p_amount_paise: purchase.amountPaise,
-  })
+  try {
+    return await withMysqlTransaction(async (connection) => {
+      const [existingRows] = await connection.execute<(RowDataPacket & {
+        payment_id: string | null
+        user_id: string
+        project_code: string
+        amount_paise: number | string
+        status: ProjectPurchase["status"]
+      })[]>(
+        `SELECT payment_id, user_id, project_code, amount_paise, status
+         FROM project_purchases WHERE order_id = ? FOR UPDATE`,
+        [purchase.orderId],
+      )
+      const existing = existingRows[0]
+      if (
+        !existing ||
+        existing.user_id !== purchase.userId ||
+        existing.project_code !== purchase.projectCode ||
+        Number(existing.amount_paise) !== purchase.amountPaise ||
+        (existing.payment_id !== null && existing.payment_id !== purchase.paymentId)
+      ) {
+        return false
+      }
 
-  if (error) throw error
-  return data === true
+      await connection.execute(
+        `UPDATE project_purchases
+         SET purchased_at = IF(status = 'paid', purchased_at, CURRENT_TIMESTAMP(3)),
+             payment_id = ?, project_title = ?, status = 'paid'
+         WHERE order_id = ? AND status IN ('pending', 'paid', 'cancelled', 'expired', 'failed')`,
+        [purchase.paymentId, purchase.projectTitle, purchase.orderId],
+      )
+      return true
+    })
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_ENTRY") {
+      return false
+    }
+    throw error
+  }
 }
 
 export async function listPendingProjectPurchases(userId: string): Promise<string[]> {
-  const { data, error } = await getAdminClient()
-    .from("project_purchases")
-    .select("order_id")
-    .eq("user_id", userId)
-    .eq("status", "pending")
-    .order("purchased_at", { ascending: false })
-    .limit(100)
-
-  if (error) throw error
-  return (data ?? []).map((row) => row.order_id)
+  const rows = await selectMysqlRows<RowDataPacket & { order_id: string }>(
+    `SELECT order_id FROM project_purchases
+     WHERE user_id = ? AND status = 'pending'
+     ORDER BY purchased_at DESC LIMIT 100`,
+    [userId],
+  )
+  return rows.map((row) => row.order_id)
 }
 
 async function markPendingPurchase(orderId: string, userId: string, status: "cancelled" | "failed"): Promise<boolean> {
-  const client = getAdminClient()
-  const { data: updated, error: updateError } = await client
-    .from("project_purchases")
-    .update({ status })
-    .eq("order_id", orderId)
-    .eq("user_id", userId)
-    .eq("status", "pending")
-    .select("order_id")
-
-  if (updateError) throw updateError
-  if ((updated?.length ?? 0) > 0) return true
-
-  const { data: existing, error: selectError } = await client
-    .from("project_purchases")
-    .select("status")
-    .eq("order_id", orderId)
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  if (selectError) throw selectError
-  return existing?.status === status
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `UPDATE project_purchases SET status = ?
+     WHERE order_id = ? AND user_id = ? AND status = 'pending'`,
+    [status, orderId, userId],
+  )
+  if (result.affectedRows > 0) return true
+  const rows = await selectMysqlRows<RowDataPacket & { status: string }>(
+    "SELECT status FROM project_purchases WHERE order_id = ? AND user_id = ? LIMIT 1",
+    [orderId, userId],
+  )
+  return rows[0]?.status === status
 }
 
 export async function markProjectPurchaseCancelled(orderId: string, userId: string): Promise<boolean> {
@@ -118,14 +118,11 @@ export async function markProjectPurchaseCancelled(orderId: string, userId: stri
 }
 
 export async function markProjectPurchaseExpired(orderId: string, userId: string): Promise<void> {
-  const { error } = await getAdminClient()
-    .from("project_purchases")
-    .update({ status: "expired" })
-    .eq("order_id", orderId)
-    .eq("user_id", userId)
-    .eq("status", "pending")
-
-  if (error) throw error
+  await getMysqlPool().execute(
+    `UPDATE project_purchases SET status = 'expired'
+     WHERE order_id = ? AND user_id = ? AND status = 'pending'`,
+    [orderId, userId],
+  )
 }
 
 export async function markProjectPurchaseFailed(orderId: string, userId: string): Promise<boolean> {
@@ -133,29 +130,24 @@ export async function markProjectPurchaseFailed(orderId: string, userId: string)
 }
 
 export async function hasPaidProjectPurchase(userId: string, projectCode: string, paymentId: string): Promise<boolean> {
-  const { data, error } = await getAdminClient()
-    .from("project_purchases")
-    .select("payment_id")
-    .eq("user_id", userId)
-    .eq("project_code", projectCode)
-    .eq("payment_id", paymentId)
-    .eq("status", "paid")
-    .maybeSingle()
-
-  if (error) throw error
-  return Boolean(data?.payment_id)
+  const rows = await selectMysqlRows<RowDataPacket & { payment_id: string | null }>(
+    `SELECT payment_id FROM project_purchases
+     WHERE user_id = ? AND project_code = ? AND payment_id = ? AND status = 'paid'
+     LIMIT 1`,
+    [userId, projectCode, paymentId],
+  )
+  return Boolean(rows[0]?.payment_id)
 }
 
 export async function listUserProjectPurchases(userId: string): Promise<ProjectPurchase[]> {
-  const { data, error } = await getAdminClient()
-    .from("project_purchases")
-    .select("payment_id, order_id, project_code, project_title, amount_paise, currency, status, purchased_at")
-    .eq("user_id", userId)
-    .order("purchased_at", { ascending: false })
-    .order("order_id", { ascending: false })
-
-  if (error) throw error
-  return ((data ?? []) as PurchaseRow[]).map((row) => ({
+  const rows = await selectMysqlRows<PurchaseRow>(
+    `SELECT payment_id, order_id, project_code, project_title, amount_paise,
+            currency, status, purchased_at
+     FROM project_purchases WHERE user_id = ?
+     ORDER BY purchased_at DESC, order_id DESC`,
+    [userId],
+  )
+  return rows.map((row) => ({
     paymentId: row.payment_id,
     orderId: row.order_id,
     projectCode: row.project_code,

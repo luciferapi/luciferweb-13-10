@@ -76,7 +76,7 @@ const sections = [
     content: (
       <>
         <p>
-          We use providers to operate the service and process information for the purposes described in this policy. These include Supabase for account authentication and database services, Cloudflare R2 for file storage, Vercel for hosting and service analytics, OpenRouter and its model providers for AI chat, Razorpay for payments, and an SMTP email provider for service messages. Providers may process information on our behalf or under their own terms when you use an integrated service.
+          We use providers to operate the service and process information for the purposes described in this policy. These include Hostinger for database services, Cloudflare R2 for file storage, Vercel for hosting and service analytics, OpenRouter and its model providers for AI chat, Razorpay for payments, and an SMTP email provider for service messages. Providers may process information on our behalf or under their own terms when you use an integrated service.
         </p>
         <p>
           Sign-in options may also use Google, X, or Telegram. If you choose one, that provider processes information under its own privacy terms. The Telegram sign-in option loads a Telegram widget from Telegram.
@@ -170,7 +170,7 @@ export default function PrivacyPolicyPage() {
         <p className="mt-8 font-mono text-xs uppercase tracking-[0.25em] text-cyan-700 dark:text-cyan-300">LUCIFER AI · Legal</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Privacy Policy</h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Effective date: October 10, 2026 · Website: luciferapi.com · Contact:{" "}
+          Effective date: October 25, 2026 · Website: luciferapi.com · Contact:{" "}
           <a className="underline" href="mailto:lucifer@luciferapi.com">lucifer@luciferapi.com</a>
         </p>
           <div className="mt-10 space-y-8">
@@ -184,7 +184,7 @@ export default function PrivacyPolicyPage() {
           <p className="mt-8 text-sm text-muted-foreground">
             Also see our <Link className="text-cyan-700 underline dark:text-cyan-300" href="/terms">Terms and Conditions</Link>.
           </p>
-          <p className="mt-10 border-t border-border pt-5 text-xs text-muted-foreground">Last updated: October 10, 2026</p>
+          <p className="mt-10 border-t border-border pt-5 text-xs text-muted-foreground">Last updated: October 25, 2026</p>
         </article>
     </main>
   )
