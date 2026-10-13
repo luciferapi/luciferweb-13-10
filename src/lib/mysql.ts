@@ -22,17 +22,21 @@ function environmentValue(name: string): string | undefined {
 }
 
 function databaseEnvironmentSuffix(): string {
+  const primaryConfigured = ["DB_HOST", "DB_USER", "DB_PASSWORD"]
+    .every((name) => process.env[name] !== undefined && environmentValue(name) !== undefined)
+  if (primaryConfigured) return ""
+
   const secondaryConfigured = ["DB_HOST_2", "DB_USER_2", "DB_PASSWORD_2"]
     .every((name) => process.env[name] !== undefined && environmentValue(name) !== undefined)
   return secondaryConfigured ? "_2" : ""
 }
 
 function requiredEnvironmentValue(name: string): string {
-  const suffix = name === "DB_NAME" ? (environmentValue("DB_NAME_2") ? "_2" : "") : databaseEnvironmentSuffix()
+  const suffix = databaseEnvironmentSuffix()
   const value = environmentValue(`${name}${suffix}`)
   if (value) return value
   if (name === "DB_NAME") return "u125883856_luciferwebdb"
-  throw new Error(`${name} is required to connect to the MySQL database.`)
+  throw new Error(`${name}${suffix} is required to connect to the MySQL database.`)
 }
 
 function positiveIntegerEnvironmentValue(name: string, fallback: number, maximum: number): number {
