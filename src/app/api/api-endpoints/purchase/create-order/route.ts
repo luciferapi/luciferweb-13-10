@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Sign in before purchasing API access." }, { status: 401 })
 
     const rateLimitResponse = await enforceRateLimit(request, "api-access-order", {
-      capacity: 10,
-      refillSeconds: 60 * 60,
+capacity: 10,
+    refillSeconds: 10 * 60,
       identifiers: [user.id],
     })
     if (rateLimitResponse) return rateLimitResponse

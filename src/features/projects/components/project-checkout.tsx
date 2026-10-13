@@ -81,9 +81,19 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId }),
       })
-      const order = await orderResponse.json()
+      const orderBody = await orderResponse.text()
+      let order: { amount?: number; currency?: string; order_id?: string; error?: string } = {}
+      if (orderBody.trim()) {
+        try {
+          order = JSON.parse(orderBody) as typeof order
+        } catch {
+          throw new Error("The payment order response was invalid. Please try again.")
+        }
+      }
       if (orderResponse.status === 401) setNeedsSignIn(true)
-      if (!orderResponse.ok) throw new Error(order.error ?? "Could not start checkout.")
+      if (!orderResponse.ok) throw new Error(order.error ?? `Could not start checkout (${orderResponse.status}).`)
+      if (!order.order_id || typeof order.amount !== "number" || !order.currency) throw new Error("The payment order was incomplete. Please try again.")
+      const orderId = order.order_id
 
       let paymentHandled = false
       const checkout = new Razorpay({
@@ -92,7 +102,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
         currency: order.currency,
         name: "LUCIFER AI",
         description: title,
-        order_id: order.order_id,
+        order_id: orderId,
         handler: async (payment) => {
           paymentHandled = true
           try {
@@ -119,7 +129,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
           ondismiss: () => {
             setBusy(false)
             if (paymentHandled) return
-            void updatePendingStatus(order.order_id, "cancelled")
+            void updatePendingStatus(orderId, "cancelled")
               .then(() => setMessage("Checkout was cancelled and recorded in your transaction history."))
               .catch((error: unknown) => {
                 console.error("Could not record the cancelled checkout.", error)
@@ -134,7 +144,7 @@ export function ProjectCheckout({ projectId, title, amountPaise, purchaseLabel }
         paymentHandled = true
         setBusy(false)
         setMessage(failure.error?.description ?? "Payment failed. Please try again.")
-        void updatePendingStatus(order.order_id, "failed").catch((error: unknown) => {
+        void updatePendingStatus(orderId, "failed").catch((error: unknown) => {
           console.error("Could not record the failed checkout.", error)
           setMessage(error instanceof Error ? error.message : "Payment failed, but its status could not be updated.")
         })

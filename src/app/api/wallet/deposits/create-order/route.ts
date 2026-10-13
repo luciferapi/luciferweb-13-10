@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   const rateLimitResponse = await enforceRateLimit(request, "wallet-deposit-order", {
     capacity: 10,
-    refillSeconds: 60 * 60,
+    refillSeconds: 10 * 60,
     identifiers: [user.id],
   })
   if (rateLimitResponse) return rateLimitResponse
