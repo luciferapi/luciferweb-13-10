@@ -14,15 +14,8 @@ import {
 } from "@/features/notifications/server/email"
 import { isOwnerEmail } from "@/features/auth/server/owner-email"
 import { setAuthSessionCookie } from "@/features/auth/server/auth-cookie"
-import { isMysqlConfigured } from "@/lib/mysql"
+import { isMysqlConfigured, isMysqlSchemaUnavailable } from "@/lib/mysql"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
-
-function mysqlSchemaError(error: unknown) {
-  if (typeof error !== "object" || error === null) return false
-  const code = "code" in error && typeof error.code === "string" ? error.code : ""
-  const errno = "errno" in error && typeof error.errno === "number" ? error.errno : 0
-  return code === "ER_BAD_FIELD_ERROR" || code === "ER_NO_SUCH_TABLE" || errno === 1054 || errno === 1146
-}
 
 export async function requestLoginOtp(request: Request) {
   const body = await readLimitedJson(request, 4 * 1024)
@@ -71,9 +64,9 @@ export async function requestLoginOtp(request: Request) {
     })
   } catch (error) {
     console.error("Could not create an owner or staff sign-in code.", error)
-    if (mysqlSchemaError(error)) {
+    if (isMysqlSchemaUnavailable(error)) {
       return NextResponse.json({
-        error: "Email-code sign-in is unavailable because the MySQL auth schema is outdated. Apply database/migrations/001_initial_schema.sql and database/migrations/002_auth_user_access_columns.sql, then retry.",
+        error: "Email-code sign-in is unavailable because the MySQL auth schema is outdated. Apply database/migrations/001_initial_schema.sql, database/migrations/002_auth_user_access_columns.sql, and database/migrations/003_wallet_schema_compatibility.sql, then retry.",
       }, { status: 503 })
     }
     return NextResponse.json({

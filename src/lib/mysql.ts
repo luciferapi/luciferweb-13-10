@@ -59,6 +59,13 @@ export function isMysqlConfigured(): boolean {
   )
 }
 
+export function isMysqlSchemaUnavailable(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false
+  const code = "code" in error && typeof error.code === "string" ? error.code : ""
+  const errno = "errno" in error && typeof error.errno === "number" ? error.errno : 0
+  return code === "ER_BAD_FIELD_ERROR" || code === "ER_NO_SUCH_TABLE" || errno === 1054 || errno === 1146
+}
+
 export function getMysqlPool(): Pool {
   if (globalThis.__luciferMysqlPool) return globalThis.__luciferMysqlPool
 

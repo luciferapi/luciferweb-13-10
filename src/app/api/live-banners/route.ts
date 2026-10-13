@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { listOwnerLiveBanners } from "@/features/owner/server/owner-live-banners"
+import { isMysqlSchemaUnavailable } from "@/lib/mysql"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -11,11 +12,10 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     )
   } catch (error) {
-    const message = error instanceof Error ? error.message : ""
-    if (message === "Supabase admin access is not configured.") {
+    if (isMysqlSchemaUnavailable(error)) {
       return NextResponse.json(
-        { banners: [] },
-        { headers: { "Cache-Control": "no-store, max-age=0" } },
+        { error: "Homepage banners are unavailable because the MySQL schema is outdated. Apply database/migrations/001_initial_schema.sql." },
+        { status: 503, headers: { "Cache-Control": "no-store, max-age=0" } },
       )
     }
 

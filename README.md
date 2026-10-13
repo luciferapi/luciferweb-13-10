@@ -69,10 +69,13 @@ adjust `DB_CONNECTION_LIMIT` for the deployment's connection budget. Never use
 Import `database/migrations/001_initial_schema.sql` into the selected Hostinger
 database using Hostinger's database manager/phpMyAdmin or the MySQL command-line
 client. The application does not create or migrate tables at runtime. Apply the
-schema, then `database/migrations/002_auth_user_access_columns.sql` to safely
-upgrade older `auth_users` tables, before starting the app. Back up the database
-before any production data cutover. `.env.local` is not tracked by Git; keep all
-database credentials private and configure them in production hosting as well.
+schema, then `database/migrations/002_auth_user_access_columns.sql` and
+`database/migrations/003_wallet_schema_compatibility.sql` to upgrade older
+databases, before starting the app. The initial schema uses additive
+`CREATE TABLE IF NOT EXISTS` statements to fill in missing tables. Back up the
+database before any production data cutover. `.env.local` is not tracked by Git;
+keep all database credentials private and configure them in production hosting
+as well.
 Set `AUTH_OTP_HMAC_SECRET` to a strong, persistent secret of at least 32 random
 bytes (hex-encoded) for owner/staff email codes.
 
