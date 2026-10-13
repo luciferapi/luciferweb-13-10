@@ -1,4 +1,5 @@
 import { OwnerProjectRequestsHistoryPage } from "@/features/owner/components/owner-project-requests-history-page"
+import { OwnerWorkspaceShell } from "@/features/owner/components/owner-workspace-shell"
 import { getOwnerWorkspaceAccess } from "@/features/auth/server/owner-access"
 import { redirect } from "next/navigation"
 
@@ -12,5 +13,14 @@ export default async function OwnerProjectRequestsHistoryRoutePage() {
     redirect("/owner")
   }
 
-  return <OwnerProjectRequestsHistoryPage />
+  return (
+    <OwnerWorkspaceShell
+      activePath="/owner/project-requests"
+      allowedModules={access.isPrimaryOwner ? null : access.modules}
+      viewerName={access.user.name}
+      viewerRole={access.isPrimaryOwner ? "Primary owner" : access.role.replace("_", " ")}
+    >
+      <OwnerProjectRequestsHistoryPage />
+    </OwnerWorkspaceShell>
+  )
 }

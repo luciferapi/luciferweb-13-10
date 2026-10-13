@@ -26,6 +26,8 @@ export function OwnerModuleWorkspace({
   viewerName?: string
   viewerRole?: string
 }) {
+  const ModuleIcon = module.icon
+
   return (
     <OwnerWorkspaceShell
       activePath={`/owner/${module.slug}`}
@@ -33,16 +35,21 @@ export function OwnerModuleWorkspace({
       viewerName={viewerName}
       viewerRole={viewerRole}
     >
-      <main className="owner-module-workspace">
-        <section className="owner-heading">
-          <div>
-            <p className="owner-kicker">{module.slug === "apis" ? "OWNER WORKSPACE" : `OWNER WORKSPACE / MODULE ${String(moduleIndex(module.slug)).padStart(2, "0")}`}</p>
-            <h1>{module.title}</h1>
-            <p>{module.slug === "apis" ? "Manage endpoint listings, access pricing, and public API details." : module.description.join(" · ")}</p>
+      <main className="owner-module-workspace" data-owner-module={module.slug}>
+        <section className="owner-heading owner-module-hero">
+          <div className="owner-heading-main">
+            <span className="owner-heading-icon"><ModuleIcon aria-hidden="true" size={23} /></span>
+            <div className="owner-heading-copy">
+              <p className="owner-kicker">
+                {`OWNER WORKSPACE / MODULE ${String(moduleIndex(module.slug)).padStart(2, "0")}`}
+              </p>
+              <h1>{module.title}</h1>
+              <p>{module.slug === "apis" ? "Manage endpoint listings, access pricing, and public API details." : module.description.join(" · ")}</p>
+            </div>
           </div>
-          <div className={module.live ? "owner-access-pill" : "owner-module-status"}>
+          <div className={`owner-heading-status${module.live ? " is-live" : " is-pending"}`}>
             {module.live ? <CheckCircle2 aria-hidden="true" size={15} /> : <CircleDashed aria-hidden="true" size={15} />}
-            {module.live ? "Operational tools available" : "Module workspace ready"}
+            <span>{module.live ? "Operational tools available" : "Module workspace ready"}</span>
           </div>
         </section>
 
@@ -73,7 +80,6 @@ export function OwnerModuleWorkspace({
             </div>
           </section>
         ) : null}
-
       </main>
     </OwnerWorkspaceShell>
   )
