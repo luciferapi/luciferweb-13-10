@@ -73,6 +73,7 @@ html {
   --charcoal: oklch(1 0 0);
   --pineapple: oklch(0.58 0.16 220);
   --coconut: oklch(0.3 0.035 275);
+  --catalog-glow: oklch(0.82 0.19 140);
 }
 
 .dark {

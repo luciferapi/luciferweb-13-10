@@ -13,14 +13,18 @@ export default async function ProjectsPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <section className="mx-auto min-h-[70vh] max-w-6xl px-5 pb-24 pt-32 sm:px-8">
+      <section className="mx-auto min-h-[70vh] max-w-6xl px-5 pb-24 pt-28 sm:px-8">
         <LiveBannerTicker placement="inline" />
-        <header className="grid gap-6 border-b border-border pb-8 md:grid-cols-[1fr_auto] md:items-end">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">Project library</p>
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Projects</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-              Browse published work, review the details, and find a project that fits what you want to build.
+        <header className="relative isolate overflow-hidden rounded-[2rem] border border-border bg-[radial-gradient(circle_at_85%_15%,color-mix(in_oklch,var(--catalog-glow)_18%,transparent),transparent_38%),linear-gradient(135deg,color-mix(in_oklch,var(--card)_94%,var(--catalog-glow)),var(--card))] px-6 py-8 shadow-[0_24px_80px_color-mix(in_oklch,var(--catalog-glow)_10%,transparent)] sm:px-10 sm:py-10">
+          <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full border border-[color-mix(in_oklch,var(--catalog-glow)_30%,transparent)] opacity-60" aria-hidden="true" />
+          <div className="relative max-w-2xl">
+            <div className="mb-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">
+              <span className="size-2 rounded-full bg-[var(--catalog-glow)] shadow-[0_0_18px_var(--catalog-glow)]" />
+              Project library
+            </div>
+            <h1 className="max-w-xl text-4xl font-bold tracking-[-0.045em] text-foreground sm:text-6xl">Build from a stronger starting point.</h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Production-ready websites, APIs, and automations with the source code to take your next idea further.
             </p>
           </div>
           <div className="flex flex-col items-start gap-3 md:items-end">
