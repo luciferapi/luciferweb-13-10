@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ArrowDownToLine, LoaderCircle } from "lucide-react"
 import { loadRazorpayCheckout } from "@/features/payments/client/razorpay-checkout"
 import {
@@ -14,6 +14,7 @@ import {
 import type { RazorpayFailure, RazorpayOptions, RazorpaySuccess } from "@/features/payments/server/razorpay-types"
 
 const presetAmounts = [100, 250, 500, 1000]
+const pendingVerificationStorageKey = "lucifer:wallet-deposit-verification"
 
 type OrderResponse = {
   order_id: string
@@ -54,7 +55,51 @@ export function WalletDepositControl() {
     if (!response.ok || typeof result !== "object" || result === null || !("success" in result) || result.success !== true) {
       throw new Error(getErrorMessage(result, "Could not verify your deposit. Contact support with your Razorpay payment ID."))
     }
+    window.localStorage.removeItem(pendingVerificationStorageKey)
   }
+
+  useEffect(() => {
+    const savedPayment = window.localStorage.getItem(pendingVerificationStorageKey)
+    if (!savedPayment) return
+
+    let payment: RazorpaySuccess
+    try {
+      const parsed: unknown = JSON.parse(savedPayment)
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        !("razorpay_payment_id" in parsed) || typeof parsed.razorpay_payment_id !== "string" ||
+        !("razorpay_order_id" in parsed) || typeof parsed.razorpay_order_id !== "string" ||
+        !("razorpay_signature" in parsed) || typeof parsed.razorpay_signature !== "string"
+      ) return
+      payment = parsed as RazorpaySuccess
+    } catch {
+      window.localStorage.removeItem(pendingVerificationStorageKey)
+      return
+    }
+
+    let cancelled = false
+    setBusy(true)
+    void verifyPayment(payment)
+      .then(() => {
+        if (cancelled) return
+        window.dispatchEvent(new Event("wallet-deposit-updated"))
+        router.refresh()
+      })
+      .catch((retryError: unknown) => {
+        if (!cancelled) {
+          console.error("Could not retry the wallet deposit verification.", retryError)
+          setError(retryError instanceof Error ? retryError.message : "Your deposit is awaiting verification. Please refresh and try again.")
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   async function updatePendingStatus(orderId: string, status: "cancelled" | "failed") {
     const response = await fetch("/api/wallet/deposits", {
@@ -98,6 +143,7 @@ export function WalletDepositControl() {
         handler: async (payment) => {
           paymentHandled = true
           try {
+            window.localStorage.setItem(pendingVerificationStorageKey, JSON.stringify(payment))
             await verifyPayment(payment)
             setOpen(false)
             window.dispatchEvent(new Event("wallet-deposit-updated"))
