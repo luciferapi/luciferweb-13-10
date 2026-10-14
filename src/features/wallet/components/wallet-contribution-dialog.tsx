@@ -173,10 +173,14 @@ export function WalletContributionDialog({
             <p className="text-xs leading-5 text-rose-300 dark:text-rose-300">Leave at least ₹1.00 for Razorpay, or apply the full purchase price from your wallet.</p>
           ) : null}
           {balancePaise !== null && !leavesInvalidRazorpayRemainder && selectedPaise !== null && selectedPaise <= balanceCapPaise ? (
-            <p className="rounded-lg bg-lime-400/10 px-3 py-2 text-xs leading-5 text-lime-300 dark:bg-lime-400/10 dark:text-lime-100">
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium leading-5 text-white dark:border-white/10 dark:bg-white/5 dark:text-white"
+            >
               {remainingPaise === 0
-                ? "The full purchase will be paid from your wallet."
-                : `${formatPriceInr(remainingPaise)} will be paid through Razorpay.`}
+                ? "The full purchase is covered by your wallet. No Razorpay charge is due."
+                : `Remaining ${formatPriceInr(remainingPaise)} will be paid through Razorpay.`}
             </p>
           ) : null}
 
