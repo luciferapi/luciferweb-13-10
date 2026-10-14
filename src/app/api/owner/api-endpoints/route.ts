@@ -50,6 +50,17 @@ const endpointFields = {
 const endpointInput = z.object(endpointFields)
 const idInput = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,127}$/) })
 
+function apiEndpointSchemaMigrationError(error: unknown): NextResponse | null {
+  if (typeof error !== "object" || error === null) return null
+  const code = "code" in error && typeof error.code === "string" ? error.code : ""
+  const message = "message" in error && typeof error.message === "string" ? error.message : ""
+  if (code !== "ER_BAD_FIELD_ERROR" || !/unknown column '(?:price_paise|owner_type)'/i.test(message)) return null
+  return NextResponse.json(
+    { error: "The API database is missing required columns. Apply database/migrations/008_api_endpoint_storage_columns.sql, then retry." },
+    { status: 503 },
+  )
+}
+
 export async function GET() {
   const unauthorized = await requireOwnerAccess("apis")
   if (unauthorized) return unauthorized
@@ -58,6 +69,8 @@ export async function GET() {
     return NextResponse.json({ endpoints: await listApiEndpoints(true) }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
     console.error("Could not load API endpoint management data.", error)
+    const migrationError = apiEndpointSchemaMigrationError(error)
+    if (migrationError) return migrationError
     return NextResponse.json({ error: "Could not load API endpoints." }, { status: 500 })
   }
 }
@@ -87,6 +100,8 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Could not save API endpoint.", error)
+    const migrationError = apiEndpointSchemaMigrationError(error)
+    if (migrationError) return migrationError
     return NextResponse.json({ error: "Could not save the API endpoint." }, { status: 500 })
   }
 }
@@ -105,6 +120,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ endpoint })
   } catch (error) {
     console.error("Could not update API endpoint.", error)
+    const migrationError = apiEndpointSchemaMigrationError(error)
+    if (migrationError) return migrationError
     return NextResponse.json({ error: "Could not update the API endpoint." }, { status: 500 })
   }
 }
