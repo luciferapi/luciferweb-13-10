@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Footer } from "@/components/layout/footer"
+import { ProjectRequestHistory } from "@/features/projects/components/project-request-history"
 
 const projectProcess = [
   {
@@ -64,6 +65,8 @@ export default function ContactProcessPage() {
               Start a project request · ₹1 fee
             </Link>
           </section>
+
+          <ProjectRequestHistory />
         </div>
       </section>
 

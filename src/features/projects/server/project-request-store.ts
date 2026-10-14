@@ -85,6 +85,34 @@ export async function listPaidProjectRequests() {
   }))
 }
 
+export async function listUserProjectRequests(userId: string) {
+  const [rows] = await getMysqlPool().execute<(RowDataPacket & {
+    request_ref: string
+    project_name: string
+    description: string
+    payment_amount_paise: number | string
+    payment_status: string
+    status: string
+    created_at: Date | string
+  })[]>(
+    `SELECT request_ref, project_name, description, payment_amount_paise,
+            payment_status, status, created_at
+     FROM project_requests
+     WHERE user_id = ?
+     ORDER BY created_at DESC`,
+    [userId],
+  )
+  return rows.map((request) => ({
+    requestRef: request.request_ref,
+    projectName: request.project_name,
+    description: request.description,
+    paymentAmountPaise: Number(request.payment_amount_paise),
+    paymentStatus: request.payment_status,
+    status: request.status,
+    createdAt: request.created_at instanceof Date ? request.created_at.toISOString() : request.created_at,
+  }))
+}
+
 export async function markProjectRequestCancelled(orderId: string, userId: string, status: "cancelled" | "failed") {
   const [result] = await getMysqlPool().execute<ResultSetHeader>(
     `UPDATE project_requests SET payment_status = ?, status = ?
