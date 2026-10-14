@@ -59,7 +59,7 @@ export function Footer() {
     {
       title: "Connect",
       links: [
-        { label: "Instagram", href: "https://instagram.com/luciferai.dev", external: true },
+        { label: "Instagram", href: "https://www.instagram.com/luciferapiweb/", external: true },
         { label: "Email", href: "mailto:lucifer@luciferapi.com" },
       ],
     },

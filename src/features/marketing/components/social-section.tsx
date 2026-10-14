@@ -137,7 +137,7 @@ export function SocialSection() {
           transition={{ delay: 0.5 }}
         >
           <motion.a
-            href="https://instagram.com/luciferai.dev"
+            href="https://www.instagram.com/luciferapiweb/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 bg-[#AFFF00] text-[#121212] px-6 py-3 rounded-full font-bold text-sm tracking-wide relative overflow-hidden group"
