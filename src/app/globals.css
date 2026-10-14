@@ -216,6 +216,13 @@ html {
   --color-coconut: var(--coconut);
 }
 
+.wallet-brand-theme {
+  --primary: #9de500;
+  --primary-foreground: #09090b;
+  --lime: #9de500;
+  --ring: #9de500;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

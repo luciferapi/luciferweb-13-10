@@ -196,9 +196,9 @@ export function WalletDepositControl() {
           setError("")
           setOpen(true)
         }}
-        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-lime-400/25 bg-zinc-900/60 text-center text-sm font-semibold text-zinc-300 transition hover:-translate-y-0.5 hover:border-lime-400/25 hover:bg-lime-400/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900/30 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:bg-lime-400/10 dark:focus-visible:ring-offset-zinc-950"
+        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-lime-400/40 bg-lime-400 text-center text-sm font-semibold text-zinc-950 transition hover:-translate-y-0.5 hover:border-lime-300 hover:bg-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-lime-400/40 dark:bg-lime-400 dark:text-zinc-950 dark:hover:border-lime-300 dark:hover:bg-lime-300 dark:focus-visible:ring-offset-zinc-950"
       >
-        <span className="grid size-11 place-items-center rounded-xl bg-lime-400/10 text-lime-300 transition group-hover:bg-lime-400/15 dark:bg-lime-400/10 dark:text-lime-300 dark:group-hover:bg-lime-400/15">
+        <span className="grid size-11 place-items-center rounded-xl bg-black/10 text-zinc-950 transition group-hover:bg-black/15 dark:bg-black/10 dark:text-zinc-950 dark:group-hover:bg-black/15">
           <ArrowDownToLine aria-hidden="true" size={21} />
         </span>
         <span>Deposit</span>

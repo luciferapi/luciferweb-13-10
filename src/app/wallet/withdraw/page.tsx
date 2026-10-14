@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function WalletWithdrawPage() {
   return (
-    <main className="min-h-[100dvh] bg-zinc-950 px-4 pb-16 pt-24 text-zinc-50 dark:bg-zinc-950 dark:text-zinc-400 sm:px-6 sm:pt-28">
+    <main className="wallet-brand-theme min-h-[100dvh] bg-zinc-950 px-4 pb-16 pt-24 text-zinc-50 dark:bg-zinc-950 dark:text-zinc-400 sm:px-6 sm:pt-28">
       <section className="mx-auto max-w-2xl">
         <Link
           href="/wallet"

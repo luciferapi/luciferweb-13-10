@@ -44,7 +44,7 @@ const historyTiles = [
 function WalletUnavailable({ message }: { message: string }) {
   return (
     <WalletAnimated>
-      <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
+      <main className="wallet-brand-theme min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
         <section className="mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
           <div className="w-full max-w-2xl rounded-2xl border border-amber-400/25 bg-zinc-900/90 p-6 shadow-[0_12px_32px_rgba(0,0,0,0.3)] backdrop-blur dark:border-amber-400/25 dark:bg-zinc-900/90 dark:shadow-none sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300 dark:text-amber-200">LUCIFER AI WALLET</p>
@@ -73,7 +73,7 @@ export default async function WalletPage() {
   if (!user) {
     return (
       <WalletAnimated>
-        <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
+        <main className="wallet-brand-theme min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
           <section className="mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
             <div className="w-full max-w-2xl rounded-2xl border border-lime-400/25 bg-zinc-900/90 p-6 shadow-[0_12px_32px_rgba(0,0,0,0.3)] backdrop-blur dark:border-white/10 dark:bg-zinc-900/90 dark:shadow-none sm:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-300 dark:text-lime-300">LUCIFER AI WALLET</p>
@@ -111,7 +111,7 @@ export default async function WalletPage() {
 
   return (
     <WalletAnimated>
-      <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
+      <main className="wallet-brand-theme min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_42%),#09090b] text-zinc-50 dark:bg-[radial-gradient(circle_at_top,rgba(175,255,0,0.08),transparent_40%),#09090b] dark:text-zinc-400">
         <section className="mx-auto min-h-[70vh] max-w-5xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
           <header data-wallet-intro className="flex flex-wrap items-end justify-between gap-5">
             <div>
