@@ -206,7 +206,7 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const mode = params.get("mode")?.toLowerCase()
-    if (!mode || !["signup", "sign-up", "singupt", "create-account"].includes(mode)) return
+    if (!mode || !["signup", "sign-up", "create-account"].includes(mode)) return
 
     const query = new URLSearchParams({ mode: "create-account" })
     const referralCode = params.get("ref")
