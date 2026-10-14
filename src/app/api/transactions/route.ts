@@ -1,7 +1,6 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { z } from "zod"
-import { findUserBySession } from "@/features/auth/server/auth-store"
 import { fetchRazorpayOrder, getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
 import { listUserApiEndpointPurchases } from "@/features/api-endpoints/server/api-purchases"
 import {
@@ -16,11 +15,9 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to view your transaction history." }, { status: 401 })
 
   try {
-    const user = await findUserBySession(token)
+    const user = await getSignedInUser()
     if (!user) return NextResponse.json({ error: "Sign in to view your transaction history." }, { status: 401 })
 
     const credentials = getRazorpayCredentials()
@@ -67,14 +64,12 @@ const cancellationSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to update transaction history." }, { status: 401 })
 
   const parsed = cancellationSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "A valid order_id is required." }, { status: 400 })
 
   try {
-    const user = await findUserBySession(token)
+    const user = await getSignedInUser()
     if (!user) return NextResponse.json({ error: "Sign in to update transaction history." }, { status: 401 })
 
     const updated = parsed.data.status === "cancelled"

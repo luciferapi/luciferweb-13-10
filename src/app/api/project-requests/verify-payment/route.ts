@@ -1,8 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { z } from "zod"
-import { findUserBySession } from "@/features/auth/server/auth-store"
 import { sendProjectRequestNotification } from "@/features/notifications/server/email"
 import { fetchRazorpayOrder, getRazorpayCredentials } from "@/features/payments/server/razorpay-server"
 import {
@@ -21,12 +20,10 @@ const requestSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to verify and submit your project request." }, { status: 401 })
 
   let user
   try {
-    user = await findUserBySession(token)
+    user = await getSignedInUser()
   } catch (error) {
     console.error("Could not verify the project requester session.", error)
     return NextResponse.json({ error: "Could not verify your sign-in right now." }, { status: 500 })

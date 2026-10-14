@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto"
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { z } from "zod"
-import { findUserBySession } from "@/features/auth/server/auth-store"
 import { sendSupportTicketNotification } from "@/features/notifications/server/email"
 import { listUserProjectPurchases } from "@/features/purchases/server/purchase-store"
 import { createSupportTicket, listSupportTickets } from "@/features/support/server/support-tickets"
@@ -30,7 +29,7 @@ const ticketSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  let user: Awaited<ReturnType<typeof findUserBySession>>
+  let user: Awaited<ReturnType<typeof getSignedInUser>>
   try {
     user = await getSupportUser()
   } catch (error) {
@@ -144,7 +143,5 @@ export async function GET() {
 }
 
 async function getSupportUser() {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return null
-  return findUserBySession(token)
+  return getSignedInUser()
 }

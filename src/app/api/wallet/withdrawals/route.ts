@@ -1,6 +1,5 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import { findUserBySession } from "@/features/auth/server/auth-store"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { getWithdrawalMethod } from "@/features/wallet/server/withdrawal-method-store"
 import {
   getAvailableWalletBalancePaise,
@@ -13,9 +12,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 async function signedInUser() {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return null
-  return findUserBySession(token)
+  return getSignedInUser()
 }
 
 export async function GET() {

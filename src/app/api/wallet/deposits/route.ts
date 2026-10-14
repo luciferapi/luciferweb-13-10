@@ -1,7 +1,6 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { z } from "zod"
-import { findUserBySession } from "@/features/auth/server/auth-store"
 import { listUserWalletDeposits, updatePendingWalletDepositStatus } from "@/features/wallet/server/wallet-deposit-store"
 import { getAvailableWalletBalancePaise } from "@/features/wallet/server/wallet-withdrawal-store"
 
@@ -14,11 +13,9 @@ const statusSchema = z.object({
 })
 
 export async function GET() {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to view your wallet deposits." }, { status: 401 })
 
   try {
-    const user = await findUserBySession(token)
+    const user = await getSignedInUser()
     if (!user) return NextResponse.json({ error: "Sign in to view your wallet deposits." }, { status: 401 })
     const [balancePaise, deposits] = await Promise.all([
       getAvailableWalletBalancePaise(user.id),
@@ -35,13 +32,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to update deposit history." }, { status: 401 })
   const parsed = statusSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "A valid deposit order and status are required." }, { status: 400 })
 
   try {
-    const user = await findUserBySession(token)
+    const user = await getSignedInUser()
     if (!user) return NextResponse.json({ error: "Sign in to update deposit history." }, { status: 401 })
     const updated = await updatePendingWalletDepositStatus(
       parsed.data.order_id,

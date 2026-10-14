@@ -1,7 +1,6 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { z } from "zod"
-import { findUserBySession } from "@/features/auth/server/auth-store"
 import { sendSupportTicketFollowupNotification } from "@/features/notifications/server/email"
 import { getSupportTicketIdentity, updateSupportTicket } from "@/features/support/server/support-tickets"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
@@ -17,12 +16,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ ticketId: string }> },
 ) {
-  const token = (await cookies()).get("lucifer_session")?.value
-  if (!token) return NextResponse.json({ error: "Sign in to reply to your support ticket." }, { status: 401 })
 
-  let user: Awaited<ReturnType<typeof findUserBySession>>
+  let user: Awaited<ReturnType<typeof getSignedInUser>>
   try {
-    user = await findUserBySession(token)
+    user = await getSignedInUser()
   } catch (error) {
     console.error("Could not verify the customer support session.", error)
     return NextResponse.json({ error: "Could not verify your sign-in right now." }, { status: 500 })
