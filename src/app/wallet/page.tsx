@@ -2,8 +2,12 @@ import Link from "next/link"
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  CheckCircle2,
   History,
+  LockKeyhole,
   ReceiptText,
+  Sparkles,
+  WalletCards,
 } from "lucide-react"
 import { WalletAnimated } from "@/features/wallet/components/wallet-animated"
 import { WalletDepositControl } from "@/features/wallet/components/wallet-deposit-control"
@@ -109,27 +113,29 @@ export default async function WalletPage() {
     <WalletAnimated>
       <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#dbeafe_42%,transparent),transparent_42%),#f4f5fb] text-[#172033] dark:bg-[radial-gradient(circle_at_top,color-mix(in_oklch,#172554_28%,transparent),transparent_40%),#101216] dark:text-slate-100">
         <section className="mx-auto min-h-[70vh] max-w-5xl px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
-          <header data-wallet-intro className="max-w-2xl">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
-              Wallet
-            </h1>
-            <p className="mt-2 max-w-[60ch] text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Use your balance for project and paid API purchases. Cash withdrawals are coming soon.
-            </p>
+          <header data-wallet-intro className="flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300"><Sparkles aria-hidden="true" className="size-3.5" /> Personal wallet</p>
+              <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-slate-950 dark:text-white sm:text-5xl">Your money, ready to move.</h1>
+              <p className="mt-3 max-w-[58ch] text-sm leading-6 text-slate-600 dark:text-slate-300">Fund projects, unlock paid APIs, and keep every wallet activity in one clear place.</p>
+            </div>
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 sm:inline-flex"><CheckCircle2 aria-hidden="true" className="size-4" /> Secure account</div>
           </header>
 
           <section
             aria-label="Wallet balance"
             data-wallet-intro
-            className="mt-7 flex flex-wrap items-end justify-between gap-5 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none sm:p-7"
+            className="relative mt-8 overflow-hidden rounded-[1.75rem] border border-slate-700/20 bg-[linear-gradient(120deg,#0f172a_0%,#123252_56%,#0e7490_100%)] p-6 text-white shadow-[0_22px_60px_rgba(15,23,42,0.2)] sm:p-8"
           >
-            <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Available balance</p>
-              <p className="mt-2 font-mono text-4xl font-bold tracking-tight tabular-nums text-slate-950 dark:text-white sm:text-5xl">
+            <WalletCards aria-hidden="true" className="absolute -right-5 -top-8 size-40 rotate-12 text-white/10" strokeWidth={1} />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-sm font-semibold text-cyan-100"><span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" /> Available balance</div>
+              <p className="mt-4 font-mono text-4xl font-black tracking-tight tabular-nums text-white sm:text-6xl">
                 {balancePaise === null ? "Unavailable" : (balancePaise / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })}
               </p>
+              <p className="mt-3 text-xs text-slate-300">Ready for project purchases and paid API access</p>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">INR</p>
+            <div className="relative mt-6 flex items-center gap-2 border-t border-white/15 pt-4 text-xs font-medium text-slate-300"><LockKeyhole aria-hidden="true" className="size-3.5" /> Protected checkout via Razorpay</div>
           </section>
 
           {balancePaise === null ? (
@@ -140,12 +146,12 @@ export default async function WalletPage() {
 
           <section
             aria-label="Wallet actions"
-            className="mt-7 grid grid-cols-2 gap-3 rounded-2xl border border-blue-100 bg-white/90 p-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none sm:p-4"
+            className="mt-7 grid grid-cols-2 gap-3 rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-3 shadow-[0_14px_38px_rgba(15,23,42,0.07)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 dark:shadow-none sm:p-4"
           >
             {quickActions.map(({ label }) => <WalletDepositControl key={label} />)}
             <div
                 aria-disabled="true"
-                className="flex min-h-24 cursor-not-allowed flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400"
+                className="flex min-h-24 cursor-not-allowed flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400"
               >
                 <span className="grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                   <ArrowUpFromLine aria-hidden="true" size={21} />
@@ -154,13 +160,13 @@ export default async function WalletPage() {
               </div>
           </section>
 
-          <p className="mt-3 text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
-            Deposits are processed securely by Razorpay. Wallet withdrawals are not available yet.
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
+            <LockKeyhole aria-hidden="true" className="size-3.5" /> Deposits are processed securely by Razorpay. Withdrawals are coming soon.
           </p>
 
           <section aria-labelledby="wallet-history-heading" className="mt-12">
-            <h2 id="wallet-history-heading" className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              Wallet history
+            <h2 id="wallet-history-heading" className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Your activity
             </h2>
             <div aria-label="Wallet history" className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {historyTiles.map(({ title, subtitle, icon: Icon, ...destination }) => {
