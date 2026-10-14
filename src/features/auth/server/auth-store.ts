@@ -179,10 +179,12 @@ async function attachReferral(
   if (!ownerId || ownerId === refereeId) return
 
   const [settingsRows] = await connection.execute<(RowDataPacket & {
+    referrer_reward_type: "fixed" | "percentage"
+    referrer_reward_amount: number | string
     valid_until: Date | string | null
     max_referrals: number | string | null
   })[]>(
-    `SELECT valid_until, max_referrals FROM referral_program_settings
+    `SELECT referrer_reward_type, referrer_reward_amount, valid_until, max_referrals FROM referral_program_settings
      WHERE program_id = 1 LIMIT 1`,
   )
   const settings = settingsRows[0]
@@ -199,8 +201,26 @@ async function attachReferral(
 
   await connection.execute(
     `INSERT INTO referrals (id, referrer_id, referee_id, status, status_reason)
-     VALUES (?, ?, ?, 'pending', 'Awaiting manual review')`,
+     VALUES (?, ?, ?, 'active', 'Activated after verified signup; inviter reward credited')`,
     [randomUUID(), ownerId, refereeId],
+  )
+  const rewardPaise = settings.referrer_reward_type === "fixed"
+    ? Math.round(Number(settings.referrer_reward_amount) * 100)
+    : 0
+  if (Number.isSafeInteger(rewardPaise) && rewardPaise > 0) {
+    await connection.execute(
+      `INSERT INTO owner_wallet_adjustments (id, user_id, actor_user_id, amount_paise, reason)
+       VALUES (?, ?, NULL, ?, 'Referral reward for verified signup')`,
+      [randomUUID(), ownerId, rewardPaise],
+    )
+  }
+}
+
+async function grantSignupBonus(connection: PoolConnection, userId: string): Promise<void> {
+  await connection.execute(
+    `INSERT INTO owner_wallet_adjustments (id, user_id, actor_user_id, amount_paise, reason)
+     VALUES (?, ?, NULL, 2500, 'Verified signup bonus')`,
+    [randomUUID(), userId],
   )
 }
 
@@ -454,6 +474,7 @@ export async function verifyEmailRegistration(
       "INSERT INTO auth_identities (provider, provider_user_id, user_id) VALUES ('password', ?, ?)",
       [profileId, profileId],
     )
+    await grantSignupBonus(connection, profileId)
     await attachReferral(connection, pending.referral_code, profileId)
     await createSessionRecord(connection, profileId, "password", session)
     await connection.execute("DELETE FROM auth_pending_registrations WHERE email = ?", [normalizedEmail])
@@ -726,7 +747,10 @@ export async function getOrCreateOAuthUser(input: {
          VALUES (?, ?, ?)`,
         [input.provider, providerUserId, userId],
       )
-      await attachReferral(connection, input.referralCode?.trim().toUpperCase() ?? null, userId)
+      if (email && input.emailVerified) {
+        await grantSignupBonus(connection, userId)
+        await attachReferral(connection, input.referralCode?.trim().toUpperCase() ?? null, userId)
+      }
       const profile = await findProfileById(connection, userId)
       if (!profile) throw new Error("The social account could not be read after creation.")
       return toAuthUser(profile)

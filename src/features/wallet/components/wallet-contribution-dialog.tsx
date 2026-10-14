@@ -69,6 +69,12 @@ export function WalletContributionDialog({
           throw new Error(message)
         }
         setBalancePaise(result.balancePaise)
+        const balanceCapPaise = Math.min(result.balancePaise, totalPaise)
+        const maxPartialPaise = Math.max(totalPaise - 100, 0)
+        const defaultWalletAmountPaise = balanceCapPaise === totalPaise
+          ? totalPaise
+          : Math.min(balanceCapPaise, maxPartialPaise)
+        setAmountText(formatPaiseInput(defaultWalletAmountPaise))
       })
       .catch((loadError: unknown) => {
         if (loadError instanceof Error && loadError.name === "AbortError") return
@@ -79,7 +85,7 @@ export function WalletContributionDialog({
       })
 
     return () => controller.abort()
-  }, [open])
+  }, [open, totalPaise])
 
   const balanceCapPaise = Math.min(balancePaise ?? 0, totalPaise)
   const maxPartialPaise = Math.max(totalPaise - 100, 0)
@@ -103,25 +109,25 @@ export function WalletContributionDialog({
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (!busy) onOpenChange(nextOpen)
     }}>
-      <DialogContent className="max-w-md rounded-2xl border-slate-200 bg-white p-5 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:p-6">
+      <DialogContent className="max-w-md rounded-2xl border-white/10 bg-zinc-900 p-5 text-zinc-100 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-400 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <Wallet aria-hidden="true" className="size-5 text-cyan-700 dark:text-cyan-300" />
+            <Wallet aria-hidden="true" className="size-5 text-lime-300 dark:text-lime-300" />
             Choose wallet amount
           </DialogTitle>
           <DialogDescription>
-            Apply any amount you choose from your wallet. The remaining amount is paid through Razorpay.
+            Available wallet credits, including signup and referral rewards, are applied automatically up to the purchase total. You can change the amount; any remainder is paid through Razorpay.
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-2 space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/10 bg-zinc-900 p-3 dark:border-white/10 dark:bg-zinc-900">
             <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Purchase total</p>
+              <p className="text-xs text-zinc-300 dark:text-zinc-400">Purchase total</p>
               <p className="mt-1 font-mono text-sm font-bold tabular-nums">{formatPriceInr(totalPaise)}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Available wallet</p>
+              <p className="text-xs text-zinc-300 dark:text-zinc-400">Available wallet</p>
               <p className="mt-1 font-mono text-sm font-bold tabular-nums">
                 {loading ? "Loading…" : balancePaise === null ? "—" : formatPriceInr(balancePaise)}
               </p>
@@ -141,13 +147,13 @@ export function WalletContributionDialog({
                 value={amountText}
                 onChange={(event) => setAmountText(event.target.value)}
                 disabled={loading || !signedIn || balancePaise === null}
-                className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+                className="min-h-11 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 font-mono tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-lime-400 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
               />
               <button
                 type="button"
                 onClick={selectMaximum}
                 disabled={loading || !signedIn || balancePaise === null || maxSelectablePaise === 0}
-                className="min-h-11 shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-semibold transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700"
+                className="min-h-11 shrink-0 rounded-lg border border-white/10 px-3 text-xs font-semibold transition hover:border-lime-400/25 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10"
               >
                 Use max
               </button>
@@ -155,19 +161,19 @@ export function WalletContributionDialog({
           </label>
 
           {balancePaise !== null && balanceCapPaise === 0 ? (
-            <p className="text-xs leading-5 text-slate-600 dark:text-slate-400">Your wallet has no available balance for this purchase.</p>
+            <p className="text-xs leading-5 text-zinc-300 dark:text-zinc-400">Your wallet has no available balance for this purchase.</p>
           ) : null}
           {balancePaise !== null && balancePaise > 0 && maxSelectablePaise === 0 && balanceCapPaise < totalPaise ? (
-            <p className="text-xs leading-5 text-slate-600 dark:text-slate-400">Razorpay requires at least ₹1.00 online unless your wallet covers the full price, so your current balance cannot be applied to this purchase yet.</p>
+            <p className="text-xs leading-5 text-zinc-300 dark:text-zinc-400">Razorpay requires at least ₹1.00 online unless your wallet covers the full price, so your current balance cannot be applied to this purchase yet.</p>
           ) : null}
           {selectedPaise !== null && selectedPaise > balanceCapPaise ? (
-            <p className="text-xs leading-5 text-rose-700 dark:text-rose-300">The wallet amount cannot exceed your available balance or the purchase total.</p>
+            <p className="text-xs leading-5 text-rose-300 dark:text-rose-300">The wallet amount cannot exceed your available balance or the purchase total.</p>
           ) : null}
           {leavesInvalidRazorpayRemainder ? (
-            <p className="text-xs leading-5 text-rose-700 dark:text-rose-300">Leave at least ₹1.00 for Razorpay, or apply the full purchase price from your wallet.</p>
+            <p className="text-xs leading-5 text-rose-300 dark:text-rose-300">Leave at least ₹1.00 for Razorpay, or apply the full purchase price from your wallet.</p>
           ) : null}
           {balancePaise !== null && !leavesInvalidRazorpayRemainder && selectedPaise !== null && selectedPaise <= balanceCapPaise ? (
-            <p className="rounded-lg bg-cyan-50 px-3 py-2 text-xs leading-5 text-cyan-950 dark:bg-cyan-950/40 dark:text-cyan-100">
+            <p className="rounded-lg bg-lime-400/10 px-3 py-2 text-xs leading-5 text-lime-300 dark:bg-lime-400/10 dark:text-lime-100">
               {remainingPaise === 0
                 ? "The full purchase will be paid from your wallet."
                 : `${formatPriceInr(remainingPaise)} will be paid through Razorpay.`}
@@ -175,13 +181,13 @@ export function WalletContributionDialog({
           ) : null}
 
           {error ? (
-            <div className="space-y-2 text-sm text-rose-700 dark:text-rose-300" role="alert">
+            <div className="space-y-2 text-sm text-rose-300 dark:text-rose-300" role="alert">
               <p>{error}</p>
               {!signedIn ? <Link href="/login" className="inline-flex font-semibold underline underline-offset-4">Sign in</Link> : null}
             </div>
           ) : null}
 
-          <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+          <p className="text-xs leading-5 text-zinc-400 dark:text-zinc-400">
             A selected amount is reserved while payment is pending. If you leave without a result, cancel the order from your <Link href="/wallet#transaction-history" className="font-semibold underline underline-offset-2">wallet transaction history</Link> to release it.
           </p>
 
@@ -190,7 +196,7 @@ export function WalletContributionDialog({
               type="button"
               onClick={() => onOpenChange(false)}
               disabled={busy}
-              className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-semibold transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-700"
+              className="min-h-10 rounded-lg border border-white/10 px-4 text-sm font-semibold transition hover:border-white/10 disabled:opacity-50 dark:border-white/10"
             >
               Cancel
             </button>
@@ -198,7 +204,7 @@ export function WalletContributionDialog({
               type="button"
               onClick={() => selectedPaise !== null && onConfirm(selectedPaise)}
               disabled={!canContinue}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-cyan-700 px-4 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-cyan-300 dark:text-slate-950 dark:hover:bg-cyan-200"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-lime-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-lime-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-lime-400 dark:text-zinc-950 dark:hover:bg-lime-300"
             >
               {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : null}
               {remainingPaise === 0 ? "Pay from wallet" : "Continue to checkout"}

@@ -9,6 +9,21 @@ import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-t
 import type { Project } from "@/features/projects/server/projects"
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
 
+function isApiEndpoint(value: unknown): value is ApiEndpoint {
+  return typeof value === "object" && value !== null &&
+    "id" in value && typeof value.id === "string" &&
+    "name" in value && typeof value.name === "string" &&
+    "path" in value && typeof value.path === "string" &&
+    "note" in value && typeof value.note === "string" &&
+    "category" in value && typeof value.category === "string" &&
+    "ownerType" in value && typeof value.ownerType === "string" &&
+    "imageUrl" in value && typeof value.imageUrl === "string" &&
+    "demoVideo" in value && typeof value.demoVideo === "string" &&
+    "linkUrl" in value && typeof value.linkUrl === "string" &&
+    "pricePaise" in value && typeof value.pricePaise === "number" && Number.isSafeInteger(value.pricePaise) &&
+    "isEnabled" in value && value.isEnabled === true
+}
+
 export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
   const [apis, setApis] = useState<ApiEndpoint[]>([])
   const [active, setActive] = useState("")
@@ -50,17 +65,7 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
           !Array.isArray(result.endpoints)
         ) throw new Error("The API catalog response was invalid.")
 
-        const endpoints = result.endpoints.filter((endpoint): endpoint is ApiEndpoint =>
-          typeof endpoint === "object" &&
-          endpoint !== null &&
-          "id" in endpoint && typeof endpoint.id === "string" &&
-          "name" in endpoint && typeof endpoint.name === "string" &&
-          "path" in endpoint && typeof endpoint.path === "string" &&
-          "note" in endpoint && typeof endpoint.note === "string" &&
-          "category" in endpoint && typeof endpoint.category === "string" &&
-          "pricePaise" in endpoint && typeof endpoint.pricePaise === "number" && Number.isSafeInteger(endpoint.pricePaise) &&
-          "isEnabled" in endpoint && endpoint.isEnabled === true,
-        )
+        const endpoints = result.endpoints.filter(isApiEndpoint)
         if (
           "ownedEndpointIds" in result &&
           Array.isArray(result.ownedEndpointIds) &&
@@ -90,7 +95,9 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
   const hasSelectedAccess = selected
     ? selected.pricePaise === 0 || ownedEndpointIds.includes(selected.id)
     : false
-  const url = selected ? new URL(selected.path, "https://luciferapi.com/").toString() : ""
+  const url = selected && hasSelectedAccess && selected.path
+    ? new URL(selected.path, "https://luciferapi.com/").toString()
+    : ""
   const selectedVideoSource = selected?.demoVideo && /^https?:\/\//i.test(selected.demoVideo)
     ? selected.demoVideo
     : selected?.demoVideo ? `/api/project-demo/${encodeURIComponent(selected.demoVideo)}` : ""
@@ -130,6 +137,24 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
     } catch (copyFailure) {
       console.error("Could not copy the API endpoint.", copyFailure)
       setCopyError("Could not copy the endpoint. Select and copy the URL manually.")
+    }
+  }
+
+  async function refreshCatalogAfterPurchase(endpointId: string) {
+    setOwnedEndpointIds((current) => current.includes(endpointId) ? current : [...current, endpointId])
+    try {
+      const response = await fetch("/api/api-endpoints", { cache: "no-store" })
+      const result: unknown = await response.json()
+      if (!response.ok || typeof result !== "object" || result === null || !("endpoints" in result) || !Array.isArray(result.endpoints)) return
+      const refreshedEndpoints = result.endpoints.filter(isApiEndpoint)
+      if (refreshedEndpoints.some((endpoint) => endpoint.id === endpointId && endpoint.path)) {
+        setApis(refreshedEndpoints)
+      }
+      if ("ownedEndpointIds" in result && Array.isArray(result.ownedEndpointIds) && result.ownedEndpointIds.every((id): id is string => typeof id === "string")) {
+        setOwnedEndpointIds(result.ownedEndpointIds)
+      }
+    } catch (refreshError) {
+      console.error("Could not refresh the API URL after purchase.", refreshError)
     }
   }
 
@@ -240,7 +265,7 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
         {selected ? <div className="mt-8 min-w-0 rounded-2xl border border-border bg-card p-5 sm:p-6 md:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs font-medium text-cyan-700 dark:text-cyan-300">GET {selected.path.startsWith("/") ? selected.path : `/${selected.path}`}</p>
+                <p className="font-mono text-xs font-medium text-cyan-700 dark:text-cyan-300">{hasSelectedAccess && selected.path ? `GET ${selected.path.startsWith("/") ? selected.path : `/${selected.path}`}` : "GET ··········"}</p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight">{selected.name}</h3>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{selected.note}</p>
                 <p className="mt-2 font-mono text-xs text-muted-foreground">API code: {selected.id}</p>
@@ -251,8 +276,10 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
             </div>
             {selected.linkUrl ? <a href={selected.linkUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-700 underline underline-offset-4 hover:text-cyan-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:text-cyan-300 dark:hover:text-cyan-200">Documentation / related link <span aria-hidden="true">↗</span></a> : null}
             {selected.demoVideo ? <video controls playsInline preload="metadata" className="mt-5 max-h-[60vh] w-full rounded-xl border border-border bg-muted" aria-label={`${selected.name} API demo video`}><source src={selectedVideoSource} />Your browser does not support embedded video.</video> : null}
-            <button type="button" onClick={() => void copyEndpoint()} aria-label={copied ? "Endpoint copied" : "Copy API endpoint"} className="mt-6 flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 text-left font-mono text-xs text-muted-foreground transition hover:border-cyan-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"><span className="truncate select-all">{url}</span>{copied ? <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /> : <Copy aria-hidden="true" className="h-4 w-4 shrink-0" />}</button>
-            {selected.pricePaise > 0 ? <p className="mt-2 text-xs leading-5 text-muted-foreground">Payment unlocks testing in this Explorer only. Direct API URLs remain publicly accessible.</p> : null}
+            {url ? (
+              <button type="button" onClick={() => void copyEndpoint()} aria-label={copied ? "Endpoint copied" : "Copy API endpoint"} className="mt-6 flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 text-left font-mono text-xs text-muted-foreground transition hover:border-cyan-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"><span className="truncate select-all">{url}</span>{copied ? <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /> : <Copy aria-hidden="true" className="h-4 w-4 shrink-0" />}</button>
+            ) : <p className="mt-6 rounded-xl border border-border bg-background px-4 py-3 font-mono text-xs text-muted-foreground">Full endpoint URL is revealed after payment.</p>}
+            {selected.pricePaise > 0 ? <p className="mt-2 text-xs leading-5 text-muted-foreground">Payment unlocks the full endpoint URL and testing in this Explorer.</p> : null}
             {copyError ? <p role="alert" className="mt-2 text-sm text-rose-700 dark:text-rose-300">{copyError}</p> : null}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {hasSelectedAccess ? (
@@ -260,9 +287,7 @@ export function ApiSection({ apiProjects }: { apiProjects: Project[] }) {
               ) : selected ? (
                 <ApiEndpointPurchaseButton
                   endpoint={selected}
-                  onUnlocked={(endpointId) => setOwnedEndpointIds((current) =>
-                    current.includes(endpointId) ? current : [...current, endpointId],
-                  )}
+                  onUnlocked={(endpointId) => void refreshCatalogAfterPurchase(endpointId)}
                 />
               ) : null}
               <span className="text-xs text-muted-foreground">GET request returning JSON</span>

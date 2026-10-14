@@ -153,7 +153,7 @@ export function OwnerReferralsPanel() {
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-300/10 text-cyan-700 dark:text-cyan-200"><Users aria-hidden="true" size={19} /></span>
           <div>
             <h2 id="referral-review-title" className="text-lg font-bold">Referral review</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Review new referral signups and mark them active or rejected. Status tracking does not issue rewards.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Email-verified referral signups activate automatically and credit the inviter. Existing referral statuses can still be reviewed here.</p>
           </div>
         </div>
         {loading ? <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" /> Loading referrals...</p> : null}
@@ -161,7 +161,7 @@ export function OwnerReferralsPanel() {
         {program ? (
           <form onSubmit={(event) => void saveProgram(event)} className="mt-5 rounded-xl border border-border bg-background/70 p-4">
             <h3 className="text-sm font-bold">Reward rules</h3>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">Set reward amounts and referral limits. Referral status changes do not automatically issue payouts.</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Set reward amounts and referral limits. Verified signups receive the signup bonus and inviter reward automatically; manual status changes do not issue extra credits.</p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {([
                 ["referrerReward", "Reward for referrer"],

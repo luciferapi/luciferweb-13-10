@@ -10,7 +10,7 @@ export const runtime = "nodejs"
 
 const projectInput = z.object({
   title: z.string().trim().min(1).max(100),
-  description: z.string().trim().min(1).max(500),
+  description: z.string().trim().min(1).refine((value) => value.split(/\s+/).length <= 10_000, "Description must be 10,000 words or fewer."),
   category: z.enum(PROJECT_CATEGORIES),
   imageUrl: z.string().trim().max(500).refine((value) => !value || (value.startsWith("/") && !value.startsWith("//")) || /^https?:\/\//i.test(value)),
   demoVideo: z.string().trim().max(500).refine((value) => !value || isProjectDemoVideoName(value) || /^https?:\/\//i.test(value)),

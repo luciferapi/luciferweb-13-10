@@ -4,6 +4,7 @@ export type ApiEndpoint = {
   path: string
   note: string
   category: string
+  ownerType: string
   imageUrl: string
   demoVideo: string
   linkUrl: string

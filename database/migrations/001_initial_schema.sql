@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS api_endpoints (
   endpoint_path VARCHAR(1024) NOT NULL,
   note TEXT NOT NULL,
   category VARCHAR(128) NOT NULL,
+  owner_type VARCHAR(128) NOT NULL DEFAULT '',
   image_url TEXT NOT NULL,
   demo_video TEXT NULL,
   link_url TEXT NOT NULL,
@@ -216,7 +217,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 CREATE TABLE IF NOT EXISTS referral_program_settings (
   program_id SMALLINT UNSIGNED PRIMARY KEY,
   referrer_reward_type VARCHAR(16) NOT NULL DEFAULT 'fixed',
-  referrer_reward_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  referrer_reward_amount DECIMAL(10,2) NOT NULL DEFAULT 10.00,
   referrer_reward_currency CHAR(3) NOT NULL DEFAULT 'INR',
   referee_reward_type VARCHAR(16) NOT NULL DEFAULT 'fixed',
   referee_reward_amount DECIMAL(10,2) NOT NULL DEFAULT 0,

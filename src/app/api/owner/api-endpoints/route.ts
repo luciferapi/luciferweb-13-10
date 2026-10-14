@@ -39,6 +39,7 @@ const endpointFields = {
   path: endpointPath,
   note: z.string().trim().max(300),
   category: z.string().trim().min(1).max(60),
+  ownerType: z.string().trim().max(128),
   imageUrl: z.string().trim().max(500).refine((value) => !value || (value.startsWith("/") && !value.startsWith("//")) || /^https?:\/\//i.test(value)),
   demoVideo: z.string().trim().max(500).refine((value) => !value || isProjectDemoVideoName(value) || /^https?:\/\//i.test(value)),
   linkUrl: z.string().trim().max(300).refine((value) => !value || /^https?:\/\//i.test(value)),

@@ -196,9 +196,9 @@ export function WalletDepositControl() {
           setError("")
           setOpen(true)
         }}
-        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-blue-100 bg-blue-50/30 text-center text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:focus-visible:ring-offset-slate-900"
+        className="wallet-action group flex min-h-24 flex-col items-center justify-center gap-3 rounded-xl border border-lime-400/25 bg-zinc-900/60 text-center text-sm font-semibold text-zinc-300 transition hover:-translate-y-0.5 hover:border-lime-400/25 hover:bg-lime-400/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900/30 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:bg-lime-400/10 dark:focus-visible:ring-offset-zinc-950"
       >
-        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-100 dark:bg-blue-950/70 dark:text-blue-300 dark:group-hover:bg-blue-900/70">
+        <span className="grid size-11 place-items-center rounded-xl bg-lime-400/10 text-lime-300 transition group-hover:bg-lime-400/15 dark:bg-lime-400/10 dark:text-lime-300 dark:group-hover:bg-lime-400/15">
           <ArrowDownToLine aria-hidden="true" size={21} />
         </span>
         <span>Deposit</span>
@@ -207,10 +207,10 @@ export function WalletDepositControl() {
       <Dialog open={open} onOpenChange={(nextOpen) => {
         if (!busy) setOpen(nextOpen)
       }}>
-        <DialogContent className="max-h-[min(90dvh,720px)] overflow-y-auto rounded-2xl border-slate-200 bg-white p-5 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:p-7">
+        <DialogContent className="max-h-[min(90dvh,720px)] overflow-y-auto rounded-2xl border-white/10 bg-zinc-900 p-5 text-zinc-100 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-400 sm:p-7">
           <DialogHeader>
             <DialogTitle className="text-left text-xl font-bold tracking-tight">Add money to your wallet</DialogTitle>
-            <DialogDescription className="text-left leading-6 text-slate-600 dark:text-slate-300">
+            <DialogDescription className="text-left leading-6 text-zinc-300 dark:text-zinc-400">
               Choose an amount from ₹1 to ₹1,000. Payment is securely processed by Razorpay.
             </DialogDescription>
           </DialogHeader>
@@ -227,10 +227,10 @@ export function WalletDepositControl() {
                     setAmount(String(preset))
                     setError("")
                   }}
-                  className={`min-h-11 rounded-xl border px-3 text-sm font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                  className={`min-h-11 rounded-xl border px-3 text-sm font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 ${
                     selected
-                      ? "border-cyan-400 bg-cyan-50 text-slate-950 dark:border-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-100"
-                      : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600"
+                      ? "border-lime-400/40 bg-lime-400/10 text-zinc-100 dark:border-lime-400/40 dark:bg-lime-400/10 dark:text-lime-100"
+                      : "border-white/10 bg-zinc-900 text-zinc-200 hover:border-white/10 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-white/10"
                   }`}
                 >
                   ₹{preset.toLocaleString("en-IN")}
@@ -240,11 +240,11 @@ export function WalletDepositControl() {
           </div>
 
           <div className="mt-5 space-y-2">
-            <label htmlFor="wallet-deposit-amount" className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            <label htmlFor="wallet-deposit-amount" className="text-sm font-semibold text-zinc-200 dark:text-zinc-400">
               Custom amount
             </label>
             <div className="relative">
-              <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-slate-500">₹</span>
+              <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-zinc-400">₹</span>
               <input
                 id="wallet-deposit-amount"
                 type="number"
@@ -258,16 +258,16 @@ export function WalletDepositControl() {
                   setError("")
                 }}
                 aria-describedby="wallet-deposit-help"
-                className="min-h-12 w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 text-base font-semibold tabular-nums text-slate-950 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-cyan-400"
+                className="min-h-12 w-full rounded-xl border border-white/10 bg-zinc-900 pl-8 pr-3 text-base font-semibold tabular-nums text-zinc-100 outline-none transition focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-lime-400/40"
               />
             </div>
-            <p id="wallet-deposit-help" className="text-xs leading-5 text-slate-600 dark:text-slate-400">
+            <p id="wallet-deposit-help" className="text-xs leading-5 text-zinc-300 dark:text-zinc-400">
               Whole rupees only. Minimum ₹1, maximum ₹1,000 per deposit.
             </p>
           </div>
 
           {error ? (
-            <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm leading-5 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-100">
+            <p role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2.5 text-sm leading-5 text-rose-200 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-200">
               {error}
             </p>
           ) : null}
@@ -276,7 +276,7 @@ export function WalletDepositControl() {
             type="button"
             onClick={() => void beginDeposit()}
             disabled={busy}
-            className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+            className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 text-sm font-bold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
           >
             {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : null}
             {busy ? "Opening secure checkout..." : "Continue to payment"}

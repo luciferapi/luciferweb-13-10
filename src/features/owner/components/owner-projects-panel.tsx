@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react"
 import { ExternalLink, LoaderCircle, Plus, Save, Trash2, Upload } from "lucide-react"
-import { findAvailableProjectCode, PROJECT_CATEGORIES, type Project } from "@/features/projects/server/projects"
+import { PROJECT_CATEGORIES, type Project } from "@/features/projects/server/projects"
 import { validateUploadFile } from "@/lib/upload-validation"
 
 function isProject(value: unknown): value is Project {
@@ -33,8 +33,6 @@ type PendingProjectUploads = {
 
 function ProjectFields({
   project,
-  projectCodePreview,
-  onProjectTitleChange,
   uploadingImage,
   onUploadImage,
   uploadingVideo,
@@ -46,8 +44,6 @@ function ProjectFields({
   isSaving,
 }: {
   project?: Project
-  projectCodePreview: string
-  onProjectTitleChange: (title: string) => void
   uploadingImage: boolean
   onUploadImage: (event: ChangeEvent<HTMLInputElement>) => void
   uploadingVideo: boolean
@@ -58,36 +54,14 @@ function ProjectFields({
   pendingUploads: PendingProjectUploads
   isSaving: boolean
 }) {
-  const categories = project?.category === "API"
-    ? PROJECT_CATEGORIES
-    : PROJECT_CATEGORIES.filter((category) => category !== "API")
-
+  const [description, setDescription] = useState(project?.description ?? "")
+  const descriptionWordCount = description.trim() ? description.trim().split(/\s+/).length : 0
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="imageUrl" defaultValue={project?.imageUrl ?? ""} />
-      <label className="space-y-2 text-sm font-medium md:col-span-2">
-        Project ID number
-        <input aria-label="Unique project ID number" readOnly value={project ? String(project.projectNumber) : "Assigned when saved"} className="h-11 w-full rounded-lg border border-border bg-muted px-3 font-mono text-xs text-muted-foreground" />
-        <span className="block text-xs font-normal text-muted-foreground">
-          {project ? "Unique numeric ID assigned by the database." : "A unique number will be assigned automatically when you save."}
-        </span>
-      </label>
-      <label className="space-y-2 text-sm font-medium md:col-span-2">
-        Project code
-        <input aria-label="Unique project code" readOnly value={project?.code ?? projectCodePreview} className="h-11 w-full rounded-lg border border-border bg-muted px-3 font-mono text-xs text-muted-foreground" />
-        <span className="block text-xs font-normal text-muted-foreground">
-          {project ? "Permanent code used by this project's URL, purchase history, and linked assets." : "Title preview only; a unique permanent suffix is added and reserved when you save."}
-        </span>
-      </label>
       <label className="space-y-2 text-sm font-medium">
         Project name
-        <input name="title" required maxLength={100} defaultValue={project?.title} onChange={(event) => onProjectTitleChange(event.target.value)} placeholder="Project name" className="h-11 w-full rounded-lg border border-border bg-card px-3 text-foreground outline-none focus:border-cyan-400" />
-      </label>
-      <label className="space-y-2 text-sm font-medium">
-        Category
-        <select name="category" defaultValue={project?.category ?? "Web"} className="h-11 w-full rounded-lg border border-border bg-card px-3 text-foreground outline-none focus:border-cyan-400">
-          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-        </select>
+        <input name="title" required maxLength={100} defaultValue={project?.title} placeholder="Project name" className="h-11 w-full rounded-lg border border-border bg-card px-3 text-foreground outline-none focus:border-cyan-400" />
       </label>
       <label className="space-y-2 text-sm font-medium">
         Project image
@@ -168,7 +142,12 @@ function ProjectFields({
       </label>
       <label className="space-y-2 text-sm font-medium md:col-span-2">
         Description
-        <textarea name="description" required maxLength={500} rows={3} defaultValue={project?.description} placeholder="What does this project do?" className="w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-foreground outline-none focus:border-cyan-400" />
+        <textarea name="description" required rows={6} value={description} onChange={(event) => {
+          const nextDescription = event.target.value
+          const wordCount = nextDescription.trim() ? nextDescription.trim().split(/\s+/).length : 0
+          if (wordCount <= 10_000) setDescription(nextDescription)
+        }} placeholder="What does this project do?" className="w-full resize-y rounded-lg border border-border bg-card px-3 py-2 text-foreground outline-none focus:border-cyan-400" />
+        <span className="block text-xs font-normal text-muted-foreground">{descriptionWordCount.toLocaleString()} / 10,000 words</span>
       </label>
     </div>
   )
@@ -184,11 +163,10 @@ export function OwnerProjectsPanel() {
   const [pendingUploads, setPendingUploads] = useState<PendingProjectUploads>({ image: null, video: null, source: null })
   const [demoVideos, setDemoVideos] = useState<string[]>([])
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
-  const [newProjectTitle, setNewProjectTitle] = useState("")
+  const [newProjectFormVersion, setNewProjectFormVersion] = useState(0)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const editingProject = projects.find((project) => project.id === editingProjectId)
-  const projectCodePreview = findAvailableProjectCode(newProjectTitle, projects.map((project) => project.code))
 
   async function loadProjects() {
     setLoading(true)
@@ -372,7 +350,7 @@ export function OwnerProjectsPanel() {
     const project = {
       title: String(formData.get("title") ?? ""),
       description: String(formData.get("description") ?? ""),
-      category: String(formData.get("category") ?? "API"),
+      category: editingProject?.category ?? "Web",
       imageUrl: String(formData.get("imageUrl") ?? ""),
       demoVideo: String(formData.get("demoVideo") ?? ""),
       technologies: String(formData.get("technologies") ?? "").split(",").map((value) => value.trim()).filter(Boolean),
@@ -407,7 +385,6 @@ export function OwnerProjectsPanel() {
       projectWasSaved = true
       setProjects((current) => [savedProject, ...current.filter((entry) => entry.id !== savedProject.id)])
       setEditingProjectId(savedProject.id)
-      setNewProjectTitle(savedProject.title)
       let imageUrl = savedProject.imageUrl
       let demoVideo = savedProject.demoVideo ?? ""
 
@@ -512,6 +489,12 @@ export function OwnerProjectsPanel() {
       } else {
         setNotice(editingProject ? "Project updated." : "Project added.")
       }
+      if (!editingProject) {
+        setEditingProjectId(null)
+        setNewProjectFormVersion((version) => version + 1)
+        setPendingUploads({ image: null, video: null, source: null })
+        form.reset()
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save project.")
       if (projectWasSaved) setNotice("Project saved, but one or more selected files did not finish uploading. Save again to retry.")
@@ -557,19 +540,19 @@ export function OwnerProjectsPanel() {
       {error ? <p role="alert" className="border-l-2 border-rose-500 pl-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
       {notice ? <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p> : null}
 
-      <form key={editingProject?.id ?? "new-project"} onSubmit={(event) => void saveProject(event)} className="space-y-4 rounded-xl border border-border bg-card/30 p-4 sm:p-6">
+      <form key={editingProject?.id ?? `new-project-${newProjectFormVersion}`} onSubmit={(event) => void saveProject(event)} className="space-y-4 rounded-xl border border-border bg-card/30 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">Project catalog</p>
             <h2 className="mt-2 text-xl font-bold">{editingProject ? `Edit ${editingProject.title}` : "Create a project"}</h2>
           </div>
           {editingProject ? (
-            <button type="button" disabled={busy} onClick={() => { setEditingProjectId(null); setNewProjectTitle(""); setPendingUploads({ image: null, video: null, source: null }); setNotice(""); setError(""); }} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={() => { setEditingProjectId(null); setNewProjectFormVersion((version) => version + 1); setPendingUploads({ image: null, video: null, source: null }); setNotice(""); setError(""); }} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:opacity-50">
               New project
             </button>
           ) : null}
         </div>
-        <ProjectFields project={editingProject} projectCodePreview={projectCodePreview} onProjectTitleChange={setNewProjectTitle} uploadingImage={uploadingImage} onUploadImage={uploadProjectImage} uploadingVideo={uploadingVideo} onUploadVideo={uploadProjectVideo} uploadingSource={uploadingSource} onUploadSource={uploadProjectSource} demoVideos={demoVideos} pendingUploads={pendingUploads} isSaving={busy} />
+        <ProjectFields project={editingProject} uploadingImage={uploadingImage} onUploadImage={uploadProjectImage} uploadingVideo={uploadingVideo} onUploadVideo={uploadProjectVideo} uploadingSource={uploadingSource} onUploadSource={uploadProjectSource} demoVideos={demoVideos} pendingUploads={pendingUploads} isSaving={busy} />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <input name="isPublished" type="checkbox" defaultChecked={editingProject?.isPublished ?? false} className="size-4 accent-cyan-500" />

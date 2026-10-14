@@ -13,6 +13,7 @@ type ApiEndpointRow = RowDataPacket & {
   endpoint_path: string
   note: string
   category: string
+  owner_type: string
   image_url: string
   demo_video: string | null
   link_url: string
@@ -31,6 +32,7 @@ async function toApiEndpoint(row: ApiEndpointRow): Promise<ApiEndpoint> {
     path: row.endpoint_path,
     note: row.note,
     category: row.category,
+    ownerType: row.owner_type,
     imageUrl: row.image_url || image?.url || "",
     demoVideo: row.demo_video || video || "",
     linkUrl: row.link_url,
@@ -42,7 +44,7 @@ async function toApiEndpoint(row: ApiEndpointRow): Promise<ApiEndpoint> {
 export async function listApiEndpoints(includeDisabled = false): Promise<ApiEndpoint[]> {
   const where = includeDisabled ? "" : "WHERE is_enabled = TRUE"
   const rows = await selectMysqlRows<ApiEndpointRow>(
-    `SELECT id, name, endpoint_path, note, category, image_url, demo_video, link_url,
+    `SELECT id, name, endpoint_path, note, category, owner_type, image_url, demo_video, link_url,
             is_enabled, price_paise
      FROM api_endpoints ${where}
      ORDER BY category, name, id`,
@@ -53,14 +55,15 @@ export async function listApiEndpoints(includeDisabled = false): Promise<ApiEndp
 export async function createApiEndpoint(endpoint: ApiEndpoint): Promise<void> {
   await getMysqlPool().execute<ResultSetHeader>(
     `INSERT INTO api_endpoints
-      (id, name, endpoint_path, note, category, image_url, demo_video, link_url, is_enabled, price_paise)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, endpoint_path, note, category, owner_type, image_url, demo_video, link_url, is_enabled, price_paise)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       endpoint.id,
       endpoint.name,
       endpoint.path,
       endpoint.note,
       endpoint.category,
+      endpoint.ownerType,
       endpoint.imageUrl,
       endpoint.demoVideo || null,
       endpoint.linkUrl,
@@ -73,7 +76,7 @@ export async function createApiEndpoint(endpoint: ApiEndpoint): Promise<void> {
 export async function updateApiEndpoint(endpoint: ApiEndpoint): Promise<boolean> {
   const [result] = await getMysqlPool().execute<ResultSetHeader>(
     `UPDATE api_endpoints
-     SET name = ?, endpoint_path = ?, note = ?, category = ?, image_url = ?,
+     SET name = ?, endpoint_path = ?, note = ?, category = ?, owner_type = ?, image_url = ?,
          demo_video = ?, link_url = ?, is_enabled = ?, price_paise = ?,
          updated_at = CURRENT_TIMESTAMP(3)
      WHERE id = ?`,
@@ -82,6 +85,7 @@ export async function updateApiEndpoint(endpoint: ApiEndpoint): Promise<boolean>
       endpoint.path,
       endpoint.note,
       endpoint.category,
+      endpoint.ownerType,
       endpoint.imageUrl,
       endpoint.demoVideo || null,
       endpoint.linkUrl,

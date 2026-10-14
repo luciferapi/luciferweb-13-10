@@ -96,27 +96,27 @@ export function WalletWithdrawalForm({
   return (
     <form
       onSubmit={(event) => void submitRequest(event)}
-      className="mt-7 space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-7"
+      className="mt-7 space-y-6 rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:border-white/10 dark:bg-zinc-900 dark:shadow-none sm:p-7"
     >
-      <section aria-label="Withdrawal limits" className="grid grid-cols-2 gap-4 border-b border-slate-200 pb-5 dark:border-slate-700">
+      <section aria-label="Withdrawal limits" className="grid grid-cols-2 gap-4 border-b border-white/10 pb-5 dark:border-white/10">
         <div>
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Available balance</p>
-          <p className="mt-1 font-mono text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+          <p className="text-xs font-medium text-zinc-300 dark:text-zinc-400">Available balance</p>
+          <p className="mt-1 font-mono text-lg font-bold tabular-nums text-zinc-100 dark:text-zinc-50">
             {(availableBalancePaise / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })}
           </p>
         </div>
-        <div className="border-l border-slate-200 pl-4 dark:border-slate-700">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Requests left today</p>
-          <p className="mt-1 font-mono text-lg font-bold tabular-nums text-slate-950 dark:text-white">{remainingRequests} of 4</p>
+        <div className="border-l border-white/10 pl-4 dark:border-white/10">
+          <p className="text-xs font-medium text-zinc-300 dark:text-zinc-400">Requests left today</p>
+          <p className="mt-1 font-mono text-lg font-bold tabular-nums text-zinc-100 dark:text-zinc-50">{remainingRequests} of 4</p>
         </div>
       </section>
 
       <div className="space-y-3">
         <div>
-          <label htmlFor="withdrawal-amount" className="text-sm font-semibold text-slate-900 dark:text-white">
+          <label htmlFor="withdrawal-amount" className="text-sm font-semibold text-zinc-100 dark:text-zinc-50">
             Withdrawal amount
           </label>
-          <p id="withdrawal-amount-help" className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
+          <p id="withdrawal-amount-help" className="mt-1 text-xs leading-5 text-zinc-300 dark:text-zinc-400">
             Choose a preset or enter a whole-rupee amount from ₹50 to ₹1,500.
           </p>
         </div>
@@ -132,10 +132,10 @@ export function WalletWithdrawalForm({
                   setAmount(String(preset))
                   setError("")
                 }}
-                className={`min-h-11 rounded-xl border px-2 text-sm font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                className={`min-h-11 rounded-xl border px-2 text-sm font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 ${
                   selected
-                    ? "border-cyan-400 bg-cyan-50 text-slate-950 dark:border-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-100"
-                    : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600"
+                    ? "border-lime-400/40 bg-lime-400/10 text-zinc-100 dark:border-lime-400/40 dark:bg-lime-400/10 dark:text-lime-100"
+                    : "border-white/10 bg-zinc-900 text-zinc-200 hover:border-white/10 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-white/10"
                 }`}
               >
                 ₹{preset.toLocaleString("en-IN")}
@@ -144,7 +144,7 @@ export function WalletWithdrawalForm({
           })}
         </div>
         <div className="relative">
-          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-slate-500">₹</span>
+          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-zinc-400">₹</span>
           <input
             id="withdrawal-amount"
             type="number"
@@ -158,21 +158,21 @@ export function WalletWithdrawalForm({
               setError("")
             }}
             aria-describedby="withdrawal-amount-help"
-            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 text-base font-semibold tabular-nums text-slate-950 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-cyan-400"
+            className="min-h-12 w-full rounded-xl border border-white/10 bg-zinc-900 pl-8 pr-3 text-base font-semibold tabular-nums text-zinc-100 outline-none transition focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-lime-400/40"
           />
         </div>
       </div>
 
-      <section aria-label="Payout method" className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Saved payout method</h2>
+      <section aria-label="Payout method" className="rounded-xl border border-white/10 bg-zinc-900 p-4 dark:border-white/10 dark:bg-zinc-900/60">
+        <h2 className="text-sm font-semibold text-zinc-100 dark:text-zinc-50">Saved payout method</h2>
         {withdrawalMethod ? (
-          <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+          <p className="mt-2 text-sm leading-6 text-zinc-300 dark:text-zinc-400">
             {withdrawalMethod.method === "upi" ? "UPI" : "Bank transfer"} to {withdrawalMethod.accountHolder}, {withdrawalMethod.destination}
           </p>
         ) : (
           <div>
-            <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">Add your UPI ID or bank account in Settings before submitting.</p>
-            <Link href="/settings" className="mt-2 inline-flex font-semibold text-blue-700 underline underline-offset-4 dark:text-cyan-300">
+            <p className="mt-2 text-sm leading-6 text-zinc-300 dark:text-zinc-400">Add your UPI ID or bank account in Settings before submitting.</p>
+            <Link href="/settings" className="mt-2 inline-flex font-semibold text-lime-300 underline underline-offset-4 dark:text-lime-300">
               Open Settings
             </Link>
           </div>
@@ -180,13 +180,13 @@ export function WalletWithdrawalForm({
       </section>
 
       {error ? (
-        <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm leading-5 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-100">
+        <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-400/25 bg-rose-400/10 p-3 text-sm leading-5 text-rose-200 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-200">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <span>{error}</span>
         </p>
       ) : null}
       {success ? (
-        <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-5 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
+        <p role="status" className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm leading-5 text-emerald-200 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
           {success}. The owner will review your request.
         </p>
       ) : null}
@@ -194,12 +194,12 @@ export function WalletWithdrawalForm({
       <button
         type="submit"
         disabled={busy || !withdrawalMethod || remainingRequests < 1 || availableBalancePaise < 5000}
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 text-sm font-bold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
       >
         {busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <ArrowUpFromLine aria-hidden="true" className="size-4" />}
         {busy ? "Submitting request..." : "Submit withdrawal request"}
       </button>
-      <p className="text-center text-xs leading-5 text-slate-600 dark:text-slate-400">
+      <p className="text-center text-xs leading-5 text-zinc-300 dark:text-zinc-400">
         Your request will be sent to the owner for manual review.
       </p>
     </form>

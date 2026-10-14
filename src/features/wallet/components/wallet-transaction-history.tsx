@@ -104,19 +104,19 @@ function formatPaymentMethod(value: string | null) {
 }
 
 const statusStyles: Record<ProjectPurchase["status"], string> = {
-  paid: "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-900",
-  pending: "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:ring-amber-900",
-  cancelled: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
-  expired: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
-  failed: "bg-rose-50 text-rose-800 ring-rose-200 dark:bg-rose-950/60 dark:text-rose-200 dark:ring-rose-900",
+  paid: "bg-emerald-400/10 text-emerald-300 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-900",
+  pending: "bg-amber-400/10 text-amber-300 ring-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:ring-amber-900",
+  cancelled: "bg-zinc-800 text-zinc-300 ring-slate-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-slate-700",
+  expired: "bg-zinc-800 text-zinc-300 ring-slate-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-slate-700",
+  failed: "bg-rose-400/10 text-rose-300 ring-rose-200 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-900",
 }
 
 const statusIconStyles: Record<ProjectPurchase["status"], string> = {
-  paid: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
-  pending: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
-  cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  expired: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  failed: "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
+  paid: "bg-emerald-400/10 text-emerald-300 dark:bg-emerald-400/10 dark:text-emerald-300",
+  pending: "bg-amber-400/10 text-amber-300 dark:bg-amber-950/60 dark:text-amber-200",
+  cancelled: "bg-zinc-800 text-zinc-300 dark:bg-zinc-900 dark:text-zinc-400",
+  expired: "bg-zinc-800 text-zinc-300 dark:bg-zinc-900 dark:text-zinc-400",
+  failed: "bg-rose-400/10 text-rose-300 dark:bg-rose-400/10 dark:text-rose-300",
 }
 
 export function WalletTransactionHistory() {
@@ -307,19 +307,19 @@ export function WalletTransactionHistory() {
   ] as const
 
   return (
-    <section id="transaction-history" aria-labelledby="transaction-history-heading" className="mt-14 scroll-mt-28 border-t border-slate-200/80 pt-9 dark:border-slate-800 sm:mt-16 sm:pt-11">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+    <section id="transaction-history" aria-labelledby="transaction-history-heading" className="mt-14 scroll-mt-28 border-t border-white/10 pt-9 dark:border-white/10 sm:mt-16 sm:pt-11">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-4 dark:border-white/10">
         <div>
-          <h2 id="transaction-history-heading" className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          <h2 id="transaction-history-heading" className="text-2xl font-bold tracking-tight text-zinc-100 dark:text-zinc-50 sm:text-3xl">
             Transaction history
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-300 dark:text-zinc-400">
             Review project and API purchases alongside wallet deposits. Cash withdrawals are coming soon.
           </p>
         </div>
         <Link
           href="/projects"
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-800 transition hover:border-blue-300 hover:text-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:text-blue-300 dark:focus-visible:ring-offset-slate-950"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-zinc-900 px-3.5 text-sm font-semibold text-zinc-200 transition hover:border-lime-400/25 hover:text-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:text-lime-300 dark:focus-visible:ring-offset-zinc-950"
         >
           Browse projects <ArrowUpRight aria-hidden="true" className="size-4" />
         </Link>
@@ -331,10 +331,10 @@ export function WalletTransactionHistory() {
             key={value}
             href={href}
             aria-current={activeFilter === value ? "page" : undefined}
-            className={`inline-flex min-h-10 items-center rounded-lg border px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+            className={`inline-flex min-h-10 items-center rounded-lg border px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 ${
               activeFilter === value
-                ? "border-blue-700 bg-blue-700 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:text-blue-300"
+                ? "border-lime-400/25 bg-lime-400 text-zinc-950"
+                : "border-white/10 bg-zinc-900 text-zinc-300 hover:border-lime-400/25 hover:text-lime-300 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:text-lime-300"
             }`}
           >
             {label}
@@ -343,14 +343,14 @@ export function WalletTransactionHistory() {
       </nav>
 
       {activeFilter === "all" && signedIn && !loading && !depositLoading && !error && !depositError ? (
-        <section aria-label="Payment summary" className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none sm:p-5">
+        <section aria-label="Payment summary" className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-lime-400/25 bg-zinc-900 p-4 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-white/10 dark:bg-zinc-900 dark:shadow-none sm:p-5">
           <div>
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Spent on purchases</p>
-            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{formatPriceInr(paidTotalPaise)}</p>
+            <p className="text-xs font-medium text-zinc-300 dark:text-zinc-400">Spent on purchases</p>
+            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-zinc-100 dark:text-zinc-50">{formatPriceInr(paidTotalPaise)}</p>
           </div>
-          <div className="border-l border-slate-200 pl-4 dark:border-slate-700 sm:pl-6">
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Completed purchases</p>
-            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-white">{completedPurchaseCount}</p>
+          <div className="border-l border-white/10 pl-4 dark:border-white/10 sm:pl-6">
+            <p className="text-xs font-medium text-zinc-300 dark:text-zinc-400">Completed purchases</p>
+            <p className="mt-1 font-mono text-xl font-bold tracking-tight tabular-nums text-zinc-100 dark:text-zinc-50">{completedPurchaseCount}</p>
           </div>
         </section>
       ) : null}
@@ -359,39 +359,39 @@ export function WalletTransactionHistory() {
         <div role="status" className="mt-5 space-y-3" aria-label="Loading transactions">
           <span className="sr-only">Loading your transactions...</span>
           {[0, 1, 2].map((item) => (
-            <div key={item} aria-hidden="true" className="h-24 rounded-2xl bg-white/80 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800" />
+            <div key={item} aria-hidden="true" className="h-24 rounded-2xl bg-zinc-900/80 ring-1 ring-slate-200 dark:bg-zinc-900 dark:ring-slate-800" />
           ))}
         </div>
       ) : filterError ? (
-        <p role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-100">
+        <p role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-rose-400/25 bg-rose-400/10 p-4 text-sm leading-6 text-rose-200 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-200">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
           <span>{filterError}</span>
         </p>
       ) : !signedIn ? (
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-          <Receipt aria-hidden="true" className="size-6 text-blue-700 dark:text-blue-300" />
-          <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">Sign in to view your purchases</h3>
-          <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
+        <section className="mt-5 rounded-2xl border border-white/10 bg-zinc-900 p-6 dark:border-white/10 dark:bg-zinc-900 sm:p-8">
+          <Receipt aria-hidden="true" className="size-6 text-lime-300 dark:text-lime-300" />
+          <h3 className="mt-4 text-lg font-semibold text-zinc-100 dark:text-zinc-50">Sign in to view your purchases</h3>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-300 dark:text-zinc-400">
             Your purchases and wallet activity are linked to your account and visible only to you.
           </p>
           <Link
             href="/login"
-            className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+            className="mt-5 inline-flex min-h-10 items-center rounded-xl bg-lime-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
           >
             Sign in
           </Link>
         </section>
       ) : filteredItemCount === 0 ? (
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-          <Receipt aria-hidden="true" className="size-6 text-blue-700 dark:text-blue-300" />
-          <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+        <section className="mt-5 rounded-2xl border border-white/10 bg-zinc-900 p-6 dark:border-white/10 dark:bg-zinc-900 sm:p-8">
+          <Receipt aria-hidden="true" className="size-6 text-lime-300 dark:text-lime-300" />
+          <h3 className="mt-4 text-lg font-semibold text-zinc-100 dark:text-zinc-50">
             {activeFilter === "deposit"
               ? "No deposits yet"
               : activeFilter === "withdraw"
                 ? "No withdrawals yet"
                 : "No wallet activity yet"}
           </h3>
-          <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
+          <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-300 dark:text-zinc-400">
             {activeFilter === "deposit"
               ? "Your wallet deposit payments will appear here after checkout."
               : activeFilter === "withdraw"
@@ -401,20 +401,20 @@ export function WalletTransactionHistory() {
           {activeFilter === "all" ? (
             <Link
               href="/projects"
-              className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+              className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-lime-400 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950"
             >
               Explore projects <ArrowUpRight aria-hidden="true" className="size-4" />
             </Link>
           ) : null}
         </section>
       ) : activeFilter === "deposit" ? (
-        <section aria-label="Wallet deposits" className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <section aria-label="Wallet deposits" className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 dark:border-white/10 dark:bg-zinc-900">
           <ul>
             {deposits.map((deposit, index) => {
               const label = deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)
               const StatusIcon = deposit.status === "paid" ? Check : deposit.status === "pending" ? Clock3 : CircleAlert
               return (
-                <li key={deposit.orderId} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                <li key={deposit.orderId} className={index > 0 ? "border-t border-white/10 dark:border-white/10" : ""}>
                   <article className="flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${statusIconStyles[deposit.status]}`}>
@@ -422,25 +422,25 @@ export function WalletTransactionHistory() {
                       </span>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">Wallet deposit</h3>
+                          <h3 className="text-sm font-semibold text-zinc-100 dark:text-zinc-50 sm:text-base">Wallet deposit</h3>
                           <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[deposit.status]}`}>
                             {label}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(deposit.paidAt ?? deposit.createdAt)}</p>
-                        <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Deposit ID {deposit.depositId}</p>
+                        <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-400">{formatPurchaseDate(deposit.paidAt ?? deposit.createdAt)}</p>
+                        <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">Deposit ID {deposit.depositId}</p>
                         {deposit.paymentId ? (
-                          <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Razorpay payment ID {deposit.paymentId}</p>
+                          <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">Razorpay payment ID {deposit.paymentId}</p>
                         ) : null}
                       </div>
                     </div>
-                    <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                    <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-zinc-100 dark:text-zinc-50 sm:ml-0">
                       +{formatPriceInr(deposit.amountPaise)}
                     </p>
                   </article>
                   {deposit.paymentDetails ? (
-                    <details className="mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950/60 sm:mx-5">
-                      <summary className="cursor-pointer font-semibold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-100">
+                    <details className="mx-4 mb-4 rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-sm dark:border-white/10 dark:bg-zinc-950/60 sm:mx-5">
+                      <summary className="cursor-pointer font-semibold text-zinc-200 outline-none focus-visible:ring-2 focus-visible:ring-lime-400 dark:text-zinc-400">
                         Razorpay payment details
                       </summary>
                       <dl className="mt-3 grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2">
@@ -474,14 +474,14 @@ export function WalletTransactionHistory() {
                           ["Captured", deposit.paymentDetails.captured ? "Yes" : "No"],
                         ].map(([label, value]) => value ? (
                           <div key={label}>
-                            <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
-                            <dd className="mt-1 break-all font-medium text-slate-900 dark:text-slate-100">{value}</dd>
+                            <dt className="text-zinc-400 dark:text-zinc-400">{label}</dt>
+                            <dd className="mt-1 break-all font-medium text-zinc-100 dark:text-zinc-400">{value}</dd>
                           </div>
                         ) : null)}
                       </dl>
                     </details>
                   ) : deposit.status === "paid" ? (
-                    <p className="mx-4 mb-4 text-xs text-slate-500 dark:text-slate-400 sm:mx-5">
+                    <p className="mx-4 mb-4 text-xs text-zinc-400 dark:text-zinc-400 sm:mx-5">
                       Razorpay payment details are not available for this deposit.
                     </p>
                   ) : null}
@@ -491,23 +491,23 @@ export function WalletTransactionHistory() {
           </ul>
         </section>
       ) : activeFilter === "withdraw" ? (
-        <section aria-label="Withdrawals coming soon" className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-900 sm:p-8">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">Cash withdrawals are coming soon</h3>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+        <section aria-label="Withdrawals coming soon" className="mt-5 rounded-2xl border border-dashed border-white/10 bg-zinc-900 p-6 dark:border-white/10 dark:bg-zinc-900 sm:p-8">
+          <h3 className="text-base font-semibold text-zinc-100 dark:text-zinc-50">Cash withdrawals are coming soon</h3>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-300 dark:text-zinc-400">
             Your wallet balance remains available for project and paid API purchases.
           </p>
         </section>
       ) : (
         <div className="mt-5 space-y-5">
           {deposits.length > 0 ? (
-            <section aria-label="Wallet deposits" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
-              <h3 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-white sm:px-5">Wallet deposits</h3>
+            <section aria-label="Wallet deposits" className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-white/10 dark:bg-zinc-900 dark:shadow-none">
+              <h3 className="border-b border-white/10 px-4 py-3 text-sm font-semibold text-zinc-100 dark:border-white/10 dark:text-zinc-50 sm:px-5">Wallet deposits</h3>
               <ul>
                 {deposits.map((deposit, index) => {
                   const statusLabel = deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)
                   const StatusIcon = deposit.status === "paid" ? Check : deposit.status === "pending" ? Clock3 : CircleAlert
                   return (
-                    <li key={`deposit-${deposit.orderId}`} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                    <li key={`deposit-${deposit.orderId}`} className={index > 0 ? "border-t border-white/10 dark:border-white/10" : ""}>
                       <article className="flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
                         <div className="flex min-w-0 items-start gap-3">
                           <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${statusIconStyles[deposit.status]}`}>
@@ -515,19 +515,19 @@ export function WalletTransactionHistory() {
                           </span>
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">Wallet deposit</h4>
+                              <h4 className="text-sm font-semibold text-zinc-100 dark:text-zinc-50 sm:text-base">Wallet deposit</h4>
                               <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[deposit.status]}`}>
                                 {statusLabel}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(deposit.paidAt ?? deposit.createdAt)}</p>
-                            <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Deposit ID {deposit.depositId}</p>
+                            <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-400">{formatPurchaseDate(deposit.paidAt ?? deposit.createdAt)}</p>
+                            <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">Deposit ID {deposit.depositId}</p>
                             {deposit.paymentId ? (
-                              <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Razorpay payment ID {deposit.paymentId}</p>
+                              <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">Razorpay payment ID {deposit.paymentId}</p>
                             ) : null}
                           </div>
                         </div>
-                        <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                        <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-zinc-100 dark:text-zinc-50 sm:ml-0">
                           +{formatPriceInr(deposit.amountPaise)}
                         </p>
                       </article>
@@ -537,17 +537,17 @@ export function WalletTransactionHistory() {
               </ul>
             </section>
           ) : null}
-          <section aria-label="Project purchases" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+          <section aria-label="Project purchases" className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-white/10 dark:bg-zinc-900 dark:shadow-none">
           <ul>
             {visibleTransactions.length === 0 ? (
-              <li className="p-4 text-sm text-slate-600 dark:text-slate-300">No project purchases yet.</li>
+              <li className="p-4 text-sm text-zinc-300 dark:text-zinc-400">No project purchases yet.</li>
             ) : null}
             {visibleTransactions.map((transaction, index) => {
               const statusLabel = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)
               const StatusIcon = transaction.status === "paid" ? Check : transaction.status === "pending" ? Clock3 : CircleAlert
 
               return (
-                <li key={transaction.orderId} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                <li key={transaction.orderId} className={index > 0 ? "border-t border-white/10 dark:border-white/10" : ""}>
                   <article className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
@@ -556,43 +556,43 @@ export function WalletTransactionHistory() {
                         </span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="max-w-full truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{transaction.projectTitle}</h3>
+                            <h3 className="max-w-full truncate text-sm font-semibold text-zinc-100 dark:text-zinc-50 sm:text-base">{transaction.projectTitle}</h3>
                             <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[transaction.status]}`}>
                               {statusLabel}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(transaction.purchasedAt)}</p>
-                          <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">Project {transaction.projectCode}</p>
+                          <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-400">{formatPurchaseDate(transaction.purchasedAt)}</p>
+                          <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">Project {transaction.projectCode}</p>
                         </div>
                       </div>
-                      <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                      <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-zinc-100 dark:text-zinc-50 sm:ml-0">
                         {formatPriceInr(transaction.amountPaise)}
                       </p>
                     </div>
 
-                    <details className="group mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                      <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-blue-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:text-blue-300 dark:focus-visible:ring-offset-slate-900 [&::-webkit-details-marker]:hidden">
+                    <details className="group mt-4 border-t border-white/10 pt-3 dark:border-white/10">
+                      <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-lime-300 outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:text-lime-300 dark:focus-visible:ring-offset-zinc-950 [&::-webkit-details-marker]:hidden">
                         Payment details
                         <ChevronDown aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180" />
                       </summary>
-                      <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800 sm:grid-cols-2 sm:p-4">
+                      <dl className="mt-3 grid gap-3 rounded-xl bg-zinc-900 p-3 text-xs dark:bg-zinc-900 sm:grid-cols-2 sm:p-4">
                         <div className="min-w-0">
-                          <dt className="font-medium text-slate-600 dark:text-slate-300">Wallet contribution</dt>
-                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
+                          <dt className="font-medium text-zinc-300 dark:text-zinc-400">Wallet contribution</dt>
+                          <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="font-medium text-slate-600 dark:text-slate-300">Payment ID</dt>
-                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
+                          <dt className="font-medium text-zinc-300 dark:text-zinc-400">Payment ID</dt>
+                          <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="font-medium text-slate-600 dark:text-slate-300">Order ID</dt>
-                          <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.orderId}</dd>
+                          <dt className="font-medium text-zinc-300 dark:text-zinc-400">Order ID</dt>
+                          <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{transaction.orderId}</dd>
                         </div>
                       </dl>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Link
                           href={`/projects/${encodeURIComponent(transaction.projectCode)}`}
-                          className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 transition hover:border-blue-300 hover:text-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:text-blue-300 dark:focus-visible:ring-offset-slate-900"
+                          className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 bg-zinc-900 px-3 text-xs font-semibold text-zinc-200 transition hover:border-lime-400/25 hover:text-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:text-lime-300 dark:focus-visible:ring-offset-zinc-950"
                         >
                           View project <ArrowUpRight aria-hidden="true" className="size-3.5" />
                         </Link>
@@ -601,7 +601,7 @@ export function WalletTransactionHistory() {
                             type="button"
                             onClick={() => void cancelPendingTransaction(transaction.orderId)}
                             disabled={Boolean(cancellingOrder)}
-                            className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:focus-visible:ring-offset-slate-900"
+                            className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-rose-400/25 bg-zinc-900 px-3 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-400/25 dark:bg-zinc-900 dark:text-rose-300 dark:hover:bg-rose-400/10 dark:focus-visible:ring-offset-zinc-950"
                           >
                             {cancellingOrder === transaction.orderId ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : <Ban aria-hidden="true" className="size-3.5" />}
                             {cancellingOrder === transaction.orderId ? "Cancelling..." : "Cancel transaction"}
@@ -616,14 +616,14 @@ export function WalletTransactionHistory() {
           </ul>
           </section>
           {apiTransactions.length > 0 ? (
-            <section aria-label="API access purchases" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
-              <h3 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-white sm:px-5">API access purchases</h3>
+            <section aria-label="API access purchases" className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-[0_3px_14px_rgba(37,99,235,0.04)] dark:border-white/10 dark:bg-zinc-900 dark:shadow-none">
+              <h3 className="border-b border-white/10 px-4 py-3 text-sm font-semibold text-zinc-100 dark:border-white/10 dark:text-zinc-50 sm:px-5">API access purchases</h3>
               <ul>
                 {apiTransactions.map((transaction, index) => {
                   const statusLabel = transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)
                   const StatusIcon = transaction.status === "paid" ? Check : transaction.status === "pending" ? Clock3 : CircleAlert
                   return (
-                    <li key={`api-${transaction.orderId}`} className={index > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}>
+                    <li key={`api-${transaction.orderId}`} className={index > 0 ? "border-t border-white/10 dark:border-white/10" : ""}>
                       <article className="p-4 sm:p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex min-w-0 items-start gap-3">
@@ -632,42 +632,42 @@ export function WalletTransactionHistory() {
                             </span>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="max-w-full truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{transaction.endpointName}</h4>
+                                <h4 className="max-w-full truncate text-sm font-semibold text-zinc-100 dark:text-zinc-50 sm:text-base">{transaction.endpointName}</h4>
                                 <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-semibold ring-1 ring-inset ${statusStyles[transaction.status]}`}>
                                   {statusLabel}
                                 </span>
                               </div>
-                              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{formatPurchaseDate(transaction.purchasedAt)}</p>
-                              <p className="mt-1 truncate font-mono text-[11px] text-slate-600 dark:text-slate-400">API {transaction.endpointId}</p>
+                              <p className="mt-1 text-xs text-zinc-300 dark:text-zinc-400">{formatPurchaseDate(transaction.purchasedAt)}</p>
+                              <p className="mt-1 truncate font-mono text-[11px] text-zinc-300 dark:text-zinc-400">API {transaction.endpointId}</p>
                             </div>
                           </div>
-                          <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-slate-900 dark:text-white sm:ml-0">
+                          <p className="ml-[52px] shrink-0 font-mono text-base font-bold tabular-nums text-zinc-100 dark:text-zinc-50 sm:ml-0">
                             {formatPriceInr(transaction.amountPaise)}
                           </p>
                         </div>
-                        <details className="group mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                          <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-blue-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:text-blue-300 dark:focus-visible:ring-offset-slate-900 [&::-webkit-details-marker]:hidden">
+                        <details className="group mt-4 border-t border-white/10 pt-3 dark:border-white/10">
+                          <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-lime-300 outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:text-lime-300 dark:focus-visible:ring-offset-zinc-950 [&::-webkit-details-marker]:hidden">
                             Payment details
                             <ChevronDown aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180" />
                           </summary>
-                          <dl className="mt-3 grid gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800 sm:grid-cols-2 sm:p-4">
+                          <dl className="mt-3 grid gap-3 rounded-xl bg-zinc-900 p-3 text-xs dark:bg-zinc-900 sm:grid-cols-2 sm:p-4">
                             <div className="min-w-0">
-                              <dt className="font-medium text-slate-600 dark:text-slate-300">Wallet contribution</dt>
-                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
+                              <dt className="font-medium text-zinc-300 dark:text-zinc-400">Wallet contribution</dt>
+                              <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{formatPriceInr(transaction.walletAppliedPaise)}</dd>
                             </div>
                             <div className="min-w-0">
-                              <dt className="font-medium text-slate-600 dark:text-slate-300">Payment ID</dt>
-                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
+                              <dt className="font-medium text-zinc-300 dark:text-zinc-400">Payment ID</dt>
+                              <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{transaction.paymentId ?? (transaction.status === "paid" ? "Paid from wallet" : "Not paid yet")}</dd>
                             </div>
                             <div className="min-w-0">
-                              <dt className="font-medium text-slate-600 dark:text-slate-300">Order ID</dt>
-                              <dd className="mt-1 break-all font-mono text-slate-800 dark:text-slate-100">{transaction.orderId}</dd>
+                              <dt className="font-medium text-zinc-300 dark:text-zinc-400">Order ID</dt>
+                              <dd className="mt-1 break-all font-mono text-zinc-200 dark:text-zinc-400">{transaction.orderId}</dd>
                             </div>
                           </dl>
                           <div className="mt-3 flex flex-wrap gap-2">
                             <Link
                               href="/api-explorer"
-                              className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 transition hover:border-blue-300 hover:text-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-700 dark:hover:text-blue-300 dark:focus-visible:ring-offset-slate-900"
+                              className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 bg-zinc-900 px-3 text-xs font-semibold text-zinc-200 transition hover:border-lime-400/25 hover:text-lime-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-lime-400/25 dark:hover:text-lime-300 dark:focus-visible:ring-offset-zinc-950"
                             >
                               Browse APIs <ArrowUpRight aria-hidden="true" className="size-3.5" />
                             </Link>
@@ -676,7 +676,7 @@ export function WalletTransactionHistory() {
                                 type="button"
                                 onClick={() => void cancelPendingApiTransaction(transaction.orderId)}
                                 disabled={Boolean(cancellingOrder)}
-                                className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:focus-visible:ring-offset-slate-900"
+                                className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-rose-400/25 bg-zinc-900 px-3 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-400/25 dark:bg-zinc-900 dark:text-rose-300 dark:hover:bg-rose-400/10 dark:focus-visible:ring-offset-zinc-950"
                               >
                                 {cancellingOrder === transaction.orderId ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : <Ban aria-hidden="true" className="size-3.5" />}
                                 {cancellingOrder === transaction.orderId ? "Cancelling..." : "Cancel transaction"}

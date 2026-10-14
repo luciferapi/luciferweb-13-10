@@ -7,7 +7,7 @@ import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-t
 import { formatPriceInr } from "@/features/projects/server/project-pricing"
 import { validateUploadFile } from "@/lib/upload-validation"
 
-const emptyEndpoint = { name: "", path: "", note: "", category: "", imageUrl: "", demoVideo: "", linkUrl: "", isEnabled: true, pricePaise: 0 }
+const emptyEndpoint = { name: "", path: "", note: "", category: "", ownerType: "", imageUrl: "", demoVideo: "", linkUrl: "", isEnabled: true, pricePaise: 0 }
 
 function isEndpoint(value: unknown): value is ApiEndpoint {
   return typeof value === "object" &&
@@ -17,6 +17,7 @@ function isEndpoint(value: unknown): value is ApiEndpoint {
     "path" in value && typeof value.path === "string" &&
     "note" in value && typeof value.note === "string" &&
     "category" in value && typeof value.category === "string" &&
+    "ownerType" in value && typeof value.ownerType === "string" &&
     "imageUrl" in value && typeof value.imageUrl === "string" &&
     "demoVideo" in value && typeof value.demoVideo === "string" &&
     "linkUrl" in value && typeof value.linkUrl === "string" &&
@@ -91,6 +92,7 @@ export function OwnerApiEndpointsPanel() {
       path: new URL(endpoint.path, "https://luciferapi.com/").toString(),
       note: endpoint.note,
       category: endpoint.category,
+      ownerType: endpoint.ownerType,
       imageUrl: endpoint.imageUrl,
       demoVideo: endpoint.demoVideo,
       linkUrl: endpoint.linkUrl,
@@ -132,17 +134,44 @@ export function OwnerApiEndpointsPanel() {
       }
 
       if (typeof result !== "object" || result === null) throw new Error(`The uploaded API ${mediaType} response was invalid.`)
+      let uploadedFields: typeof fields
       if (mediaType === "image" && "imageUrl" in result && typeof result.imageUrl === "string") {
-        const imageUrl = result.imageUrl
-        setFields((current) => ({ ...current, imageUrl }))
+        uploadedFields = { ...fields, imageUrl: result.imageUrl }
       } else if (mediaType === "video" && "filename" in result && typeof result.filename === "string") {
         const filename = result.filename
         const remoteUrl = "url" in result && typeof result.url === "string" ? result.url : ""
-        setFields((current) => ({ ...current, demoVideo: remoteUrl || filename }))
+        if (!remoteUrl) throw new Error("The R2 upload response did not include a public video URL.")
+        uploadedFields = { ...fields, demoVideo: remoteUrl || filename }
       } else {
         throw new Error(`The uploaded API ${mediaType} response was invalid.`)
       }
-      setNotice(`API ${mediaType} uploaded. Save the endpoint to link it.`)
+      const saveResponse = await fetch("/api/owner/api-endpoints", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...uploadedFields, id: editingId }),
+      })
+      const saveResult: unknown = await saveResponse.json()
+      if (!saveResponse.ok || typeof saveResult !== "object" || saveResult === null || !("endpoint" in saveResult) || !isEndpoint(saveResult.endpoint)) {
+        const message = typeof saveResult === "object" && saveResult !== null && "error" in saveResult && typeof saveResult.error === "string"
+          ? saveResult.error
+          : `The API ${mediaType} reached R2, but the endpoint could not be updated.`
+        throw new Error(message)
+      }
+      const savedEndpoint = saveResult.endpoint
+      setFields({
+        name: savedEndpoint.name,
+        path: new URL(savedEndpoint.path, "https://luciferapi.com/").toString(),
+        note: savedEndpoint.note,
+        category: savedEndpoint.category,
+        ownerType: savedEndpoint.ownerType,
+        imageUrl: savedEndpoint.imageUrl,
+        demoVideo: savedEndpoint.demoVideo,
+        linkUrl: savedEndpoint.linkUrl,
+        isEnabled: savedEndpoint.isEnabled,
+        pricePaise: savedEndpoint.pricePaise,
+      })
+      setEndpoints((current) => current.map((endpoint) => endpoint.id === savedEndpoint.id ? savedEndpoint : endpoint))
+      setNotice(`API ${mediaType} uploaded to R2 and linked to the endpoint.`)
     } catch (uploadError) {
       console.error(`Could not upload API ${mediaType}.`, uploadError)
       setError(uploadError instanceof Error ? uploadError.message : `Could not upload API ${mediaType}.`)
@@ -185,6 +214,7 @@ export function OwnerApiEndpointsPanel() {
         path: new URL(savedEndpoint.path, "https://luciferapi.com/").toString(),
         note: savedEndpoint.note,
         category: savedEndpoint.category,
+        ownerType: savedEndpoint.ownerType,
         imageUrl: savedEndpoint.imageUrl,
         demoVideo: savedEndpoint.demoVideo,
         linkUrl: savedEndpoint.linkUrl,
@@ -314,6 +344,10 @@ export function OwnerApiEndpointsPanel() {
           <input required maxLength={60} value={fields.category} onChange={(event) => setFields({ ...fields, category: event.target.value })} placeholder="Example" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-foreground outline-none focus:border-cyan-400" />
         </label>
         <label className="space-y-2 text-sm font-medium">
+          Owner type
+          <input maxLength={128} value={fields.ownerType} onChange={(event) => setFields({ ...fields, ownerType: event.target.value })} placeholder="Enter owner type" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-foreground outline-none focus:border-cyan-400" />
+        </label>
+        <label className="space-y-2 text-sm font-medium">
           One-time Explorer price (INR)
           <input
             type="number"
@@ -347,7 +381,7 @@ export function OwnerApiEndpointsPanel() {
               <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
               <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label={`Upload image for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "image")} disabled={uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
             </span>
-          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload an image.</span>}
+          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload the image to R2.</span>}
           <span className="block text-xs font-normal text-muted-foreground">JPG, PNG, WebP, or GIF · max 5 MB · stored by API code</span>
           {fields.imageUrl ? <img src={fields.imageUrl} alt={`${fields.name || "API"} preview`} className="aspect-video w-full rounded-lg border border-border object-cover" /> : null}
         </label>
@@ -358,7 +392,7 @@ export function OwnerApiEndpointsPanel() {
               <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
               <input type="file" accept="video/mp4,video/x-m4v,video/quicktime,video/webm" aria-label={`Upload demo video for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "video")} disabled={uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
             </span>
-          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload a video.</span>}
+          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload the video to R2.</span>}
           <span className="block text-xs font-normal text-muted-foreground">{fields.demoVideo || "MP4, M4V, MOV, or WebM · max 100 MB"}</span>
         </label>
         <label className="space-y-2 text-sm font-medium sm:col-span-2">
@@ -450,7 +484,7 @@ export function OwnerApiEndpointsPanel() {
                     </span>
                     <span className="mt-1 block truncate font-mono text-xs text-muted-foreground">{endpoint.path}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-                      <span>{endpoint.category}</span><span aria-hidden="true" className="text-slate-600">/</span>
+                      <span>{endpoint.category}</span>{endpoint.ownerType ? <><span aria-hidden="true" className="text-slate-600">/</span><span>Owner: {endpoint.ownerType}</span></> : null}<span aria-hidden="true" className="text-slate-600">/</span>
                       <span className="font-mono">{endpoint.id}</span>
                     </span>
                   </span>

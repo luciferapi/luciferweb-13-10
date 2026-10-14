@@ -17,7 +17,13 @@ export async function GET() {
       listApiEndpoints(),
       listPaidApiEndpointIds(user.id),
     ])
-    return NextResponse.json({ endpoints, ownedEndpointIds }, { headers: { "Cache-Control": "private, no-store" } })
+    const ownedIds = new Set(ownedEndpointIds)
+    const visibleEndpoints = endpoints.map((endpoint) =>
+      endpoint.pricePaise > 0 && !ownedIds.has(endpoint.id)
+        ? { ...endpoint, path: "" }
+        : endpoint,
+    )
+    return NextResponse.json({ endpoints: visibleEndpoints, ownedEndpointIds }, { headers: { "Cache-Control": "private, no-store" } })
   } catch (error) {
     console.error("Could not load the API endpoint catalog.", error)
     return NextResponse.json({ error: "Could not load the API endpoint catalog." }, { status: 500 })
