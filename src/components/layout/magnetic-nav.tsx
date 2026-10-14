@@ -249,6 +249,7 @@ export default function MagneticNav() {
           throw new Error('The wallet balance response was invalid.');
         }
         setWalletBalancePaise(result.balancePaise);
+        setWalletBalanceError(false);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Could not load the profile wallet balance.', error);
