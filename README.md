@@ -76,6 +76,13 @@ databases, before starting the app. The initial schema uses additive
 database before any production data cutover. `.env.local` is not tracked by Git;
 keep all database credentials private and configure them in production hosting
 as well.
+For existing databases where email registration fails with an unknown
+`auth_user_id` column, apply
+`database/migrations/009_auth_pending_registration_user_id.sql` with a database
+administrator. It adds the missing column, assigns UUIDs to any pending
+registrations already in the table, and enforces uniqueness. The migration is
+idempotent and preserves pending registrations; take a database backup before
+running production schema changes.
 For API Management on an existing database, the owner-only management routes
 check for the endpoint owner-type and pricing columns and add them if missing.
 This additive update is idempotent and preserves existing endpoint rows. If the
