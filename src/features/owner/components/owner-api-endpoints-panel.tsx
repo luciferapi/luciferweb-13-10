@@ -376,23 +376,23 @@ export function OwnerApiEndpointsPanel() {
         </label>
         <label className="space-y-2 text-sm font-medium">
           API image
-          {editingId ? (
-            <span className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
-              <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label={`Upload image for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "image")} disabled={uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
-            </span>
-          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload the image to R2.</span>}
+          <span className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
+            <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label={`Upload image for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "image")} disabled={!editingId || uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
+          </span>
+          <span className="block text-xs font-normal text-muted-foreground">{editingId ? "Upload an image to R2; it will be linked to this API automatically." : "Save the endpoint first to assign its unique code, then this picker will be enabled."}</span>
+          {uploading === "image" ? <span role="status" className="block text-xs text-muted-foreground">Uploading image to R2…</span> : null}
           <span className="block text-xs font-normal text-muted-foreground">JPG, PNG, WebP, or GIF · max 5 MB · stored by API code</span>
           {fields.imageUrl ? <img src={fields.imageUrl} alt={`${fields.name || "API"} preview`} className="aspect-video w-full rounded-lg border border-border object-cover" /> : null}
         </label>
         <label className="space-y-2 text-sm font-medium">
           Demo video
-          {editingId ? (
-            <span className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
-              <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-              <input type="file" accept="video/mp4,video/x-m4v,video/quicktime,video/webm" aria-label={`Upload demo video for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "video")} disabled={uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
-            </span>
-          ) : <span className="block rounded-lg border border-border bg-background px-3 py-3 text-xs font-normal text-muted-foreground">Save the endpoint first to assign its unique code, then upload the video to R2.</span>}
+          <span className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
+            <Upload aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            <input type="file" accept="video/mp4,video/x-m4v,video/quicktime,video/webm" aria-label={`Upload demo video for API ${fields.name}`} onChange={(event) => void uploadMedia(event, "video")} disabled={!editingId || uploading !== null} className="min-w-0 flex-1 text-xs text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-foreground disabled:opacity-50" />
+          </span>
+          <span className="block text-xs font-normal text-muted-foreground">{editingId ? "Upload a demo video to R2; it will be linked to this API automatically." : "Save the endpoint first to assign its unique code, then this picker will be enabled."}</span>
+          {uploading === "video" ? <span role="status" className="block text-xs text-muted-foreground">Uploading demo video to R2…</span> : null}
           <span className="block text-xs font-normal text-muted-foreground">{fields.demoVideo || "MP4, M4V, MOV, or WebM · max 100 MB"}</span>
         </label>
         <label className="space-y-2 text-sm font-medium sm:col-span-2">
