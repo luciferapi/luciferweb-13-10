@@ -10,7 +10,7 @@ import { enforceRateLimit } from "@/lib/server/rate-limit"
 export const runtime = "nodejs"
 
 const requestSchema = z.object({
-  amount: z.number().int().min(50).max(1000),
+  amount: z.number().int().min(1).max(1000),
 })
 
 export async function POST(request: Request) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
   const parsed = requestSchema.safeParse(body.value)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Choose a whole-rupee deposit amount from ₹50 to ₹1,000." }, { status: 400 })
+    return NextResponse.json({ error: "Choose a whole-rupee deposit amount from ₹1 to ₹1,000." }, { status: 400 })
   }
 
   const amountPaise = parsed.data.amount * 100

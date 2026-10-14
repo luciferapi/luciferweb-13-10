@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import type { RazorpayFailure, RazorpayOptions, RazorpaySuccess } from "@/features/payments/server/razorpay-types"
 
-const presetAmounts = [100, 250, 500, 1000]
+const presetAmounts = [1, 100, 250, 1000]
 const pendingVerificationStorageKey = "lucifer:wallet-deposit-verification"
 
 type OrderResponse = {
@@ -41,7 +41,7 @@ function getErrorMessage(value: unknown, fallback: string) {
 export function WalletDepositControl() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [amount, setAmount] = useState("100")
+  const [amount, setAmount] = useState("1")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
 
@@ -114,8 +114,8 @@ export function WalletDepositControl() {
 
   async function beginDeposit() {
     const selectedAmount = Number(amount)
-    if (!Number.isInteger(selectedAmount) || selectedAmount < 50 || selectedAmount > 1000) {
-      setError("Enter a whole-rupee amount from ₹50 to ₹1,000.")
+    if (!Number.isInteger(selectedAmount) || selectedAmount < 1 || selectedAmount > 1000) {
+      setError("Enter a whole-rupee amount from ₹1 to ₹1,000.")
       return
     }
     setBusy(true)
@@ -211,7 +211,7 @@ export function WalletDepositControl() {
           <DialogHeader>
             <DialogTitle className="text-left text-xl font-bold tracking-tight">Add money to your wallet</DialogTitle>
             <DialogDescription className="text-left leading-6 text-slate-600 dark:text-slate-300">
-              Choose an amount from ₹50 to ₹1,000. Payment is securely processed by Razorpay.
+              Choose an amount from ₹1 to ₹1,000. Payment is securely processed by Razorpay.
             </DialogDescription>
           </DialogHeader>
 
@@ -249,7 +249,7 @@ export function WalletDepositControl() {
                 id="wallet-deposit-amount"
                 type="number"
                 inputMode="numeric"
-                min={50}
+                min={1}
                 max={1000}
                 step={1}
                 value={amount}
@@ -262,7 +262,7 @@ export function WalletDepositControl() {
               />
             </div>
             <p id="wallet-deposit-help" className="text-xs leading-5 text-slate-600 dark:text-slate-400">
-              Whole rupees only. Minimum ₹50, maximum ₹1,000 per deposit.
+              Whole rupees only. Minimum ₹1, maximum ₹1,000 per deposit.
             </p>
           </div>
 
