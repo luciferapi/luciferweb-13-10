@@ -83,6 +83,11 @@ administrator. It adds the missing column, assigns UUIDs to any pending
 registrations already in the table, and enforces uniqueness. The migration is
 idempotent and preserves pending registrations; take a database backup before
 running production schema changes.
+For older databases that reject registrations when date of birth is omitted,
+apply `database/migrations/010_auth_pending_registration_nullable_date_of_birth.sql`.
+It makes `date_of_birth` nullable in both `auth_pending_registrations` and
+`auth_users` without changing existing dates, matching the app's optional
+registration field and the initial schema.
 For API Management on an existing database, the owner-only management routes
 check for the endpoint owner-type and pricing columns and add them if missing.
 This additive update is idempotent and preserves existing endpoint rows. If the
