@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto"
 import {
   createApiEndpoint,
   deleteApiEndpoint,
+  ensureApiEndpointStorageSchema,
   listApiEndpoints,
   updateApiEndpoint,
 } from "@/features/api-endpoints/server/api-endpoints"
@@ -54,9 +55,13 @@ function apiEndpointSchemaMigrationError(error: unknown): NextResponse | null {
   if (typeof error !== "object" || error === null) return null
   const code = "code" in error && typeof error.code === "string" ? error.code : ""
   const message = "message" in error && typeof error.message === "string" ? error.message : ""
-  if (code !== "ER_BAD_FIELD_ERROR" || !/unknown column '(?:price_paise|owner_type)'/i.test(message)) return null
+  const isMissingApiColumn = code === "ER_BAD_FIELD_ERROR" && /unknown column '(?:price_paise|owner_type)'/i.test(message)
+  const isSchemaPermissionError = ["ER_DBACCESS_DENIED_ERROR", "ER_TABLEACCESS_DENIED_ERROR", "ER_COLUMNACCESS_DENIED_ERROR"].includes(code)
+  if (!isMissingApiColumn && !isSchemaPermissionError) return null
   return NextResponse.json(
-    { error: "The API database is missing required columns. Apply database/migrations/008_api_endpoint_storage_columns.sql, then retry." },
+    { error: isSchemaPermissionError
+      ? "The API database account cannot apply the required schema update. Run database/migrations/008_api_endpoint_storage_columns.sql with a database administrator, then retry."
+      : "The API database is missing required columns. Run database/migrations/008_api_endpoint_storage_columns.sql, then retry." },
     { status: 503 },
   )
 }
@@ -66,6 +71,7 @@ export async function GET() {
   if (unauthorized) return unauthorized
 
   try {
+    await ensureApiEndpointStorageSchema()
     return NextResponse.json({ endpoints: await listApiEndpoints(true) }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
     console.error("Could not load API endpoint management data.", error)
@@ -83,6 +89,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Check the API endpoint details and try again." }, { status: 400 })
 
   try {
+    await ensureApiEndpointStorageSchema()
     for (;;) {
       const existing = await listApiEndpoints(true)
       const endpoint = {
@@ -114,6 +121,7 @@ export async function PUT(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Check the API endpoint details and try again." }, { status: 400 })
 
   try {
+    await ensureApiEndpointStorageSchema()
     const { id, ...fields } = parsed.data
     const endpoint = { id, ...fields }
     if (!await updateApiEndpoint(endpoint)) return NextResponse.json({ error: "API endpoint not found." }, { status: 404 })

@@ -7,6 +7,56 @@ import { getProjectImage } from "@/features/projects/server/project-images"
 import type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 export type { ApiEndpoint } from "@/features/api-endpoints/server/api-endpoint-types"
 
+type ApiEndpointColumnRow = RowDataPacket & { columnName: string }
+
+let apiEndpointSchemaSetup: Promise<void> | null = null
+
+function isDuplicateColumnError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_FIELDNAME"
+}
+
+export async function ensureApiEndpointStorageSchema(): Promise<void> {
+  if (!apiEndpointSchemaSetup) {
+    apiEndpointSchemaSetup = (async () => {
+      const columns = await selectMysqlRows<ApiEndpointColumnRow>(
+        `SELECT COLUMN_NAME AS columnName
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'api_endpoints'
+           AND COLUMN_NAME IN ('owner_type', 'price_paise')`,
+      )
+      const existingColumns = new Set(columns.map((column) => column.columnName))
+
+      if (!existingColumns.has("owner_type")) {
+        try {
+          await getMysqlPool().execute(
+            "ALTER TABLE api_endpoints ADD COLUMN owner_type VARCHAR(128) NOT NULL DEFAULT '' AFTER category",
+          )
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error
+        }
+      }
+
+      if (!existingColumns.has("price_paise")) {
+        try {
+          await getMysqlPool().execute(
+            "ALTER TABLE api_endpoints ADD COLUMN price_paise BIGINT UNSIGNED NOT NULL DEFAULT 0 AFTER is_enabled",
+          )
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error
+        }
+      }
+    })()
+  }
+
+  try {
+    await apiEndpointSchemaSetup
+  } catch (error) {
+    apiEndpointSchemaSetup = null
+    throw error
+  }
+}
+
 type ApiEndpointRow = RowDataPacket & {
   id: string
   name: string

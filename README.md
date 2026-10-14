@@ -76,11 +76,12 @@ databases, before starting the app. The initial schema uses additive
 database before any production data cutover. `.env.local` is not tracked by Git;
 keep all database credentials private and configure them in production hosting
 as well.
-For API Management on an existing database, also apply
-`database/migrations/008_api_endpoint_storage_columns.sql`. It adds the endpoint
-owner-type and pricing columns required by the API catalog; without it, catalog
-queries and endpoint saves fail. The migration is idempotent and preserves
-existing endpoint rows.
+For API Management on an existing database, the owner-only management routes
+check for the endpoint owner-type and pricing columns and add them if missing.
+This additive update is idempotent and preserves existing endpoint rows. If the
+production database account cannot alter tables, apply
+`database/migrations/008_api_endpoint_storage_columns.sql` with a database
+administrator instead.
 Set `AUTH_OTP_HMAC_SECRET` to a strong, persistent secret of at least 32 random
 bytes (hex-encoded) for owner/staff email codes.
 
