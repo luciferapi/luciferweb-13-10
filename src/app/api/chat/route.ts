@@ -5,10 +5,24 @@ import { chooseAutomaticModule, findBuiltInModule } from "@/features/chat/module
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 
-const DEFAULT_MODEL = "ollama/llama3.2"
+const DEFAULT_OLLAMA_MODEL = "llama3.2"
+const DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
+const OPENROUTER_MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
+
+function getDefaultOpenRouterModel() {
+  const configured = process.env.OPENROUTER_MODEL?.trim()
+  return configured && OPENROUTER_MODEL_PATTERN.test(configured)
+    ? configured
+    : DEFAULT_OPENROUTER_MODEL
+}
+
+function getDefaultModelId() {
+  if (process.env.OPENROUTER_API_KEY?.trim()) return getDefaultOpenRouterModel()
+  return `ollama/${process.env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL}`
+}
 
 function normalizeModelId(model?: string) {
-  if (!model) return DEFAULT_MODEL
+  if (!model) return getDefaultModelId()
 
   const trimmed = model.trim()
   const normalized = trimmed.startsWith("~") ? trimmed.slice(1) : trimmed
@@ -16,11 +30,17 @@ function normalizeModelId(model?: string) {
   if (normalized.startsWith("ollama/")) {
     const ollamaModel = normalized.slice("ollama/".length).trim()
     if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(ollamaModel)) {
-      return `ollama/${ollamaModel}`
+      return process.env.OPENROUTER_API_KEY?.trim()
+        ? getDefaultOpenRouterModel()
+        : `ollama/${ollamaModel}`
     }
   }
 
-  return normalized.startsWith("ollama/") ? normalized : DEFAULT_MODEL
+  if (process.env.OPENROUTER_API_KEY?.trim() && OPENROUTER_MODEL_PATTERN.test(normalized)) {
+    return normalized
+  }
+
+  return getDefaultModelId()
 }
 
 function normalizeMessages(messages: unknown): ModelMessage[] {
@@ -81,6 +101,101 @@ function getModulePrompt(body: Record<string, unknown>, messages: ModelMessage[]
 
 function isOllamaModel(modelId: string) {
   return modelId.startsWith("ollama/")
+}
+
+function parseOpenRouterStreamLine(line: string) {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith("data:")) return ""
+
+  const data = trimmed.slice("data:".length).trim()
+  if (!data || data === "[DONE]") return ""
+
+  const payload = JSON.parse(data) as {
+    choices?: Array<{ delta?: { content?: unknown } }>
+    error?: string | { message?: string }
+  }
+  if (payload.error) {
+    const detail = typeof payload.error === "string" ? payload.error : payload.error.message
+    throw new Error(detail || "OpenRouter returned an error.")
+  }
+
+  const content = payload.choices?.[0]?.delta?.content
+  return typeof content === "string" ? content : ""
+}
+
+async function streamOpenRouterResponse(system: string, messages: ModelMessage[], modelId: string) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim()
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.")
+
+  const configuredUrl = process.env.OPENROUTER_URL?.trim() || "https://openrouter.ai/api/v1"
+  const endpointUrl = new URL(configuredUrl)
+  const configuredPath = endpointUrl.pathname.replace(/\/+$/, "")
+  const versionedPath = /\/(?:api\/)?v1$/.test(configuredPath)
+    ? configuredPath
+    : `${configuredPath}/api/v1`
+  endpointUrl.pathname = configuredPath.endsWith("/chat/completions")
+    ? configuredPath
+    : `${versionedPath}/chat/completions`
+  const response = await fetch(endpointUrl.toString(), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://luciferapi.com",
+      "X-Title": "LUCIFER AI",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      stream: true,
+      max_tokens: 1200,
+      messages: [{ role: "system", content: system }, ...messages],
+    }),
+    signal: AbortSignal.timeout(90_000),
+  })
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => "")
+    throw new Error(`OpenRouter request failed (${response.status}): ${detail.slice(0, 300)}`)
+  }
+
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  let pending = ""
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = response.body!.getReader()
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          pending += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+          const lines = pending.split("\n")
+          pending = done ? "" : (lines.pop() ?? "")
+          for (const line of lines) {
+            const text = parseOpenRouterStreamLine(line)
+            if (text) controller.enqueue(encoder.encode(text))
+          }
+          if (done) break
+        }
+        if (pending.trim()) {
+          const text = parseOpenRouterStreamLine(pending)
+          if (text) controller.enqueue(encoder.encode(text))
+        }
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      } finally {
+        reader.releaseLock()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  })
 }
 
 async function streamOllamaResponse(system: string, messages: ModelMessage[], modelId: string) {
@@ -212,11 +327,12 @@ export async function POST(request: Request) {
       : ""
     const systemWithModule = `${system}${moduleContext}`
 
-    const configuredModel = process.env.OLLAMA_MODEL?.trim() || "llama3.2"
-    const ollamaModelId = isOllamaModel(modelId) ? modelId : `ollama/${configuredModel}`
-    return await streamOllamaResponse(systemWithModule, messages, ollamaModelId)
+    if (isOllamaModel(modelId)) {
+      return await streamOllamaResponse(systemWithModule, messages, modelId)
+    }
+    return await streamOpenRouterResponse(systemWithModule, messages, modelId)
   } catch (error) {
-    console.error("[chat] Ollama request failed", error)
+    console.error("[chat] Provider request failed", error)
     return NextResponse.json(
       { error: "LUCIFER AI could not complete that response. Please try again." },
       { status: 502 },

@@ -18,7 +18,6 @@ export interface Message {
 }
 
 const STORAGE_KEY = "chat-messages"
-const OLLAMA_MODEL_STORAGE_KEY = "ollama-custom-model"
 const MODULE_STORAGE_KEY = "chat-selected-module"
 
 function extractStreamText(value: string) {
@@ -94,7 +93,6 @@ export function ChatShell() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(true)
-  const [ollamaModel, setOllamaModel] = useState("llama3.2")
   const [selectedModule, setSelectedModule] = useState("auto")
   const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
 
@@ -103,7 +101,6 @@ const requestRef = useRef<AbortController | null>(null)
 useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      const savedOllamaModel = localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
       const savedModule = localStorage.getItem(MODULE_STORAGE_KEY)
       const savedCustomModules = localStorage.getItem(CHAT_MODULES_STORAGE_KEY)
 
@@ -111,9 +108,6 @@ if (stored) {
         setMessages(restoreMessages(stored))
       }
 
-      if (savedOllamaModel?.trim()) {
-        setOllamaModel(savedOllamaModel.trim())
-      }
       if (savedModule?.trim()) setSelectedModule(savedModule.trim())
       if (savedCustomModules) {
         const parsed = JSON.parse(savedCustomModules) as CustomChatModule[]
@@ -200,7 +194,7 @@ try {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: `ollama/${ollamaModel}`,
+            model: "openrouter/auto",
             module: selectedModule === "auto"
               ? { id: "auto" }
               : [...BUILT_IN_CHAT_MODULES, ...customModules].find((module) => module.id === selectedModule) ?? { id: "auto" },
@@ -288,7 +282,7 @@ if (!accumulated) {
         }
       }
     },
-    [customModules, isLoaded, ollamaModel, selectedModule],
+    [customModules, isLoaded, selectedModule],
   )
 
 const sendMessage = useCallback(
