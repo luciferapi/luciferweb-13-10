@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
+import {
+  getOpenRouterApiKey,
+  getOpenRouterEndpoint,
+  getOpenRouterHeaders,
+  getOpenRouterModel,
+} from "@/lib/server/openrouter"
 
 export const runtime = "nodejs"
 
@@ -36,21 +42,18 @@ export async function POST(request: Request) {
   })
   if (rateLimitResponse) return rateLimitResponse
 
-  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").trim().replace(/\/$/, "")
-  const model = (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
-  if (!model) return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 503 })
+  const apiKey = getOpenRouterApiKey()
+  if (!apiKey) return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 503 })
 
   let response: Response
   try {
-    const headers: HeadersInit = { "Content-Type": "application/json" }
-    const apiKey = process.env.OLLAMA_API_KEY?.trim()
-    if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-    response = await fetch(`${baseUrl}/api/chat`, {
+    response = await fetch(getOpenRouterEndpoint(), {
       method: "POST",
-      headers,
+      headers: getOpenRouterHeaders(apiKey),
       body: JSON.stringify({
-        model,
+        model: getOpenRouterModel(),
         stream: false,
+        max_tokens: 160,
         messages: [
           {
             role: "system",
@@ -59,30 +62,31 @@ export async function POST(request: Request) {
           },
           { role: "user", content: prompt },
         ],
-        options: { num_predict: 160 },
       }),
       signal: AbortSignal.timeout(45_000),
     })
   } catch (error) {
-    console.error("Hero assistant request to Ollama failed.", error)
+    console.error("Hero assistant request to OpenRouter failed.", error)
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 
   if (!response.ok) {
-    console.error("Ollama returned HTTP", response.status, "for the hero assistant.")
+    console.error("OpenRouter returned HTTP", response.status, "for the hero assistant.")
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 
   try {
-    const data = (await response.json()) as { message?: { content?: string } }
-    const text = data.message?.content
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: unknown } }>
+    }
+    const text = data.choices?.[0]?.message?.content
     if (typeof text !== "string" || !text.trim()) {
-    console.error("Ollama returned no assistant text for the hero assistant.")
+      console.error("OpenRouter returned no assistant text for the hero assistant.")
       return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
     }
     return NextResponse.json({ text: text.trim() })
   } catch {
-    console.error("Ollama returned an invalid JSON response for the hero assistant.")
+    console.error("OpenRouter returned an invalid JSON response for the hero assistant.")
     return NextResponse.json({ error: "The assistant is temporarily unavailable." }, { status: 502 })
   }
 }

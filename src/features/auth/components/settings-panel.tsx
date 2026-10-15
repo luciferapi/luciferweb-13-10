@@ -53,8 +53,6 @@ const themeOptions = [
   },
 ] as const
 
-const OLLAMA_MODEL_STORAGE_KEY = "ollama-custom-model"
-
 export function SettingsPanel() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
@@ -83,9 +81,6 @@ export function SettingsPanel() {
   const [sendingPasswordReset, setSendingPasswordReset] = useState(false)
   const [passwordResetError, setPasswordResetError] = useState("")
   const [passwordResetNotice, setPasswordResetNotice] = useState("")
-  const [ollamaModelDraft, setOllamaModelDraft] = useState("llama3.2")
-  const [ollamaModelNotice, setOllamaModelNotice] = useState("")
-  const [ollamaModelError, setOllamaModelError] = useState("")
   const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
   const [moduleNameDraft, setModuleNameDraft] = useState("")
   const [moduleDescriptionDraft, setModuleDescriptionDraft] = useState("")
@@ -98,8 +93,6 @@ export function SettingsPanel() {
   }, [])
 
   useEffect(() => {
-    const savedModel = window.localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
-    if (savedModel?.trim()) setOllamaModelDraft(savedModel.trim())
     const savedModules = window.localStorage.getItem(CHAT_MODULES_STORAGE_KEY)
     if (savedModules) {
       try {
@@ -337,21 +330,6 @@ export function SettingsPanel() {
     } finally {
       setSigningOut(false)
     }
-  }
-
-  function handleOllamaModelSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const model = ollamaModelDraft.trim()
-    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(model)) {
-      setOllamaModelError("Use 1–128 letters, numbers, dots, underscores, hyphens, or colons.")
-      setOllamaModelNotice("")
-      return
-    }
-
-    window.localStorage.setItem(OLLAMA_MODEL_STORAGE_KEY, model)
-    setOllamaModelDraft(model)
-    setOllamaModelError("")
-    setOllamaModelNotice("Ollama model saved on this device.")
   }
 
   function handleCustomModuleSave(event: FormEvent<HTMLFormElement>) {
@@ -717,47 +695,11 @@ export function SettingsPanel() {
                 AI preferences
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Choose the Ollama model used by the local AI option in Chat.
+                Customize chat with reusable instruction sets for your workflows.
               </p>
             </div>
           </div>
         </div>
-        <form onSubmit={handleOllamaModelSave} className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <label htmlFor="settings-ollama-model" className="grid gap-2 text-sm font-medium text-foreground">
-            Ollama model name
-            <input
-              id="settings-ollama-model"
-              name="ollamaModel"
-              type="text"
-              value={ollamaModelDraft}
-              onChange={(event) => {
-                setOllamaModelDraft(event.target.value)
-                setOllamaModelError("")
-                setOllamaModelNotice("")
-              }}
-              maxLength={128}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder="llama3.2"
-              aria-describedby="settings-ollama-model-help"
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-lime focus:ring-2 focus:ring-lime/30"
-            />
-            <span id="settings-ollama-model-help" className="text-xs font-normal text-muted-foreground">
-              Example: <code className="rounded bg-muted px-1 py-0.5">llama3.2</code>, <code className="rounded bg-muted px-1 py-0.5">qwen2.5:7b</code>, or <code className="rounded bg-muted px-1 py-0.5">mistral</code>.
-            </span>
-          </label>
-          <button
-            type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-lime px-4 py-2.5 text-sm font-semibold text-charcoal transition hover:bg-lime/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 active:scale-[0.98]"
-          >
-            Save model
-          </button>
-        </form>
-        {ollamaModelError ? <p role="alert" className="mt-3 text-sm text-destructive">{ollamaModelError}</p> : null}
-        {ollamaModelNotice ? <p role="status" className="mt-3 text-sm text-foreground">{ollamaModelNotice}</p> : null}
-        <p className="mt-4 text-xs leading-5 text-muted-foreground">
-          This preference is stored only in this browser. Make sure the same model is available on your Ollama server.
-        </p>
         <div className="mt-6 border-t border-border pt-6">
           <div className="border-b border-border pb-4">
             <h3 className="text-base font-semibold text-foreground">Custom modules</h3>

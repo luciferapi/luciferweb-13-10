@@ -165,21 +165,13 @@ Display name and date of birth can each be changed once from Settings. A
 confirmation is shown before either change, and customer support must handle
 later corrections. Chat remains publicly accessible.
 
-### Ollama local AI provider
+### AI provider
 
-The AI chat model selector includes **Ollama (local)**. Install Ollama on the
-same server as the Next.js app, pull a model, and set these server-only
-variables:
-
-```bash
-ollama pull llama3.2
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2
-```
-
-The browser never connects directly to Ollama. The Next.js `/api/chat` route
-proxies and streams Ollama's NDJSON response. If Ollama is unavailable, the
-other configured gateway models remain unaffected.
+Chat and the optional homepage assistant use OpenRouter from server-side routes.
+Set the server-only `OPENROUTER_API_KEY`; both features use `openrouter/auto` by
+default. Optionally set `OPENROUTER_MODEL` to a specific OpenRouter model ID or
+`OPENROUTER_URL` to a custom API base URL. The browser never receives the API
+key, and there is no local-model fallback.
 
 The forgot-password endpoint checks that an account exists before creating
 and sending a reset link. Owner and staff sign-in codes are generated and verified by the app and sent

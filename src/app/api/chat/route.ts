@@ -4,44 +4,12 @@ import { getSignedInUser } from "@/features/auth/server/auth-session"
 import { chooseAutomaticModule, findBuiltInModule } from "@/features/chat/modules"
 import { enforceRateLimit } from "@/lib/server/rate-limit"
 import { readLimitedJson } from "@/lib/server/read-limited-json"
-
-const DEFAULT_OLLAMA_MODEL = "llama3.2"
-const DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
-const OPENROUTER_MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
-
-function getDefaultOpenRouterModel() {
-  const configured = process.env.OPENROUTER_MODEL?.trim()
-  return configured && OPENROUTER_MODEL_PATTERN.test(configured)
-    ? configured
-    : DEFAULT_OPENROUTER_MODEL
-}
-
-function getDefaultModelId() {
-  if (process.env.OPENROUTER_API_KEY?.trim()) return getDefaultOpenRouterModel()
-  return `ollama/${process.env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL}`
-}
-
-function normalizeModelId(model?: string) {
-  if (!model) return getDefaultModelId()
-
-  const trimmed = model.trim()
-  const normalized = trimmed.startsWith("~") ? trimmed.slice(1) : trimmed
-
-  if (normalized.startsWith("ollama/")) {
-    const ollamaModel = normalized.slice("ollama/".length).trim()
-    if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(ollamaModel)) {
-      return process.env.OPENROUTER_API_KEY?.trim()
-        ? getDefaultOpenRouterModel()
-        : `ollama/${ollamaModel}`
-    }
-  }
-
-  if (process.env.OPENROUTER_API_KEY?.trim() && OPENROUTER_MODEL_PATTERN.test(normalized)) {
-    return normalized
-  }
-
-  return getDefaultModelId()
-}
+import {
+  getOpenRouterApiKey,
+  getOpenRouterEndpoint,
+  getOpenRouterHeaders,
+  getOpenRouterModel,
+} from "@/lib/server/openrouter"
 
 function normalizeMessages(messages: unknown): ModelMessage[] {
   if (!Array.isArray(messages)) return []
@@ -99,10 +67,6 @@ function getModulePrompt(body: Record<string, unknown>, messages: ModelMessage[]
   return { id: moduleId, name: name || "Custom module", description: "User-configured module", instructions }
 }
 
-function isOllamaModel(modelId: string) {
-  return modelId.startsWith("ollama/")
-}
-
 function parseOpenRouterStreamLine(line: string) {
   const trimmed = line.trim()
   if (!trimmed.startsWith("data:")) return ""
@@ -124,26 +88,12 @@ function parseOpenRouterStreamLine(line: string) {
 }
 
 async function streamOpenRouterResponse(system: string, messages: ModelMessage[], modelId: string) {
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim()
+  const apiKey = getOpenRouterApiKey()
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured.")
 
-  const configuredUrl = process.env.OPENROUTER_URL?.trim() || "https://openrouter.ai/api/v1"
-  const endpointUrl = new URL(configuredUrl)
-  const configuredPath = endpointUrl.pathname.replace(/\/+$/, "")
-  const versionedPath = /\/(?:api\/)?v1$/.test(configuredPath)
-    ? configuredPath
-    : `${configuredPath}/api/v1`
-  endpointUrl.pathname = configuredPath.endsWith("/chat/completions")
-    ? configuredPath
-    : `${versionedPath}/chat/completions`
-  const response = await fetch(endpointUrl.toString(), {
+  const response = await fetch(getOpenRouterEndpoint(), {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://luciferapi.com",
-      "X-Title": "LUCIFER AI",
-    },
+    headers: getOpenRouterHeaders(apiKey),
     body: JSON.stringify({
       model: modelId,
       stream: true,
@@ -198,77 +148,6 @@ async function streamOpenRouterResponse(system: string, messages: ModelMessage[]
   })
 }
 
-async function streamOllamaResponse(system: string, messages: ModelMessage[], modelId: string) {
-  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434").trim().replace(/\/$/, "")
-  const model = modelId.slice("ollama/".length) || (process.env.OLLAMA_MODEL ?? "llama3.2").trim()
-  if (!model) throw new Error("OLLAMA_MODEL is not configured.")
-
-  const headers: HeadersInit = { "Content-Type": "application/json" }
-  const apiKey = process.env.OLLAMA_API_KEY?.trim()
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-
-  const response = await fetch(`${baseUrl}/api/chat`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model,
-      stream: true,
-      messages: [{ role: "system", content: system }, ...messages],
-      options: { num_predict: 1200 },
-    }),
-    signal: AbortSignal.timeout(45_000),
-  })
-
-  if (!response.ok || !response.body) {
-    const detail = await response.text().catch(() => "")
-    throw new Error(`Ollama request failed (${response.status}): ${detail.slice(0, 300)}`)
-  }
-
-  const decoder = new TextDecoder()
-  const encoder = new TextEncoder()
-  let pending = ""
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const reader = response.body!.getReader()
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          pending += decoder.decode(value ?? new Uint8Array(), { stream: !done })
-          const lines = pending.split("\n")
-          pending = done ? "" : (lines.pop() ?? "")
-          for (const line of lines) {
-            if (!line.trim()) continue
-            const payload = JSON.parse(line) as { message?: { content?: string }; error?: string }
-            if (payload.error) throw new Error(payload.error)
-            const text = payload.message?.content
-            if (typeof text === "string" && text) controller.enqueue(encoder.encode(text))
-          }
-          if (done) break
-        }
-        if (pending.trim()) {
-          const payload = JSON.parse(pending) as { message?: { content?: string }; error?: string }
-          if (payload.error) throw new Error(payload.error)
-          const text = payload.message?.content
-          if (typeof text === "string" && text) controller.enqueue(encoder.encode(text))
-        }
-        controller.close()
-      } catch (error) {
-        controller.error(error)
-      } finally {
-        reader.releaseLock()
-      }
-    },
-  })
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
-  })
-}
-
 export async function POST(request: Request) {
   try {
     const user = await getSignedInUser()
@@ -296,7 +175,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid conversation." }, { status: 400 })
     }
 
-    const modelId = normalizeModelId(requestedModel)
+    const modelId = getOpenRouterModel(requestedModel)
     const messages = normalizeMessages(body.messages)
     const conversationLength = messages.reduce((total, message) => total + message.content.length, 0)
     if (
@@ -313,6 +192,12 @@ export async function POST(request: Request) {
       identifiers: user ? [user.id] : [],
     })
     if (rateLimitResponse) return rateLimitResponse
+    if (!getOpenRouterApiKey()) {
+      return NextResponse.json(
+        { error: "LUCIFER AI is temporarily unavailable." },
+        { status: 503 },
+      )
+    }
 
     const userName = user?.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100) ?? ""
     const userContext = userName
@@ -327,9 +212,6 @@ export async function POST(request: Request) {
       : ""
     const systemWithModule = `${system}${moduleContext}`
 
-    if (isOllamaModel(modelId)) {
-      return await streamOllamaResponse(systemWithModule, messages, modelId)
-    }
     return await streamOpenRouterResponse(systemWithModule, messages, modelId)
   } catch (error) {
     console.error("[chat] Provider request failed", error)
