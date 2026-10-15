@@ -7,7 +7,7 @@ export function BackButton() {
   const pathname = usePathname()
   const router = useRouter()
 
-  if (pathname === "/") return null
+  if (pathname === "/" || pathname === "/chat") return null
 
   return (
     <button
