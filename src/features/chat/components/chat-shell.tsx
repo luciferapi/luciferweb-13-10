@@ -343,13 +343,13 @@ try {
 
   return (
       <main aria-label="AI chat workspace" className="ai-chat-section relative isolate h-dvh overflow-hidden">
-        <header className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-20 border-b border-white/[0.08] bg-[#212121]/90 backdrop-blur-xl xl:left-[var(--navigation-width)] xl:top-0">
+        <header className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-20 border-b border-white/[0.08] bg-zinc-950/90 backdrop-blur-xl xl:left-[var(--navigation-width)] xl:top-0">
           <div className="pointer-events-auto mx-auto flex min-h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#303030]">
+              <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
                 <Image src="/images/ai-logo.jpg" alt="" width={32} height={32} className="size-full object-cover" priority />
               </span>
-              <p className="truncate text-sm font-semibold tracking-tight text-zinc-100">Lucifer AI</p>
+              <p className="truncate text-sm font-bold tracking-[0.04em] text-white">LUCIFER <span className="text-lime-300">AI</span></p>
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -366,7 +366,7 @@ try {
                       // The selected mode still applies for this session.
                     }
                   }}
-                  className="h-9 max-w-36 rounded-full border border-white/10 bg-[#303030] px-3 text-xs font-medium text-zinc-200 outline-none transition hover:bg-[#383838] focus-visible:ring-2 focus-visible:ring-white/40"
+                  className="h-9 max-w-36 rounded-full border border-white/10 bg-zinc-900 px-3 text-xs font-medium text-zinc-200 outline-none transition hover:border-lime-400/30 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-lime-400/60"
                   aria-label={`Response mode: ${activeModule.name}`}
                 >
                   {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}
@@ -378,7 +378,7 @@ try {
                   onClick={clearChat}
                   disabled={!isLoaded}
                   variant="ghost"
-                  className="h-9 gap-2 rounded-full border border-transparent px-3 text-zinc-300 transition hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
+                  className="h-9 gap-2 rounded-full border border-transparent px-3 text-lime-300 transition hover:border-lime-400/20 hover:bg-lime-400/[0.06] hover:text-lime-200"
                   aria-label="Start a new chat"
                   title="New chat"
                 >

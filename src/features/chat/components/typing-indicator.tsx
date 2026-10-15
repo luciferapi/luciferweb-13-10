@@ -6,9 +6,9 @@ export function TypingIndicator() {
       aria-label="Lucifer AI is responding"
     >
       <span className="sr-only">Lucifer AI is responding</span>
-      <span className="size-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]" />
-      <span className="size-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]" />
-      <span className="size-2 animate-bounce rounded-full bg-zinc-400" />
+      <span className="size-2 animate-bounce rounded-full bg-lime-300 [animation-delay:-0.3s]" />
+      <span className="size-2 animate-bounce rounded-full bg-lime-300 [animation-delay:-0.15s]" />
+      <span className="size-2 animate-bounce rounded-full bg-lime-300" />
     </div>
   )
 }

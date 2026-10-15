@@ -97,7 +97,7 @@ export function AudioWaveform({ isRecording, stream }: AudioWaveformProps) {
       {levels.map((level, index) => (
         <div
           key={index}
-          className="bg-zinc-400 rounded-full transition-all duration-75"
+          className="rounded-full bg-lime-300 transition-all duration-75"
           style={{
             width: "3px",
             height: `${Math.max(4, level * 28)}px`,

@@ -49,7 +49,7 @@ export function MarkdownRenderer({ content, className, isStreaming = false }: Ma
       const codeMatch = remaining.match(/^`([^`]+)`/)
       if (codeMatch) {
         elements.push(
-          <code key={keyIndex++} className="px-1.5 py-0.5 bg-slate-800 text-cyan-100 rounded text-sm font-mono">
+          <code key={keyIndex++} className="px-1.5 py-0.5 bg-zinc-800 text-lime-200 rounded text-sm font-mono">
             {codeMatch[1]}
           </code>,
         )
@@ -82,7 +82,7 @@ export function MarkdownRenderer({ content, className, isStreaming = false }: Ma
             href={linkMatch[2]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2 transition-colors"
+            className="text-lime-300 hover:text-lime-200 underline underline-offset-2 transition-colors"
           >
             {linkMatch[1]}
           </a>,
@@ -118,7 +118,7 @@ export function MarkdownRenderer({ content, className, isStreaming = false }: Ma
       const codeMatch = remaining.match(/^`([^`]+)`/)
       if (codeMatch) {
         elements.push(
-          <code key={keyIndex++} className="px-1.5 py-0.5 bg-slate-800 text-cyan-100 rounded text-sm font-mono">
+          <code key={keyIndex++} className="px-1.5 py-0.5 bg-zinc-800 text-lime-200 rounded text-sm font-mono">
             {codeMatch[1]}
           </code>,
         )
@@ -169,7 +169,7 @@ export function MarkdownRenderer({ content, className, isStreaming = false }: Ma
             href={linkMatch[2]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2 transition-colors"
+            className="text-lime-300 hover:text-lime-200 underline underline-offset-2 transition-colors"
           >
             {linkMatch[1]}
           </a>,

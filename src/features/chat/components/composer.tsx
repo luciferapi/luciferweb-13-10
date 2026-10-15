@@ -215,8 +215,8 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
       <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-3xl">
         <div
           className={cn(
-            "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-white/[0.1] bg-[#303030] p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.24)] transition-colors duration-200 sm:p-3",
-            "focus-within:border-white/20 focus-within:ring-2 focus-within:ring-white/[0.06]",
+            "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-white/[0.1] bg-zinc-900/95 p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-colors duration-200 sm:p-3",
+            "focus-within:border-lime-400/40 focus-within:ring-2 focus-within:ring-lime-400/10",
           )}
         >
           {uploadedImage && (
@@ -249,7 +249,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
               disabled={isStreaming || disabled}
               size="icon"
               variant="ghost"
-              className="size-10 shrink-0 rounded-full text-zinc-300 hover:bg-white/10 hover:text-white"
+              className="size-10 shrink-0 rounded-full text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
               aria-label="Attach image"
               title="Attach image"
             >
@@ -288,7 +288,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
               size="icon"
               variant="ghost"
               className={cn(
-                "size-10 shrink-0 rounded-full text-zinc-300 transition hover:bg-white/10 hover:text-white",
+                "size-10 shrink-0 rounded-full text-lime-300 transition hover:bg-lime-400/10 hover:text-lime-200",
                 isRecording && "bg-red-500/15 text-red-300 hover:bg-red-500/25 hover:text-red-200",
               )}
               aria-label={isRecording ? "Stop recording" : "Start voice input"}
@@ -301,7 +301,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
               <button
                 type="button"
                 onClick={onStop}
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white"
+                className="grid size-10 shrink-0 place-items-center rounded-full border border-lime-400/30 bg-zinc-800 text-lime-300 transition hover:bg-lime-400/10"
                 aria-label="Stop generating"
                 title="Stop generating"
               >
@@ -312,7 +312,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
                 type="button"
                 onClick={handleSend}
                 disabled={(!value.trim() && !uploadedImage) || disabled}
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-500 disabled:text-zinc-800"
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-lime-400 text-zinc-950 transition hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-500"
                 aria-label="Send message"
                 title="Send message"
               >

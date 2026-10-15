@@ -2,10 +2,9 @@
 
 import { useEffect, useRef } from "react"
 import gsap from "gsap"
-import { AlertCircle, ArrowUpRight, BookOpen, Bug, Code2, RefreshCw, Sparkles } from "lucide-react"
+import { AlertCircle, ArrowUpRight, BookOpen, Bug, Code2, Loader2, RefreshCw, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { AnimatedOrb } from "./animated-orb"
 import { MessageBubble } from "./message-bubble"
 import { TypingIndicator } from "./typing-indicator"
 import type { Message } from "./chat-shell"
@@ -160,9 +159,9 @@ export function MessageList({
         role="status"
         aria-label="Loading Lucifer AI"
       >
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-          <AnimatedOrb size={28} />
-          <span className="text-sm text-slate-300">Preparing your chat</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/80 px-4 py-3">
+          <Loader2 aria-hidden="true" className="size-5 animate-spin text-lime-300" />
+          <span className="text-sm text-zinc-300">Preparing your chat</span>
         </div>
       </div>
     )
@@ -194,13 +193,13 @@ export function MessageList({
                 type="button"
                 data-intro-item
                 onClick={() => onSendPrompt(prompt)}
-                className="group flex min-h-12 items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="group flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-left transition-colors hover:border-lime-400/40 hover:bg-lime-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/60"
               >
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-zinc-300 transition group-hover:bg-white/10 group-hover:text-white">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-lime-400/10 text-lime-300 transition group-hover:bg-lime-400/15 group-hover:text-lime-200">
                   <Icon aria-hidden="true" className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1 text-sm font-medium text-zinc-200">{title}</span>
-                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-zinc-500 transition group-hover:text-zinc-200" />
+                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-zinc-500 transition group-hover:text-lime-300" />
               </button>
             ))}
           </div>

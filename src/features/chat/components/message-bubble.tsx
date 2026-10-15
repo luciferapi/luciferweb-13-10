@@ -38,7 +38,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       )}
     >
       {isUser ? (
-        <div className="max-w-[88%] rounded-[1.5rem] bg-[#303030] px-4 py-3 text-zinc-100 sm:max-w-[80%]">
+        <div className="max-w-[88%] rounded-[1.5rem] border border-white/10 bg-zinc-900/90 px-4 py-3 text-zinc-100 sm:max-w-[80%]">
           <div className="flex flex-col gap-2">
             {message.imageData && (
               <div className="size-24 overflow-hidden rounded-xl border border-white/10">
@@ -67,7 +67,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-400 transition hover:bg-lime-400/[0.08] hover:text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
           aria-label="Copy assistant message"
           title={copied ? "Copied" : "Copy response"}
         >

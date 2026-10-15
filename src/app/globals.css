@@ -607,43 +607,44 @@ html {
 
 /* Keep the chat canvas calm and focused, independent of the marketing palette. */
 .ai-chat-section {
-  color: #ececec;
-  background: #212121;
+  color: #fafafa;
+  background: #09090b;
 }
 .ai-chat-section::before,
 .ai-chat-section::after {
   display: none;
 }
 .ai-chat-section [role="log"] {
-  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+  scrollbar-color: rgba(163, 230, 53, 0.28) transparent;
   scrollbar-width: thin;
 }
 .ai-chat-section [role="log"]::-webkit-scrollbar { width: 8px; }
 .ai-chat-section [role="log"]::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.28);
+  background: rgba(163, 230, 53, 0.28);
   background-clip: padding-box;
 }
 .ai-chat-section .text-stone-400 { color: #a1a1aa; }
 .ai-chat-section .text-stone-800 { color: #f4f4f5; }
-.ai-chat-section .bg-white { background-color: var(--card); }
-.ai-chat-section .border-stone-200 { border-color: var(--border); }
+.ai-chat-section .bg-white { background-color: #18181b; }
+.ai-chat-section .border-stone-200 { border-color: rgb(255 255 255 / 12%); }
 .ai-chat-section .shadow-stone-200\/60 { --tw-shadow-color: color-mix(in srgb, var(--foreground) 12%, transparent); }
-.ai-chat-section textarea { min-width: 0; color: #ececec; caret-color: #ececec; }
+.ai-chat-section textarea { min-width: 0; color: #fafafa; caret-color: #a3e635; }
 .ai-chat-section textarea::placeholder { color: #a1a1aa; opacity: 1; }
-.ai-chat-section button[aria-label="Start a new chat"] { color: #d4d4d8; }
-.ai-chat-section button[aria-label="Start a new chat"]:hover { color: #ffffff; }
-.ai-chat-section button[aria-label="Start voice input"] { color: #d4d4d8; }
-.ai-chat-section button[aria-label="Start voice input"]:hover { background: rgb(255 255 255 / 8%); }
-.ai-chat-section button[aria-label="Attach image"] { color: #d4d4d8; }
-.ai-chat-section button[aria-label="Attach image"]:hover { background: rgb(255 255 255 / 8%); }
+.ai-chat-section select { color-scheme: dark; }
+.ai-chat-section button[aria-label="Start a new chat"] { color: #bef264; }
+.ai-chat-section button[aria-label="Start a new chat"]:hover { color: #d9f99d; }
+.ai-chat-section button[aria-label="Start voice input"] { color: #bef264; }
+.ai-chat-section button[aria-label="Start voice input"]:hover { background: rgb(163 230 53 / 10%); }
+.ai-chat-section button[aria-label="Attach image"] { color: #bef264; }
+.ai-chat-section button[aria-label="Attach image"]:hover { background: rgb(163 230 53 / 10%); }
 .ai-chat-section button[aria-label="Stop recording"] { background: #dc2626; color: #ffffff; }
-.ai-chat-section button[aria-label="Stop generating"] { outline: 1px solid #f87171; outline-offset: 2px; }
-.ai-chat-section button:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.ai-chat-section button[aria-label="Stop generating"] { outline: 1px solid rgb(163 230 53 / 60%); outline-offset: 2px; }
+.ai-chat-section button:focus-visible { outline: 2px solid #a3e635; outline-offset: 3px; }
 .ai-chat-section button:disabled { cursor: not-allowed; }
 .ai-chat-section .gradient-text-animated,
-.ai-chat-section .analysis-word-gradient { background-image: linear-gradient(110deg, var(--pineapple), var(--foreground), var(--pineapple)); }
+.ai-chat-section .analysis-word-gradient { background-image: linear-gradient(110deg, #a3e635, #fafafa, #a3e635); }
 @media (max-width: 640px) { .ai-chat-section textarea { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .ai-chat-section *, .ai-chat-section *::before, .ai-chat-section *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .ai-chat-section .streaming-word { opacity: 1; transform: none; filter: none; } }
 
