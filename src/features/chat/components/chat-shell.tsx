@@ -343,7 +343,7 @@ try {
               <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
                 <Image src="/images/ai-logo.jpg" alt="" width={32} height={32} className="size-full object-cover" priority />
               </span>
-              <p className="truncate text-sm font-bold tracking-[0.04em] text-white">LUCIFER <span className="text-lime-300">AI</span></p>
+              <p className="truncate text-sm font-bold tracking-[0.04em] text-white">LUCIFER <span className="text-lime-400">AI</span></p>
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -360,7 +360,7 @@ try {
                       // The selected mode still applies for this session.
                     }
                   }}
-                  className="h-9 max-w-36 rounded-full border border-white/10 bg-zinc-900 px-3 text-xs font-medium text-zinc-200 outline-none transition hover:border-lime-400/30 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-lime-400/60"
+                  className="h-9 max-w-40 rounded-full border border-white/10 bg-zinc-900 px-3 text-sm font-medium text-zinc-100 outline-none transition hover:border-lime-400/50 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-lime-400/60"
                   aria-label={`Response mode: ${activeModule.name}`}
                 >
                   {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}

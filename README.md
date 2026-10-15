@@ -94,6 +94,11 @@ This additive update is idempotent and preserves existing endpoint rows. If the
 production database account cannot alter tables, apply
 `database/migrations/008_api_endpoint_storage_columns.sql` with a database
 administrator instead.
+The owner project-request inbox and user Process page similarly add the review
+status, owner message, and review timestamp fields when missing. If the
+production database account cannot alter the request table, apply
+`database/migrations/011_project_request_review_workflow.sql` with a database
+administrator.
 Set `AUTH_OTP_HMAC_SECRET` to a strong, persistent secret of at least 32 random
 bytes (hex-encoded) for owner/staff email codes.
 

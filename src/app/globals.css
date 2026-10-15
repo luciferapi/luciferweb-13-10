@@ -223,6 +223,13 @@ html {
   --ring: #9de500;
 }
 
+.home-brand-theme {
+  --primary: #a3e635;
+  --primary-foreground: #09090b;
+  --lime: #a3e635;
+  --ring: #a3e635;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -607,6 +614,10 @@ html {
 
 /* Keep the chat canvas calm and focused, independent of the marketing palette. */
 .ai-chat-section {
+  --primary: #a3e635;
+  --primary-foreground: #09090b;
+  --lime: #a3e635;
+  --ring: #a3e635;
   color: #fafafa;
   background: #09090b;
 }

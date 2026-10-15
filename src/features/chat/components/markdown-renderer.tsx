@@ -251,7 +251,7 @@ export function MarkdownRenderer({ content, className, isStreaming = false }: Ma
   }
 
   return (
-    <div className={cn("text-sm whitespace-pre-wrap break-words", className)}>
+    <div className={cn("whitespace-pre-wrap break-words text-[15px] leading-7 sm:text-base", className)}>
       {renderContent(staticContent, false)}
       {renderContent(animatingContent, true)}
     </div>

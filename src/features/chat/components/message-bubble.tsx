@@ -38,7 +38,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       )}
     >
       {isUser ? (
-        <div className="max-w-[88%] rounded-[1.5rem] border border-white/10 bg-zinc-900/90 px-4 py-3 text-zinc-100 sm:max-w-[80%]">
+        <div className="min-h-11 min-w-16 max-w-[88%] rounded-2xl border border-white/10 bg-zinc-900/90 px-4 py-2.5 text-zinc-100 sm:max-w-[80%]">
           <div className="flex flex-col gap-2">
             {message.imageData && (
               <div className="size-24 overflow-hidden rounded-xl border border-white/10">

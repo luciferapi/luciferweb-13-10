@@ -212,7 +212,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-3 z-10 px-3 sm:bottom-5 sm:px-6 xl:left-[var(--navigation-width)]">
-      <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-3xl">
+      <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-4xl">
         <div
           className={cn(
             "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-white/[0.1] bg-zinc-900/95 p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-colors duration-200 sm:p-3",

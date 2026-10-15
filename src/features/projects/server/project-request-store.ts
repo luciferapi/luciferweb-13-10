@@ -1,8 +1,53 @@
 import "server-only"
-import { getMysqlPool, withMysqlTransaction } from "@/lib/mysql"
+import { getMysqlPool, selectMysqlRows, withMysqlTransaction } from "@/lib/mysql"
 import type { ResultSetHeader, RowDataPacket } from "mysql2"
 
 export const PROJECT_REQUEST_FEE_PAISE = 100
+
+type ProjectRequestColumnRow = RowDataPacket & { columnName: string }
+
+let projectRequestReviewSchemaSetup: Promise<void> | null = null
+
+function isDuplicateColumnError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_FIELDNAME"
+}
+
+export async function ensureProjectRequestReviewSchema(): Promise<void> {
+  if (!projectRequestReviewSchemaSetup) {
+    projectRequestReviewSchemaSetup = (async () => {
+      const columns = await selectMysqlRows<ProjectRequestColumnRow>(
+        `SELECT COLUMN_NAME AS columnName
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'project_requests'
+           AND COLUMN_NAME IN ('review_status', 'owner_message', 'reviewed_by', 'reviewed_at')`,
+      )
+      const existingColumns = new Set(columns.map((column) => column.columnName))
+      const additions = [
+        ["review_status", "VARCHAR(24) NOT NULL DEFAULT 'pending' AFTER status"],
+        ["owner_message", "TEXT NULL AFTER review_status"],
+        ["reviewed_by", "CHAR(36) NULL AFTER owner_message"],
+        ["reviewed_at", "DATETIME(3) NULL AFTER reviewed_by"],
+      ] as const
+
+      for (const [name, definition] of additions) {
+        if (existingColumns.has(name)) continue
+        try {
+          await getMysqlPool().execute(`ALTER TABLE project_requests ADD COLUMN ${name} ${definition}`)
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error
+        }
+      }
+    })()
+  }
+
+  try {
+    await projectRequestReviewSchemaSetup
+  } catch (error) {
+    projectRequestReviewSchemaSetup = null
+    throw error
+  }
+}
 
 type PaidProjectRequestRow = RowDataPacket & {
   request_number: number | string
@@ -54,8 +99,12 @@ export async function savePendingProjectRequest(input: {
 }
 
 export async function listPaidProjectRequests() {
+  await ensureProjectRequestReviewSchema()
   const [rows] = await getMysqlPool().execute<(RowDataPacket & {
     id: number | string
+    request_ref: string
+    user_name: string | null
+    user_email: string | null
     project_name: string
     description: string
     contact_email: string | null
@@ -64,15 +113,28 @@ export async function listPaidProjectRequests() {
     preferred_language: string | null
     desired_duration: string | null
     payment_amount_paise: number | string
+    payment_status: string
+    review_status: "pending" | "accepted" | "rejected"
+    owner_message: string | null
+    reviewed_at: Date | string | null
     created_at: Date | string
   })[]>(
-    `SELECT id, project_name, description, contact_email, whatsapp_number, telegram_id,
-            preferred_language, desired_duration, payment_amount_paise, created_at
-     FROM project_requests WHERE payment_status = 'paid'
-     ORDER BY created_at DESC LIMIT 100`,
+    `SELECT requests.id, requests.request_ref, users.name AS user_name, users.email AS user_email,
+            requests.project_name, requests.description, requests.contact_email, requests.whatsapp_number,
+            requests.telegram_id, requests.preferred_language, requests.desired_duration,
+            requests.payment_amount_paise, requests.payment_status, requests.review_status,
+            requests.owner_message, requests.reviewed_at, requests.created_at
+     FROM project_requests AS requests
+     INNER JOIN auth_users AS users ON users.id = requests.user_id
+     WHERE requests.payment_status = 'paid'
+     ORDER BY CASE requests.review_status WHEN 'pending' THEN 0 ELSE 1 END,
+              requests.created_at DESC`,
   )
   return rows.map((request) => ({
     id: Number(request.id),
+    requestRef: request.request_ref,
+    userName: request.user_name ?? "",
+    userEmail: request.user_email ?? "",
     projectName: request.project_name,
     description: request.description,
     contactEmail: request.contact_email,
@@ -80,12 +142,17 @@ export async function listPaidProjectRequests() {
     telegramId: request.telegram_id,
     preferredLanguage: request.preferred_language,
     desiredDuration: request.desired_duration,
-    paymentAmountPaise: request.payment_amount_paise,
+    paymentAmountPaise: Number(request.payment_amount_paise),
+    paymentStatus: request.payment_status,
+    reviewStatus: request.review_status,
+    ownerMessage: request.owner_message,
+    reviewedAt: request.reviewed_at instanceof Date ? request.reviewed_at.toISOString() : request.reviewed_at,
     createdAt: request.created_at instanceof Date ? request.created_at.toISOString() : request.created_at,
   }))
 }
 
 export async function listUserProjectRequests(userId: string) {
+  await ensureProjectRequestReviewSchema()
   const [rows] = await getMysqlPool().execute<(RowDataPacket & {
     request_ref: string
     project_name: string
@@ -93,10 +160,13 @@ export async function listUserProjectRequests(userId: string) {
     payment_amount_paise: number | string
     payment_status: string
     status: string
+    review_status: "pending" | "accepted" | "rejected"
+    owner_message: string | null
+    reviewed_at: Date | string | null
     created_at: Date | string
   })[]>(
     `SELECT request_ref, project_name, description, payment_amount_paise,
-            payment_status, status, created_at
+            payment_status, status, review_status, owner_message, reviewed_at, created_at
      FROM project_requests
      WHERE user_id = ?
      ORDER BY created_at DESC`,
@@ -109,8 +179,40 @@ export async function listUserProjectRequests(userId: string) {
     paymentAmountPaise: Number(request.payment_amount_paise),
     paymentStatus: request.payment_status,
     status: request.status,
+    reviewStatus: request.review_status,
+    ownerMessage: request.owner_message,
+    reviewedAt: request.reviewed_at instanceof Date ? request.reviewed_at.toISOString() : request.reviewed_at,
     createdAt: request.created_at instanceof Date ? request.created_at.toISOString() : request.created_at,
   }))
+}
+
+export async function reviewPaidProjectRequest(input: {
+  requestRef: string
+  decision: "accepted" | "rejected"
+  ownerMessage: string | null
+  reviewedBy: string
+}): Promise<{ ok: true } | { ok: false; reason: "not_found" | "not_paid" | "already_reviewed" }> {
+  await ensureProjectRequestReviewSchema()
+  const [result] = await getMysqlPool().execute<ResultSetHeader>(
+    `UPDATE project_requests
+     SET review_status = ?, owner_message = ?, reviewed_by = ?,
+         reviewed_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3)
+     WHERE request_ref = ? AND payment_status = 'paid' AND review_status = 'pending'`,
+    [input.decision, input.ownerMessage, input.reviewedBy, input.requestRef],
+  )
+  if (result.affectedRows === 1) return { ok: true }
+
+  const [rows] = await getMysqlPool().execute<(RowDataPacket & {
+    payment_status: string
+    review_status: string
+  })[]>(
+    "SELECT payment_status, review_status FROM project_requests WHERE request_ref = ? LIMIT 1",
+    [input.requestRef],
+  )
+  const current = rows[0]
+  if (!current) return { ok: false, reason: "not_found" }
+  if (current.payment_status !== "paid") return { ok: false, reason: "not_paid" }
+  return { ok: false, reason: "already_reviewed" }
 }
 
 export async function markProjectRequestCancelled(orderId: string, userId: string, status: "cancelled" | "failed") {
