@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { MessageSquareDashed, Sparkles } from "lucide-react"
+import { SquarePen } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Composer, AI_MODELS, type AIModel } from "./composer"
+import { Composer } from "./composer"
 import { BUILT_IN_CHAT_MODULES, CHAT_MODULES_STORAGE_KEY, type CustomChatModule } from "../modules"
 import { MessageList } from "./message-list"
 
@@ -18,7 +18,6 @@ export interface Message {
 }
 
 const STORAGE_KEY = "chat-messages"
-const MODEL_STORAGE_KEY = "chat-selected-model"
 const OLLAMA_MODEL_STORAGE_KEY = "ollama-custom-model"
 const MODULE_STORAGE_KEY = "chat-selected-module"
 
@@ -95,10 +94,6 @@ export function ChatShell() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(true)
-
-const [selectedModel, setSelectedModel] = useState<AIModel>(
-    "ollama/llama3.2",
-  )
   const [ollamaModel, setOllamaModel] = useState("llama3.2")
   const [selectedModule, setSelectedModule] = useState("auto")
   const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
@@ -108,7 +103,6 @@ const requestRef = useRef<AbortController | null>(null)
 useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      const savedModel = localStorage.getItem(MODEL_STORAGE_KEY)
       const savedOllamaModel = localStorage.getItem(OLLAMA_MODEL_STORAGE_KEY)
       const savedModule = localStorage.getItem(MODULE_STORAGE_KEY)
       const savedCustomModules = localStorage.getItem(CHAT_MODULES_STORAGE_KEY)
@@ -117,11 +111,6 @@ if (stored) {
         setMessages(restoreMessages(stored))
       }
 
-const model = AI_MODELS.find((item) => item.id === savedModel)
-
-      if (model) {
-        setSelectedModel(model.id)
-      }
       if (savedOllamaModel?.trim()) {
         setOllamaModel(savedOllamaModel.trim())
       }
@@ -151,16 +140,6 @@ try {
       // Keep chatting even if browser storage is full.
     }
   }, [messages, isLoaded])
-
-const handleModelChange = useCallback((model: AIModel) => {
-    setSelectedModel(model)
-
-try {
-      localStorage.setItem(MODEL_STORAGE_KEY, model)
-    } catch {
-      // Saving the preference is optional.
-    }
-  }, [])
 
 const sendWithHistory = useCallback(
     async (
@@ -221,7 +200,7 @@ try {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: selectedModel === "ollama/llama3.2" ? `ollama/${ollamaModel}` : selectedModel,
+            model: `ollama/${ollamaModel}`,
             module: selectedModule === "auto"
               ? { id: "auto" }
               : [...BUILT_IN_CHAT_MODULES, ...customModules].find((module) => module.id === selectedModule) ?? { id: "auto" },
@@ -309,7 +288,7 @@ if (!accumulated) {
         }
       }
     },
-    [customModules, isLoaded, ollamaModel, selectedModel, selectedModule],
+    [customModules, isLoaded, ollamaModel, selectedModule],
   )
 
 const sendMessage = useCallback(
@@ -359,53 +338,52 @@ try {
     }
   }, [])
 
-  const activeModel = AI_MODELS.find((model) => model.id === selectedModel)?.name ?? "AI model"
   const availableModules = [...BUILT_IN_CHAT_MODULES, ...customModules]
   const activeModule = availableModules.find((module) => module.id === selectedModule) ?? BUILT_IN_CHAT_MODULES[0]
 
   return (
       <main aria-label="AI chat workspace" className="ai-chat-section relative isolate h-dvh overflow-hidden">
-        <header className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-20 border-b border-white/[0.07] bg-slate-950/55 backdrop-blur-2xl xl:left-[var(--navigation-width)] xl:top-0">
-          <div className="pointer-events-auto mx-auto flex min-h-[4.5rem] max-w-5xl items-center gap-3 px-4 py-2.5 sm:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-100/15 bg-slate-900 shadow-[0_0_28px_rgba(34,211,238,0.12)]">
-                <Image src="/images/ai-logo.jpg" alt="" width={40} height={40} className="size-full object-cover" priority />
+        <header className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-20 border-b border-white/[0.08] bg-[#212121]/90 backdrop-blur-xl xl:left-[var(--navigation-width)] xl:top-0">
+          <div className="pointer-events-auto mx-auto flex min-h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#303030]">
+                <Image src="/images/ai-logo.jpg" alt="" width={32} height={32} className="size-full object-cover" priority />
               </span>
-              <div className="min-w-0">
-                <p className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-white/90">LUCIFER <span className="text-cyan-300">AI</span></p>
-                <p className="mt-0.5 truncate text-[11px] text-slate-400 sm:text-xs">A thoughtful space to build, learn, and solve</p>
-              </div>
+              <p className="truncate text-sm font-semibold tracking-tight text-zinc-100">Lucifer AI</p>
             </div>
 
-            <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-              <span className="hidden items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-2 text-xs font-medium text-slate-300 sm:inline-flex">
-                <Sparkles aria-hidden="true" className="size-3.5 text-cyan-300" />
-                <span className="hidden md:inline">Model</span> {activeModel}
-              </span>
-              <select
-                value={activeModule.id}
-                onChange={(event) => {
-                  const moduleId = event.target.value
-                  setSelectedModule(moduleId)
-                  localStorage.setItem(MODULE_STORAGE_KEY, moduleId)
-                }}
-                className="hidden max-w-36 rounded-xl border border-white/[0.08] bg-slate-900/80 px-2.5 py-2 text-xs font-medium text-slate-300 outline-none focus:border-cyan-200/40 sm:block"
-                aria-label="Choose AI module"
-              >
-                {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}
-              </select>
-              <span className="hidden text-[11px] text-slate-500 lg:inline">Saved on this device</span>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <label className="relative">
+                <span className="sr-only">Response mode</span>
+                <select
+                  value={activeModule.id}
+                  onChange={(event) => {
+                    const moduleId = event.target.value
+                    setSelectedModule(moduleId)
+                    try {
+                      localStorage.setItem(MODULE_STORAGE_KEY, moduleId)
+                    } catch {
+                      // The selected mode still applies for this session.
+                    }
+                  }}
+                  className="h-9 max-w-36 rounded-full border border-white/10 bg-[#303030] px-3 text-xs font-medium text-zinc-200 outline-none transition hover:bg-[#383838] focus-visible:ring-2 focus-visible:ring-white/40"
+                  aria-label={`Response mode: ${activeModule.name}`}
+                >
+                  {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}
+                </select>
+              </label>
               {messages.length > 0 || error ? (
                 <Button
                   type="button"
                   onClick={clearChat}
                   disabled={!isLoaded}
                   variant="ghost"
-                  className="h-9 gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 text-slate-300 shadow-sm transition hover:border-cyan-200/30 hover:bg-cyan-200/10 hover:text-cyan-100"
+                  className="h-9 gap-2 rounded-full border border-transparent px-3 text-zinc-300 transition hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
                   aria-label="Start a new chat"
+                  title="New chat"
                 >
-                  <MessageSquareDashed aria-hidden="true" className="size-4" />
-                  <span className="text-xs font-semibold">New chat</span>
+                  <SquarePen aria-hidden="true" className="size-4" />
+                  <span className="hidden text-xs font-medium sm:inline">New chat</span>
                 </Button>
               ) : null}
             </div>
@@ -426,8 +404,6 @@ try {
           onStop={stopStreaming}
           isStreaming={isStreaming}
           disabled={!isLoaded}
-          selectedModel={selectedModel}
-          onModelChange={handleModelChange}
         />
       </main>
     )

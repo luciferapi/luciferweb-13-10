@@ -1,20 +1,16 @@
 "use client"
 
+import { useState } from "react"
+import Image from "next/image"
+import { Copy, CopyCheck } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import type { Message } from "./chat-shell"
-import { Copy, CopyCheck, User } from "lucide-react"
 import { MarkdownRenderer } from "./markdown-renderer"
-import Image from "next/image"
-import { useState } from "react"
 
 interface MessageBubbleProps {
   message: Message
   isStreaming?: boolean
-}
-
-// Format time for display
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
 export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
@@ -37,84 +33,52 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
     <div
       data-chat-message-content
       className={cn(
-        "flex max-w-[96%] gap-3 sm:max-w-[90%]",
-        isUser
-          ? "ml-auto flex-row-reverse"
-          : "mr-auto items-end",
+        "group flex w-full flex-col gap-1",
+        isUser ? "items-end" : "items-start",
       )}
     >
-      {/* Avatar */}
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border",
-          isUser
-            ? "border-cyan-100/15 bg-cyan-200/10 text-cyan-100"
-            : "border-white/10 bg-slate-900 shadow-[0_6px_20px_rgba(0,0,0,0.18)]",
-          !isUser && isStreaming && "sticky bottom-4 self-end transition-all duration-300",
-        )}
-        aria-hidden="true"
-      >
-        {isUser ? (
-          <User aria-hidden="true" className="size-4" />
-        ) : (
-          <Image src="/images/ai-logo.jpg" alt="LUCIFER AI assistant logo" width={32} height={32} className="h-full w-full object-cover" />
-        )}
-      </div>
-
-      {/* Message content */}
-      <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
-        {/* Role label (optional, shown on larger screens) */}
-        <span className="mb-1.5 mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 sm:block">{isUser ? "You" : "Lucifer AI"}</span>
-
-        {/* Bubble */}
-        <div
-          className={cn(
-            "overflow-hidden rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.12)]",
-            isUser
-              ? "rounded-br-md border border-cyan-100/15 bg-gradient-to-br from-cyan-200/[0.12] to-violet-300/[0.08] text-slate-100"
-              : "rounded-bl-md border border-white/[0.075] bg-slate-900/60 text-slate-200",
-          )}
-        >
-          {!isUser && message.content.trim() && (
-            <div className="flex justify-end p-2 pb-0">
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[10px] font-medium text-slate-300 transition hover:border-cyan-100/20 hover:bg-slate-800 hover:text-cyan-100"
-                aria-label="Copy assistant message"
-              >
-                {copied ? <CopyCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-          )}
-          <div
-            className={cn(isUser ? "px-4 py-3" : "py-1")}
-          >
-            {isUser ? (
-              <div className="flex flex-col gap-2">
-                {message.imageData && (
-                  <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-700">
-                    <Image
-                      src={message.imageData}
-                      alt="Uploaded image"
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+      {isUser ? (
+        <div className="max-w-[88%] rounded-[1.5rem] bg-[#303030] px-4 py-3 text-zinc-100 sm:max-w-[80%]">
+          <div className="flex flex-col gap-2">
+            {message.imageData && (
+              <div className="size-24 overflow-hidden rounded-xl border border-white/10">
+                <Image
+                  src={message.imageData}
+                  alt="Image attached to message"
+                  width={96}
+                  height={96}
+                  unoptimized
+                  className="size-full object-cover"
+                />
               </div>
-            ) : (
-              <MarkdownRenderer content={message.content || " "} isStreaming={isStreaming} />
             )}
+            <p className="whitespace-pre-wrap break-words text-[15px] leading-6">
+              {message.content}
+            </p>
           </div>
         </div>
+      ) : (
+        <div className="w-full min-w-0 text-zinc-100">
+          <MarkdownRenderer content={message.content || " "} isStreaming={isStreaming} />
+        </div>
+      )}
 
-        {/* Timestamp */}
-        <span className="mt-1.5 text-[10px] tabular-nums text-slate-500">{formatTime(message.createdAt)}</span>
-      </div>
+      {!isUser && message.content.trim() && (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-400 transition hover:bg-white/[0.06] hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+          aria-label="Copy assistant message"
+          title={copied ? "Copied" : "Copy response"}
+        >
+          {copied ? (
+            <CopyCheck aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Copy aria-hidden="true" className="size-3.5" />
+          )}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      )}
     </div>
   )
 }

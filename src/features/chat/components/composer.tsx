@@ -4,20 +4,11 @@ import type React from "react"
 
 import { useState, useRef, useCallback, type KeyboardEvent, useEffect } from "react"
 import gsap from "gsap"
-import { Square, Mic, MicOff, Brain, Paperclip, X, Send, ChevronDown } from "lucide-react"
+import Image from "next/image"
+import { ArrowUp, Mic, MicOff, Paperclip, Square, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuPortal,
-} from "@/components/ui/dropdown-menu"
 import { AudioWaveform } from "./audio-waveform"
-
-export type AIModel =
-  | "ollama/llama3.2"
 
 type SpeechRecognitionResult = {
   isFinal: boolean
@@ -53,24 +44,17 @@ declare global {
   }
 }
 
-export const AI_MODELS: { id: AIModel; name: string }[] = [
-  { id: "ollama/llama3.2", name: "Ollama (local)" },
-]
-
 interface ComposerProps {
   onSend: (content: string, imageData?: string) => void
   onStop: () => void
   isStreaming: boolean
   disabled?: boolean
-  selectedModel: AIModel
-  onModelChange: (model: AIModel) => void
 }
 
-export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel, onModelChange }: ComposerProps) {
+export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProps) {
   const [value, setValue] = useState("")
   const [isRecording, setIsRecording] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [showImageBounce, setShowImageBounce] = useState(false)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const composerRef = useRef<HTMLDivElement>(null)
@@ -150,21 +134,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
     }
   }, [])
 
-  const playClickSound = useCallback(() => {
-    const audio = new Audio("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/click-FM4Xaa1FJj237591TiZw4yL1fIxdOw.mp3")
-    audio.volume = 0.5
-    audio.play().catch(() => {})
-  }, [])
-
-  const playRecordSound = useCallback(() => {
-    const audio = new Audio("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/record-CNHOyjcpri6lx5C2sGXncDtFVDwspO.mp3")
-    audio.volume = 0.5
-    audio.play().catch(() => {})
-  }, [])
-
   const toggleRecording = useCallback(() => {
-    playClickSound()
-
     if (!recognitionRef.current) {
       alert("Speech recognition is not supported in your browser")
       return
@@ -178,7 +148,6 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
         setMediaStream(null)
       }
     } else {
-      playRecordSound()
       baseTextRef.current = value
       finalTranscriptsRef.current = ""
       recognitionRef.current.start()
@@ -193,11 +162,10 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
           console.error("[v0] Error getting microphone stream:", err)
         })
     }
-  }, [isRecording, value, playClickSound, playRecordSound, mediaStream])
+  }, [isRecording, value, mediaStream])
 
   const handleSend = useCallback(() => {
     if ((!value.trim() && !uploadedImage) || isStreaming || disabled) return
-    playClickSound()
 
     if (isRecording && recognitionRef.current) {
       recognitionRef.current.stop()
@@ -211,7 +179,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"
     }
-  }, [value, uploadedImage, isStreaming, disabled, onSend, isRecording, playClickSound])
+  }, [value, uploadedImage, isStreaming, disabled, onSend, isRecording])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -225,54 +193,68 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      playClickSound()
-
       const file = e.target.files?.[0]
       if (file && file.type.startsWith("image/")) {
         const reader = new FileReader()
         reader.onload = (event) => {
           setUploadedImage(event.target?.result as string)
-          setShowImageBounce(true)
-          setTimeout(() => setShowImageBounce(false), 400)
         }
         reader.readAsDataURL(file)
       }
       e.target.value = ""
     },
-    [playClickSound],
+    [],
   )
 
   const removeImage = useCallback(() => {
     setUploadedImage(null)
   }, [])
 
-  const currentModel = AI_MODELS.find((m) => m.id === selectedModel) || AI_MODELS[0]
-
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-10 px-3 sm:bottom-6 sm:px-6 xl:left-[var(--navigation-width)]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-3 z-10 px-3 sm:bottom-5 sm:px-6 xl:left-[var(--navigation-width)]">
       <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-3xl">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-10 -top-3 h-10 rounded-full bg-cyan-400/20 blur-2xl" />
         <div
           className={cn(
-            "relative z-10 flex flex-col gap-3 overflow-hidden rounded-[1.65rem] border border-white/[0.09] bg-slate-950/85 p-3 shadow-[0_22px_70px_rgba(0,0,0,0.52)] backdrop-blur-2xl transition-colors duration-200 sm:rounded-[1.9rem] sm:p-4",
-            "focus-within:border-cyan-200/30 focus-within:ring-2 focus-within:ring-cyan-200/10",
+            "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-white/[0.1] bg-[#303030] p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.24)] transition-colors duration-200 sm:p-3",
+            "focus-within:border-white/20 focus-within:ring-2 focus-within:ring-white/[0.06]",
           )}
         >
-          <div className="flex gap-2 items-center">
-            {uploadedImage && (
-              <div className={cn("relative shrink-0", showImageBounce && "image-bounce")}>
-                <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-700">
-                  <img src={uploadedImage} alt="Uploaded image" className="h-full w-full object-cover" />
-                </div>
-                <button
-                  onClick={removeImage}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 hover:bg-stone-900 text-white rounded-full flex items-center justify-center transition-colors"
-                  aria-label="Remove image"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+          {uploadedImage && (
+            <div className="relative ml-1 mt-1 size-14 overflow-hidden rounded-xl border border-white/10">
+              <Image src={uploadedImage} alt="Image attached to message" width={56} height={56} unoptimized className="size-full object-cover" />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-black/75 text-white transition hover:bg-black"
+                aria-label="Remove attached image"
+              >
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+            aria-label="Upload image"
+          />
+
+          <div className="flex items-end gap-2">
+            <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming || disabled}
+              size="icon"
+              variant="ghost"
+              className="size-10 shrink-0 rounded-full text-zinc-300 hover:bg-white/10 hover:text-white"
+              aria-label="Attach image"
+              title="Attach image"
+            >
+              <Paperclip className="size-[18px]" aria-hidden="true" />
+            </Button>
 
             <textarea
               ref={textareaRef}
@@ -282,136 +264,61 @@ export function Composer({ onSend, onStop, isStreaming, disabled, selectedModel,
                 handleInput()
               }}
               onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "Listening..." : "Ask Lucifer AI anything..."}
+              placeholder={isRecording ? "Listening…" : "Message Lucifer AI"}
               disabled={isStreaming || disabled}
               rows={1}
               className={cn(
-                "min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-6 text-slate-100 placeholder:text-slate-400",
-                "focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
+                "min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-6 text-zinc-100 placeholder:text-zinc-400",
+                "focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
                 "max-h-40 overflow-y-auto",
               )}
               aria-label="Message input"
             />
 
             {isRecording && (
-              <div className="shrink-0 w-24">
+              <div className="hidden w-20 shrink-0 sm:block">
                 <AudioWaveform isRecording={isRecording} stream={mediaStream} />
               </div>
             )}
 
+            <Button
+              type="button"
+              onClick={toggleRecording}
+              disabled={isStreaming || disabled}
+              size="icon"
+              variant="ghost"
+              className={cn(
+                "size-10 shrink-0 rounded-full text-zinc-300 transition hover:bg-white/10 hover:text-white",
+                isRecording && "bg-red-500/15 text-red-300 hover:bg-red-500/25 hover:text-red-200",
+              )}
+              aria-label={isRecording ? "Stop recording" : "Start voice input"}
+              title={isRecording ? "Stop recording" : "Voice input"}
+            >
+              {isRecording ? <MicOff className="size-[18px]" aria-hidden="true" /> : <Mic className="size-[18px]" aria-hidden="true" />}
+            </Button>
+
             {isStreaming ? (
               <button
-                onClick={() => {
-                  playClickSound()
-                  onStop()
-                }}
-                className="flex items-center gap-2 rounded-full bg-rose-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-500 disabled:opacity-50"
+                type="button"
+                onClick={onStop}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white"
                 aria-label="Stop generating"
+                title="Stop generating"
               >
-                <Square className="h-4 w-4 fill-current" aria-hidden="true" />
-                Stop
+                <Square className="size-3.5 fill-current" aria-hidden="true" />
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleSend}
                 disabled={(!value.trim() && !uploadedImage) || disabled}
-                className={cn(
-                  "flex min-h-10 items-center gap-2 rounded-xl bg-cyan-300 px-3.5 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:-translate-y-px hover:bg-cyan-200 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50",
-                )}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-500 disabled:text-zinc-800"
                 aria-label="Send message"
+                title="Send message"
               >
-                <Send className="h-4 w-4" aria-hidden="true" />
-                Send
+                <ArrowUp className="size-5" aria-hidden="true" />
               </button>
             )}
-          </div>
-
-          <div className="flex min-w-0 items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              aria-label="Upload image"
-            />
-
-            <div className="relative">
-              <Button
-                onClick={toggleRecording}
-                disabled={isStreaming || disabled}
-                size="icon"
-                className={cn(
-                  "relative z-10 h-9 w-9 shrink-0 rounded-xl transition-all",
-                  isRecording
-                    ? "bg-red-500 hover:bg-red-600 text-white animate-bounce-subtle"
-                    : "bg-slate-800 hover:bg-slate-700 text-slate-200",
-                )}
-                aria-label={isRecording ? "Stop recording" : "Start voice input"}
-              >
-                {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </Button>
-            </div>
-
-            <Button
-              onClick={() => {
-                playClickSound()
-                fileInputRef.current?.click()
-              }}
-              disabled={isStreaming || disabled}
-              size="icon"
-              className="h-9 w-9 shrink-0 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700"
-              aria-label="Attach image"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    disabled={isStreaming || disabled}
-                    className="h-9 min-w-0 max-w-[min(12rem,40vw)] gap-1.5 rounded-xl bg-slate-800/90 px-2.5 text-slate-200 hover:bg-slate-700"
-                    aria-label={`Select AI model. Current model: ${currentModel.name}`}
-                    onClick={playClickSound}
-                  >
-                    <Brain aria-hidden="true" className="size-4 shrink-0 text-cyan-200" />
-                    <span className="truncate text-xs font-semibold">{currentModel.name}</span>
-                    <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" />
-                  </Button>
-                }
-              />
-              <DropdownMenuPortal>
-                <DropdownMenuContent
-                  align="start"
-                  side="top"
-                  sideOffset={8}
-                  className="w-48 max-h-64 overflow-y-auto px-2 py-2 rounded-2xl z-[9999] border-slate-700 bg-slate-900 text-slate-100"
-                >
-                  {AI_MODELS.map((model) => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => {
-                        playClickSound()
-                        onModelChange(model.id)
-                      }}
-                      className={cn(
-                        "flex items-center cursor-pointer gap-3 rounded-lg",
-                        selectedModel === model.id && "bg-slate-800 text-cyan-200",
-                      )}
-                    >
-                      <span className="flex size-5 items-center justify-center rounded-sm bg-slate-800 text-[10px] font-bold text-slate-300" aria-hidden="true">
-                        {model.name.slice(0, 1)}
-                      </span>
-                      <span className="text-sm">{model.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenuPortal>
-            </DropdownMenu>
-
-            <span className="ml-auto hidden truncate text-[11px] text-slate-500 md:block">Enter to send <span aria-hidden="true">·</span> Shift+Enter for a new line</span>
           </div>
         </div>
       </div>
