@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { SquarePen } from "lucide-react"
+import { Check, ChevronDown, Sparkles, SquarePen } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Composer } from "./composer"
@@ -97,6 +97,26 @@ export function ChatShell() {
   const [customModules, setCustomModules] = useState<CustomChatModule[]>([])
 
 const requestRef = useRef<AbortController | null>(null)
+  const moduleSwitcherRef = useRef<HTMLDetailsElement>(null)
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!moduleSwitcherRef.current?.contains(event.target as Node)) {
+        if (moduleSwitcherRef.current) moduleSwitcherRef.current.open = false
+      }
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && moduleSwitcherRef.current?.open) {
+        moduleSwitcherRef.current.open = false
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick)
+    document.addEventListener("keydown", closeOnEscape)
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick)
+      document.removeEventListener("keydown", closeOnEscape)
+    }
+  }, [])
 
 useEffect(() => {
     try {
@@ -347,25 +367,59 @@ try {
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <label className="relative">
-                <span className="sr-only">Response mode</span>
-                <select
-                  value={activeModule.id}
-                  onChange={(event) => {
-                    const moduleId = event.target.value
-                    setSelectedModule(moduleId)
-                    try {
-                      localStorage.setItem(MODULE_STORAGE_KEY, moduleId)
-                    } catch {
-                      // The selected mode still applies for this session.
-                    }
-                  }}
-                  className="h-9 max-w-40 rounded-full border border-white/10 bg-zinc-900 px-3 text-sm font-medium text-zinc-100 outline-none transition hover:border-lime-400/50 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-lime-400/60"
-                  aria-label={`Response mode: ${activeModule.name}`}
+              <details ref={moduleSwitcherRef} className="group relative">
+                <summary
+                  aria-label={`Change chat module. Current module: ${activeModule.name}`}
+                  title="Switch chat module"
+                  className="flex h-10 w-[132px] cursor-pointer list-none items-center gap-2 rounded-xl border border-lime-300/30 bg-gradient-to-r from-lime-300/[0.12] to-zinc-900/90 px-2.5 text-left shadow-[0_4px_20px_rgba(163,230,53,0.08)] transition hover:border-lime-200/60 hover:from-lime-300/[0.17] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300/60 sm:w-[190px] sm:gap-2.5 sm:px-3 [&::-webkit-details-marker]:hidden"
                 >
-                  {availableModules.map((module) => <option key={module.id} value={module.id}>{module.name}</option>)}
-                </select>
-              </label>
+                  <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-lg border border-lime-200/20 bg-lime-300/10 text-lime-200">
+                    <Sparkles className="size-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[9px] font-bold uppercase leading-3 tracking-[0.16em] text-lime-100/70">Module</span>
+                    <span className="block truncate text-xs font-semibold leading-4 text-white sm:text-sm">{activeModule.name}</span>
+                  </span>
+                  <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-lime-100/80 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="absolute right-0 top-[calc(100%+0.55rem)] z-50 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950/95 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.65)] backdrop-blur-2xl">
+                  <div className="px-3 pb-2 pt-2">
+                    <p className="text-xs font-semibold text-white">Choose a module</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">Switch the assistant focus for this chat.</p>
+                  </div>
+                  <div className="max-h-[min(60vh,26rem)] space-y-1 overflow-y-auto">
+                    {availableModules.map((module) => {
+                      const isActive = module.id === selectedModule
+                      return (
+                        <button
+                          key={module.id}
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => {
+                            setSelectedModule(module.id)
+                            try {
+                              localStorage.setItem(MODULE_STORAGE_KEY, module.id)
+                            } catch {
+                              // The selected mode still applies for this session.
+                            }
+                            if (moduleSwitcherRef.current) moduleSwitcherRef.current.open = false
+                          }}
+                          className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300/60 ${isActive ? "bg-lime-300/[0.12] text-white" : "text-zinc-200 hover:bg-zinc-800/90"}`}
+                        >
+                          <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg ${isActive ? "bg-lime-300/15 text-lime-200" : "bg-zinc-800 text-zinc-400"}`}>
+                            <Sparkles aria-hidden="true" className="size-3.5" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold">{module.name}</span>
+                            <span className="mt-0.5 block text-xs leading-5 text-zinc-400">{module.description}</span>
+                          </span>
+                          {isActive && <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-lime-200" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </details>
               {messages.length > 0 || error ? (
                 <Button
                   type="button"
