@@ -1143,14 +1143,15 @@ html:has(main > #hero) .live-banner-ticker {
 /* AI chat: quiet charcoal canvas with a restrained brand-lime ambient glow. */
 .ai-chat-section {
   background:
-    radial-gradient(ellipse 58% 40% at 50% 0%, rgb(163 230 53 / 0.075), transparent 72%),
-    radial-gradient(ellipse 38% 34% at 5% 88%, rgb(163 230 53 / 0.035), transparent 75%),
-    linear-gradient(155deg, #09090b 0%, #101113 52%, #09090b 100%);
+    radial-gradient(ellipse 64% 44% at 50% -4%, rgb(163 230 53 / 0.12), transparent 72%),
+    radial-gradient(ellipse 42% 38% at 5% 86%, rgb(163 230 53 / 0.055), transparent 76%),
+    radial-gradient(ellipse 35% 34% at 96% 62%, rgb(132 204 22 / 0.045), transparent 75%),
+    linear-gradient(155deg, #09090b 0%, #111214 52%, #09090b 100%);
 }
 .ai-chat-section > header {
-  border-bottom-color: rgb(163 230 53 / 0.13);
-  background: rgb(9 9 11 / 0.82);
-  box-shadow: 0 10px 36px rgb(0 0 0 / 0.14);
+  border-bottom-color: rgb(163 230 53 / 0.2);
+  background: rgb(9 9 11 / 0.92);
+  box-shadow: 0 12px 38px rgb(0 0 0 / 0.24);
 }
 .ai-chat-section [role="log"] {
   scrollbar-color: rgb(163 230 53 / 0.24) transparent;

@@ -215,8 +215,8 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
       <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-4xl">
         <div
           className={cn(
-            "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-white/[0.1] bg-zinc-900/95 p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-colors duration-200 sm:p-3",
-            "focus-within:border-lime-400/40 focus-within:ring-2 focus-within:ring-lime-400/10",
+            "relative z-10 flex flex-col gap-2 rounded-[1.75rem] border border-zinc-600/80 bg-zinc-900/95 p-2.5 shadow-[0_18px_55px_rgba(0,0,0,0.48),0_0_0_1px_rgba(163,230,53,0.06)] backdrop-blur-xl transition-colors duration-200 sm:p-3",
+            "focus-within:border-lime-300/55 focus-within:ring-2 focus-within:ring-lime-300/15",
           )}
         >
           {uploadedImage && (
@@ -319,6 +319,10 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
                 <ArrowUp className="size-5" aria-hidden="true" />
               </button>
             )}
+          </div>
+          <div className="hidden items-center justify-between px-3 pb-0.5 text-[11px] text-zinc-400 sm:flex">
+            <span>AI can make mistakes. Verify important details.</span>
+            <span><kbd className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-zinc-300">Enter</kbd> to send <span className="px-1 text-zinc-600">·</span> <kbd className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-zinc-300">Shift + Enter</kbd> for a new line</span>
           </div>
         </div>
       </div>

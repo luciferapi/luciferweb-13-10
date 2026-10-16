@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Copy, CopyCheck } from "lucide-react"
+import { Copy, CopyCheck, Sparkles } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { Message } from "./chat-shell"
@@ -38,7 +38,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       )}
     >
       {isUser ? (
-        <div className="min-h-11 min-w-16 max-w-[88%] rounded-2xl border border-white/10 bg-zinc-900/90 px-4 py-2.5 text-zinc-100 sm:max-w-[80%]">
+        <div className="min-h-11 min-w-16 max-w-[88%] rounded-2xl rounded-br-md border border-lime-300/25 bg-gradient-to-br from-lime-300/[0.16] to-lime-400/[0.07] px-4 py-2.5 text-zinc-50 shadow-[0_8px_24px_rgba(0,0,0,0.15)] sm:max-w-[80%]">
           <div className="flex flex-col gap-2">
             {message.imageData && (
               <div className="size-24 overflow-hidden rounded-xl border border-white/10">
@@ -59,7 +59,12 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         </div>
       ) : (
         <div className="w-full min-w-0 text-zinc-100">
-          <MarkdownRenderer content={message.content || " "} isStreaming={isStreaming} />
+          <div className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-lime-200/90">
+            <Sparkles aria-hidden="true" className="size-3.5" /> Lucifer AI
+          </div>
+          <div className="rounded-2xl border border-zinc-700/60 bg-zinc-950/35 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:px-5">
+            <MarkdownRenderer content={message.content || " "} isStreaming={isStreaming} />
+          </div>
         </div>
       )}
 

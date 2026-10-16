@@ -178,22 +178,29 @@ export function MessageList({
       aria-relevant="additions text"
     >
       {messages.length === 0 && !error && !isStreaming && (
-        <div ref={emptyStateRef} className="mx-auto flex min-h-[calc(100dvh-18rem)] w-full max-w-2xl flex-col items-center justify-center text-center xl:min-h-[calc(100dvh-16rem)]">
-          <h1 data-intro-item className="text-balance text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">
-            What can I help with?
+        <div ref={emptyStateRef} className="mx-auto flex min-h-[calc(100dvh-18rem)] w-full max-w-2xl flex-col items-center justify-center py-8 text-center xl:min-h-[calc(100dvh-16rem)]">
+          <div data-intro-item aria-hidden="true" className="mb-5 grid size-16 place-items-center rounded-[1.35rem] border border-lime-300/30 bg-gradient-to-br from-lime-300/20 via-lime-400/10 to-zinc-900 text-lime-200 shadow-[0_12px_45px_rgba(163,230,53,0.12)]">
+            <Sparkles className="size-7" />
+          </div>
+          <p data-intro-item className="mb-3 rounded-full border border-lime-300/20 bg-lime-300/[0.07] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-lime-200">
+            Your AI workspace
+          </p>
+          <h1 data-intro-item className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            What can we <span className="text-lime-300">create?</span>
           </h1>
-          <p data-intro-item className="mt-2 text-sm text-zinc-400 sm:text-base">
-            Ask, create, plan, or work through a problem.
+          <p data-intro-item className="mt-3 max-w-lg text-sm leading-6 text-zinc-300 sm:text-base">
+            Ask a question, shape an idea, or work through a challenge with Lucifer AI.
           </p>
 
-          <div className="mt-7 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+          <p data-intro-item className="mb-3 mt-8 w-full text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 sm:text-xs">Start with a prompt</p>
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
             {starterPrompts.map(({ title, prompt, icon: Icon }) => (
               <button
                 key={title}
                 type="button"
                 data-intro-item
                 onClick={() => onSendPrompt(prompt)}
-                className="group flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/60 px-4 py-3 text-left transition-colors hover:border-lime-400/40 hover:bg-lime-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/60"
+                className="group flex min-h-14 items-center gap-3 rounded-2xl border border-zinc-700/80 bg-zinc-900/75 px-4 py-3 text-left shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition duration-200 hover:-translate-y-0.5 hover:border-lime-300/50 hover:bg-zinc-800/90 hover:shadow-[0_12px_28px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300/70"
               >
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-lime-400/10 text-lime-300 transition group-hover:bg-lime-400/15 group-hover:text-lime-200">
                   <Icon aria-hidden="true" className="size-4" />
