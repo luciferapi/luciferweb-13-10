@@ -211,7 +211,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
   }, [])
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-3 z-10 px-3 sm:bottom-5 sm:px-6 xl:left-[var(--navigation-width)]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-3 z-10 px-3 sm:bottom-5 sm:px-6 xl:left-0 xl:right-[var(--navigation-width)]">
       <div ref={composerRef} className="pointer-events-auto relative mx-auto w-full max-w-4xl">
         <div
           className={cn(
