@@ -72,7 +72,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs text-zinc-400 transition hover:bg-lime-400/[0.08] hover:text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/50 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-zinc-700/80 bg-zinc-900/90 px-2.5 text-xs font-medium text-zinc-200 shadow-sm transition hover:border-lime-300/45 hover:bg-zinc-800 hover:text-lime-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300/60"
           aria-label="Copy assistant message"
           title={copied ? "Copied" : "Copy response"}
         >

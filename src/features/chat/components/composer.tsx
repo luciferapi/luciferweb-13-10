@@ -248,8 +248,8 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
               onClick={() => fileInputRef.current?.click()}
               disabled={isStreaming || disabled}
               size="icon"
-              variant="ghost"
-              className="size-10 shrink-0 rounded-full text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
+              variant="outline"
+              className="size-10 shrink-0 rounded-full border-zinc-700 bg-zinc-800 text-lime-200 shadow-sm hover:border-lime-300/50 hover:bg-zinc-700 hover:text-lime-100"
               aria-label="Attach image"
               title="Attach image"
             >
@@ -288,7 +288,7 @@ export function Composer({ onSend, onStop, isStreaming, disabled }: ComposerProp
               size="icon"
               variant="ghost"
               className={cn(
-                "size-10 shrink-0 rounded-full text-lime-300 transition hover:bg-lime-400/10 hover:text-lime-200",
+                "size-10 shrink-0 rounded-full border border-zinc-700 bg-zinc-800 text-lime-200 shadow-sm transition hover:border-lime-300/50 hover:bg-zinc-700 hover:text-lime-100",
                 isRecording && "bg-red-500/15 text-red-300 hover:bg-red-500/25 hover:text-red-200",
               )}
               aria-label={isRecording ? "Stop recording" : "Start voice input"}

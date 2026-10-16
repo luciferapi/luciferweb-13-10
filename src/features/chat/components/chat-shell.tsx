@@ -425,8 +425,8 @@ try {
                   type="button"
                   onClick={clearChat}
                   disabled={!isLoaded}
-                  variant="ghost"
-                  className="h-9 gap-2 rounded-full border border-transparent px-3 text-lime-300 transition hover:border-lime-400/20 hover:bg-lime-400/[0.06] hover:text-lime-200"
+                  variant="outline"
+                  className="h-9 gap-2 rounded-full border-zinc-700 bg-zinc-900 px-3 text-zinc-100 shadow-sm transition hover:border-lime-300/50 hover:bg-zinc-800 hover:text-lime-100"
                   aria-label="Start a new chat"
                   title="New chat"
                 >
