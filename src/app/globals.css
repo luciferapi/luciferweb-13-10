@@ -1139,3 +1139,30 @@ html:has(main > #hero) .live-banner-ticker {
     display: inline-flex !important;
   }
 }
+
+/* AI chat: quiet charcoal canvas with a restrained brand-lime ambient glow. */
+.ai-chat-section {
+  background:
+    radial-gradient(ellipse 58% 40% at 50% 0%, rgb(163 230 53 / 0.075), transparent 72%),
+    radial-gradient(ellipse 38% 34% at 5% 88%, rgb(163 230 53 / 0.035), transparent 75%),
+    linear-gradient(155deg, #09090b 0%, #101113 52%, #09090b 100%);
+}
+.ai-chat-section > header {
+  border-bottom-color: rgb(163 230 53 / 0.13);
+  background: rgb(9 9 11 / 0.82);
+  box-shadow: 0 10px 36px rgb(0 0 0 / 0.14);
+}
+.ai-chat-section [role="log"] {
+  scrollbar-color: rgb(163 230 53 / 0.24) transparent;
+  scrollbar-width: thin;
+}
+.ai-chat-section [role="log"]::-webkit-scrollbar { width: 8px; }
+.ai-chat-section [role="log"]::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgb(163 230 53 / 0.22);
+  background-clip: padding-box;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ai-chat-section > header { transition: background-color 180ms ease, box-shadow 180ms ease; }
+}

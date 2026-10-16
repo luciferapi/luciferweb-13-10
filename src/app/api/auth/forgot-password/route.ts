@@ -8,7 +8,7 @@ import { enforceRateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 const GENERIC_RESPONSE = {
-  message: "If an account exists for that email, password reset instructions will be sent.",
+  message: "If an account exists for that email, reset instructions will be sent. Check your spam folder; if nothing arrives after a few minutes, contact support.",
 }
 
 export async function POST(request: Request) {
@@ -39,10 +39,14 @@ export async function POST(request: Request) {
 
   if (!token) return NextResponse.json(GENERIC_RESPONSE)
 
-    const baseUrl = process.env.APP_URL?.trim()
-    if (!baseUrl) {
-      return NextResponse.json({ error: "APP_URL is not configured." }, { status: 500 })
-    }
+  const baseUrl = process.env.APP_URL?.trim()
+  if (!baseUrl) {
+    await deletePasswordResetToken(token).catch((error) => {
+      console.error("Could not invalidate reset token because APP_URL is missing.", error)
+    })
+    console.error("Password reset cannot be sent because APP_URL is not configured.")
+    return NextResponse.json({ error: "Password reset is temporarily unavailable. Please try again later." }, { status: 503 })
+  }
   const resetUrl = new URL("/login", baseUrl)
   resetUrl.searchParams.set("reset", token)
 
@@ -64,6 +68,8 @@ export async function POST(request: Request) {
     } catch (cleanupError) {
       console.error("Could not invalidate the unsent password reset link.", cleanupError)
     }
+    // Keep the response identical for known and unknown accounts to prevent email enumeration.
+    return NextResponse.json(GENERIC_RESPONSE)
   }
 
   return NextResponse.json(GENERIC_RESPONSE)

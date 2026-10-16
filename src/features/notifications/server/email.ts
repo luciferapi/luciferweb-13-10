@@ -149,13 +149,19 @@ async function sendTeamEmail(input: TeamEmailInput): Promise<void> {
 export async function sendPasswordResetEmail(email: string, url: string): Promise<void> {
   const SMTP_USER = getSmtpSender()
   const safeUrl = escapeHtml(url)
-  await sendSmtpMessage({
+  const result = await sendSmtpMessage({
     from: { name: "Lucifer AI", address: SMTP_USER },
     to: email,
     subject: "Reset your Lucifer AI password",
     text: `Use this link to reset your password: ${url}\n\nThis link expires in one hour. If you did not request a reset, you can ignore this email.`,
     html: `<p>We received a request to reset your Lucifer AI password.</p><p><a href="${safeUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request a reset, you can ignore this email.</p>`,
   })
+  const accepted = result.accepted.some((recipient) =>
+    (typeof recipient === "string" ? recipient : recipient.address).toLowerCase() === email.toLowerCase(),
+  )
+  if (!accepted) {
+    throw new Error("The SMTP server did not accept the password reset recipient.")
+  }
 }
 
 function escapeHtml(value: string) {
